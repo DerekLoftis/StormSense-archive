@@ -1,0 +1,43 @@
+tidewatch_id,agency,station_no,nws_lid,nws_official_forecast,nwm_coastal_shef,stofs2d_shef,stofs3d_points,cbofs_station
+BISH,NOAA,8571421,BISM2,not checked,yes,yes,yes,yes
+CBBT,NOAA,8638901,CHBV2,not checked,yes,yes,yes,yes
+DAHL,NOAA,8635027,NCDV2,yes,yes,yes,yes,yes
+KIPT,NOAA,8632200,KPTV2,not checked,yes,yes,yes,yes
+LEWI,NOAA,8635750,LWTV2,not checked,yes,yes,yes,yes
+MNPT,NOAA,8639348,MNPV2,not checked,yes,yes,yes,no
+SWPT,NOAA,8638610,SWPV2,yes,yes,yes,yes,yes
+WACH,NOAA,8631044,WAHV2,yes,yes,no,netcdf only,no
+WADC,NOAA,8594900,WASD2,event only,yes,yes,yes,yes
+WMPT,NOAA,8636580,WNDV2,not checked,yes,yes,yes,yes
+YRCG,NOAA,8637689,YKTV2,not checked,yes,yes,yes,yes
+SLIM,NOAA,8577330,SLIM2,not checked,yes,yes,yes,yes
+USFM,USGS,0204289994,FTMV2,not checked,yes,yes,no,not checked
+USJT,USGS,02042770,JSFV2,not checked,yes,yes,no,not checked
+USLI,USGS,0204292275,LHNV2,yes,yes,yes,no,not checked
+USPT,USGS,02042893,ELZV2,not checked,yes,no,no,not checked
+USSF,USGS,02042822,NMDV2,not checked,yes,yes,no,not checked
+GTND,USGS,01647600,GTND2,not checked,yes,no,no,not checked
+AXTV,USGS,01652590,AXTV2,not checked,yes,yes,no,not checked
+CRSM,USGS,01485755,CRSM2,not checked,yes,no,no,not checked
+NSWV,USGS,01484790,NSWV2,not checked,yes,yes,no,not checked
+RAPV,USGS,01668000,RAPV2,yes,yes,no,no,not checked
+EZMV,USGS,020428831,EZMV2,not checked,yes,yes,no,not checked
+RICV,USGS,02037705,RICV2,not checked,yes,no,no,not checked
+ALEV,USGS,01652545,ALEV2,not checked,yes,no,no,not checked
+USBK,USGS,0167862550,BKNV2,not checked,yes,no,no,not checked
+USBC,USGS,0204288905,BLYV2,not checked,no,no,no,not checked
+BPAD,USGS,01651827,BPAD2,not checked,yes,no,no,not checked
+USHR,USGS,0204289985,HMNV2,not checked,yes,no,no,not checked
+IHDM,USGS,01655480,IHDM2,not checked,yes,yes,no,not checked
+LENM,USGS,01661350,LENM2,not checked,no,no,no,not checked
+USLB,USGS,0204293125,LONV2,not checked,yes,no,no,not checked
+USLR,USGS,0204297575,LRBV2,not checked,yes,no,no,not checked
+USLN,USGS,0204295505,LTCV2,not checked,yes,no,no,not checked
+USNC,USGS,0167892964,NMCV2,not checked,yes,no,no,not checked
+USTC,USGS,0204291317,THAV2,none,yes,no,no,not checked
+USWN,USGS,02043155,WNCV2,not checked,no,no,no,not checked
+USSB,USGS,01484812,not found,n/a,no,no,no,not checked
+USMB,USGS,02042928,not found,n/a,no,no,no,not checked
+USBM,USGS,0204288539,not found,n/a,no,no,no,not checked
+USNW,USGS,02043390,not found,n/a,no,no,no,not checked
+USPA,USGS,0204288721,EBRV2,not checked,no,no,no,not checked
