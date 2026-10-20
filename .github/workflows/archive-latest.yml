@@ -1,0 +1,63 @@
+# Archives each StormSense Latest run (DerekLoftis/StormSense-latest, scheduled at :20 past
+# 00/06/12/18Z) from its public Pages site: one tarball per build on that month's release
+# (stormsense-YYYY-MM, about 120 a month, under the 1000-asset limit), with the run and station
+# index committed under data/index/stormsense-latest/. GitHub starts the publish runs up to
+# several hours late, so this checks every hour and skips a build that is already in the index.
+name: Archive StormSense Latest
+
+on:
+  schedule:
+    - cron: "50 * * * *"
+  workflow_dispatch:
+
+concurrency:
+  group: archive-latest
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  archive:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Download the published run
+        id: fetch
+        continue-on-error: true
+        run: |
+          set -o pipefail
+          python archiver/latest_archive.py --out out 2>&1 | tee archive_log.txt
+
+      - name: Upload the tarball to the month's release
+        if: steps.fetch.outputs.archived == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ steps.fetch.outputs.tag }}
+          ASSET: ${{ steps.fetch.outputs.asset }}
+        run: |
+          gh release view "$TAG" >/dev/null 2>&1 || \
+            gh release create "$TAG" --title "StormSense Latest ${TAG#stormsense-}" \
+              --notes "StormSense Latest runs (fore72, 7day, 30day: html, csv, json), one tarball per 6-hourly cycle. data/index/stormsense-latest/ lists every run and what it holds."
+          gh release upload "$TAG" "$ASSET" --clobber
+
+      - name: Commit the index
+        if: steps.fetch.outputs.archived == 'true'
+        run: |
+          git config user.name "stormsense-archive"
+          git config user.email "actions@users.noreply.github.com"
+          git add data/index/stormsense-latest
+          git diff --cached --quiet || git commit -q -m "Archive StormSense Latest $(basename "${{ steps.fetch.outputs.asset }}" .tar.xz)"
+          for i in 1 2 3 4; do git pull --rebase -q && git push -q && break; sleep $((2**i)); done
+
+      - name: Show the end of a failed archive as an annotation
+        if: steps.fetch.outcome == 'failure'
+        run: |
+          echo "::error title=archive failed::$(tail -n 30 archive_log.txt | sed ':a;N;$!ba;s/%/%25/g;s/\n/%0A/g')"
+          exit 1
