@@ -1,0 +1,69 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><title>StormSense Disclaimer and Methods Disclosure</title><style>
+*{font-family:Arial,'Liberation Sans',Helvetica,sans-serif;box-sizing:border-box}
+html,body{margin:0;padding:0;background:#fff}
+body{font-size:10pt;line-height:1.3;color:#111;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+.band{background:#00467f;color:#fff;font-weight:bold;font-size:14pt;letter-spacing:0.4px;text-align:center;padding:4px 0;width:72%;margin:0 auto 3px}
+.sub{text-align:center;font-size:9.5pt;color:#333;margin:0 0 12px}
+p{text-align:justify;margin:0 0 11px}
+.h{text-decoration:underline}
+p.cont{margin-top:0}
+.cont .h{display:block;margin-bottom:8px}
+figure{margin:6px 0 12px;break-inside:avoid}
+figure img{width:100%;display:block;border:1px solid #ddd}
+figure.small img{width:68%;margin:0 auto;border:none}
+figcaption{font-size:8.6pt;line-height:1.3;margin-top:5px;text-align:justify}
+.keep{break-inside:avoid}
+.headkeep{break-after:avoid}
+.confirm{background:#fff176;padding:0 2px}
+table{border-collapse:collapse;margin:4px auto 12px;font-size:9pt;break-inside:avoid}
+th,td{border:1px solid #555;padding:2px 7px;text-align:left}
+th{background:#e8eef5}
+td.n{text-align:right}
+a{color:#0b5fb3;text-decoration:none;overflow-wrap:anywhere}
+i{font-style:italic}
+</style></head><body>
+<div class="band">DISCLAIMER AND METHODS DISCLOSURE</div>
+<div class="sub">StormSense&trade; Predictive Plots &middot; Virginia Institute of Marine Science &middot; October 2026</div>
+
+<p><span class="h">Disclaimer</span> &ndash; StormSense&trade; Predictive Plots are computer-generated operational storm tide forecasts; the user assumes any and all risk. The Virginia Institute of Marine Science (VIMS) makes no warranty concerning any of the data or forecasts displayed on <b>StormSense Latest</b> (<a href="https://derekloftis.github.io/StormSense-latest/">derekloftis.github.io/StormSense-latest/</a>), on the <b>StormSense Ensemble</b> (<a href="https://derekloftis.github.io/StormSense-ensemble/">derekloftis.github.io/StormSense-ensemble/</a>), or on VIMS pages that embed them, such as <a href="https://www.vims.edu/people/loftis_jd/StormSense/forecasts/noaa/swpt/">www.vims.edu/people/loftis_jd/StormSense/forecasts/noaa/swpt/</a>. StormSense Latest is rebuilt every 6 hours at about 00:20, 06:20, 12:20 and 18:20 UTC, and the StormSense Ensemble every 6 hours at about 00:40, 06:40, 12:40 and 18:40 UTC. For each station StormSense provides a 72-hour forecast (fore72) and 7-day and 30-day observation hindcasts (7day, 30day), each in feet above mean lower low water (MLLW) and above NAVD88, each with CSV and JSON downloads and metadata documents. The information provided by <i>StormSense</i> is offered &ldquo;as-is&rdquo; with no claim explicit or implied as to its accuracy or timeliness. The user assumes all risk regarding <i>StormSense</i> or any of the following components:</p>
+
+<p><span class="h">Unverified Water Levels</span> &ndash; <i>StormSense</i> displays the same six-minute gauge observations shown by VIMS <i>Tidewatch</i>: water levels from National Oceanic and Atmospheric Administration (NOAA/NOS) Center for Operational Oceanographic Products and Services (CO-OPS) stations, U.S. Geological Survey (USGS) tide gauges, VIMS tide stations and StormSense/GreenStream sensors. The exceptions are Chesapeake Bay Bridge Tunnel (CBBT, 8638901), Money Point (MNPT, 8639348), Dahlgren (8635027) and Washington, DC (8594900), whose observations come directly from the NOAA CO-OPS Data API relative to MLLW; their NAVD88 heights are obtained as described under Tidal Datums. Consistent with its purpose as a flood warning system, <i>StormSense</i> displays observed six-minute water levels in near-real time or as soon as possible after collection. Due to this requirement, manual verification and data quality-control procedures are not implemented. Extraneous heights or data &lsquo;outliers&rsquo; should be disregarded.</p>
+
+<p><span class="h">Astronomic Tides</span> &ndash; The astronomic tide on <i>StormSense</i> charts is NOAA&rsquo;s harmonic tide prediction: the predictions carried in the NWS P-ETSS station output and, for the 30-day hindcasts at NOAA stations, NOAA CO-OPS six-minute predictions. In each case the predicted tide is shifted onto the gauge record. The astronomic tide is displayed as a blue line labeled <i>Astronomic Tide</i> together with the corresponding observed water levels shown as a red line (Figs. 1&ndash;3).</p>
+
+<p><span class="h">Residuals</span> &ndash; The difference between observed water level and predicted astronomic tide (the <i>residual</i>) provides a measure of the non-tidal water-level change. Shown as a light-blue (cyan) line labeled <i>Residual</i> in the <i>StormSense</i> charts, the residual represents water-level change forced primarily by local winds and variations in atmospheric pressure and for this reason is sometimes called the <i>weather tide</i>. A positive residual indicates weather acting to raise water levels locally whereas a negative residual indicates the reverse. When a storm occurs and positive residuals exceed a certain height, the resulting line depicts a <i>storm surge</i>, as during 23&ndash;27 September in Fig. 3.</p>
+
+<p class="headkeep"><span class="h">72-hour Storm Tide Forecasts</span> &ndash; <i>StormSense</i> 72-hour forecasts use the storm tide from the NWS Probabilistic Extra-Tropical Storm Surge model (P-ETSS), run by the NWS Meteorological Development Laboratory (MDL) as a 21-member ensemble driven by the Global Ensemble Forecast System (GEFS). The chart shows the ensemble mean as a red dashed line labeled <i>StormSense Forecast</i>, with the 10%&ndash;90% exceedance band drawn as a dark-blue cone labeled <i>Forecast Uncertainty (10%&ndash;90%)</i> (Fig. 1). The P-ETSS hourly surge is interpolated to 6 minutes, smoothed with a 3-hour filter and added to the 6-minute astronomic tide.</p>
+
+<figure>
+<img src="ss_fig1_fore72_SWPT_NAVD.png" alt="StormSense 72-hour forecast, Sewells Point, NAVD88">
+<figcaption><b>Figure 1.</b> <i>StormSense</i> 72-hour forecast for Sewells Point (SWPT) in feet above NAVD88 (latest observation 2026-10-15 16:36 EDT). The red-shaded panel at left holds the observed hindcast data: observed (red), astronomic tide (blue) and residual (cyan). The blue-shaded panel at right holds the StormSense fore72 forecast data through about 16:00 on 18 October: astronomic tide forecast (blue), StormSense forecast (red dashed), forecast residual (cyan dashed) and the 10%&ndash;90% forecast uncertainty cone, which widens with lead time until its upper edge rises above the Major line late on 18 October. Horizontal lines at right are the NWS flood categories Action 2.39, Minor 2.89, Moderate 3.89 and Major 4.89 feet, and MLLW (&minus;1.61 feet NAVD88).</figcaption>
+</figure>
+
+<p class="cont"><span class="h">72-hour Storm Tide Forecasts (continued)</span>
+Each forecast is aligned to its gauge by the median difference between the observations and P-ETSS&rsquo;s hourly storm tide over the last 24 hours, which removes datum offsets and bias. Where P-ETSS has no point for a station, the chart shows the VIMS <i>Tidewatch</i> 36-hour forecast instead, and the line under the chart disclaimer names which guidance is in use. A fixed P-ETSS override is currently applied at all stations for consistency; an adaptive choice of guidance, based on each model&rsquo;s recent skill, is planned and will be named on each chart.</p>
+
+<p>Charts in NAVD88 show the NWS National Water Prediction Service (NWPS) flood categories (Action, Minor, Moderate and Major) where NWS defines them for a station, together with the MLLW line (Fig. 1). Charts in MLLW show the tidal datum lines (Figs. 2&ndash;3; see Tidal Datums). Every line label in the chart legend can be clicked to hide or show that line.</p>
+
+<figure>
+<img src="ss_fig2_7day_SWPT_MLLW.png" alt="StormSense 7-day hindcast, Sewells Point, MLLW">
+<figcaption><b>Figure 2.</b> <i>StormSense</i> 7-day hindcast for Sewells Point in feet above MLLW, 9&ndash;15 October 2026 (latest observation 2026-10-15 20:36). Observed water level (red) stayed above the astronomic tide (blue) throughout, with a positive residual (cyan) of roughly 0.2 to 1 foot that rose to about 1 foot late on 15 October; observed high waters on 11 and 12 October exceeded the HAT line. Datum lines at right: HAT+2 5.70 and HAT+1 4.70 (dotted), HAT 3.70, MHHW 2.76, NAVD88 1.61, MSL 1.36, MLLW 0.00 and LAT &minus;0.87.</figcaption>
+</figure>
+
+<figure>
+<img src="ss_fig3_30day_SWPT_MLLW.png" alt="StormSense 30-day hindcast, Sewells Point, MLLW">
+<figcaption><b>Figure 3.</b> <i>StormSense</i> 30-day hindcast for Sewells Point in feet above MLLW, 15 September to 15 October 2026 (latest observation 2026-10-15 04:36). Observed high waters (red) reached about 6 feet above MLLW, above the HAT+2 line, during 23&ndash;27 September, when the residual (cyan) rose to more than 3 feet. Datum lines at right run from HAT+3 6.70 down to LAT &minus;0.87.</figcaption>
+</figure>
+
+<p><span class="h">StormSense Ensemble</span> &ndash; The <i>StormSense Ensemble</i> site shows one 72-hour chart per station and datum that overlays P-ETSS (with its 10%&ndash;90% cone), STOFS-2D-Global, STOFS-3D-Atlantic, the Chesapeake Bay Operational Forecast System (CBOFS), the National Water Model (NWM) coastal short-range and medium-range forecasts, the NWS official forecast, the VIMS <i>Tidewatch</i> forecast and a tide-plus-persistence baseline. Model guidance is aligned to each gauge by the median of observed minus model water level over the last 24 hours, and each run is archived.</p>
+
+<p><span class="h">Tidal Datums</span> &ndash; Mean sea level (MSL) is a tidal datum derived by NOAA/NOS as the arithmetic average of the hourly heights recorded at government tide stations in the U.S. and its territories over a specific series of 19 years designated as the National Tidal Datum Epoch (NTDE). Mean higher high water (MHHW) and mean lower low water (MLLW) are similarly derived from the higher high water (lower low water) recorded each tidal day and averaged over the NTDE, which currently consists of the 19-year series 1983&ndash;2001. Highest Astronomic Tide (HAT) and Lowest Astronomic Tide (LAT) are the highest (lowest) predicted tide over the same NTDE; dotted lines mark 1-foot steps above HAT (HAT+1, HAT+2 and so on). NAVD88, the North American Vertical Datum of 1988, is a fixed geodetic datum rather than a tidal datum. Datum heights come from NOAA&rsquo;s published datums at NOAA stations and from NOAA VDatum grids at USGS and partner sites. At Sewells Point, for example, NAVD88 zero lies 1.61 feet above MLLW (Figs. 2&ndash;3). At stations without a NOAA-published NAVD88 height, NAVD88 is converted from MLLW with NOAA VDatum (MDVAchb12 grid; VDatum uncertainty about &plusmn;0.25 feet):</p>
+
+<table>
+<tr><th>Station</th><th>NOAA ID</th><th>NAVD88 zero above MLLW</th><th>Source</th></tr>
+<tr><td>Chesapeake Bay Bridge Tunnel (CBBT)</td><td>8638901</td><td class="n">1.92 ft</td><td>NOAA VDatum (MDVAchb12)</td></tr>
+<tr><td>Money Point (MNPT)</td><td>8639348</td><td class="n">1.77 ft</td><td>NOAA VDatum (MDVAchb12)</td></tr>
+<tr><td>Dahlgren</td><td>8635027</td><td class="n">1.04 ft</td><td>NOAA published NAVD88</td></tr>
+<tr><td>Washington, DC</td><td>8594900</td><td class="n">1.40 ft</td><td>NOAA published NAVD88</td></tr>
+</table>
+</body></html>

@@ -1,0 +1,76 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><title>Tidewatch Disclaimer and Methods Disclosure</title><style>
+*{font-family:Arial,'Liberation Sans',Helvetica,sans-serif;box-sizing:border-box}
+html,body{margin:0;padding:0;background:#fff}
+body{font-size:10pt;line-height:1.3;color:#111;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+.band{background:#00467f;color:#fff;font-weight:bold;font-size:14pt;letter-spacing:0.4px;text-align:center;padding:4px 0;width:72%;margin:0 auto 3px}
+.sub{text-align:center;font-size:9.5pt;color:#333;margin:0 0 12px}
+p{text-align:justify;margin:0 0 11px}
+.h{text-decoration:underline}
+p.cont{margin-top:0}
+.cont .h{display:block;margin-bottom:8px}
+figure{margin:6px 0 12px;break-inside:avoid}
+figure img{width:100%;display:block;border:1px solid #ddd}
+figure.small img{width:68%;margin:0 auto;border:none}
+figcaption{font-size:8.6pt;line-height:1.3;margin-top:5px;text-align:justify}
+.keep{break-inside:avoid}
+.headkeep{break-after:avoid}
+.confirm{background:#fff176;padding:0 2px}
+table{border-collapse:collapse;margin:4px auto 12px;font-size:9pt;break-inside:avoid}
+th,td{border:1px solid #555;padding:2px 7px;text-align:left}
+th{background:#e8eef5}
+td.n{text-align:right}
+a{color:#0b5fb3;text-decoration:none;overflow-wrap:anywhere}
+i{font-style:italic}
+</style></head><body>
+<div class="band">DISCLAIMER AND METHODS DISCLOSURE</div>
+<div class="sub">Tidewatch Charts&trade; &middot; Virginia Institute of Marine Science &middot; updated October 2026</div>
+
+<p><span class="h">Disclaimer</span> &ndash; The Virginia Institute of Marine Science (VIMS) makes no warranty concerning any of the data displayed on its real-time water-level observations website (<a href="https://www.vims.edu/tidewatch">www.vims.edu/tidewatch</a>), which includes 36-hour water-level forecasts at 35 active stations operated by NOAA, the USGS and partners in the lower Chesapeake Bay, tidal Potomac, Eastern Shore and Hampton Roads. Tidewatch Charts&trade; are automated storm tide forecasts; user assumes all risk. The interactive charts, served from web4.vims.edu/physical/tidewatch/, are updated hourly and show three windows&mdash;a 36-hour forecast, a 3-day window and a 30-day window&mdash;each in feet above mean lower low water (MLLW) and above NAVD88, each with a CSV download. The information provided by <i>Tidewatch</i> is offered &ldquo;as-is&rdquo; with no claim explicit or implied as to its accuracy or timeliness. The user assumes all risk regarding <i>Tidewatch</i> or any of the following components:</p>
+
+<p><span class="h">Unverified Water Levels</span> &ndash; Six-minute water levels are obtained automatically from tide stations operated by the National Oceanic and Atmospheric Administration, National Ocean Service (NOAA/NOS), Center for Operational Oceanographic Products and Services (CO-OPS) through the CO-OPS Data API (api.tidesandcurrents.noaa.gov), which replaces the retired CO-OPS SOAP web services; from U.S. Geological Survey (USGS) tide gauges through USGS water services; from VIMS tide stations; and from StormSense/GreenStream sensors (GS01 and GS02). <span class="confirm">[Derek: confirm &ndash; the 2012 text read: &ldquo;Observed water levels are recorded every six minutes on the hour and tenth-hour at continuously operating VIMS tide stations and downloaded automatically via GOES satellite at half-hour intervals (Jamestown North Ferry Pier) and hourly intervals (Back River Dandy Haven).&rdquo; Is this still how the VIMS stations report?]</span> Consistent with its purpose as a flood warning system, <i>Tidewatch</i> displays observed six-minute water levels in near-real time or as soon as possible after collection. Due to this requirement, manual verification and data quality-control procedures are not implemented. Extraneous heights or data &lsquo;outliers&rsquo; should be disregarded.</p>
+
+<p><span class="h">Astronomic Tides</span> &ndash; Astronomic tides are computer-generated at six-minute intervals by a VIMS tide prediction program using tidal harmonic constants derived from a least-squares harmonic analysis (Boon&rsquo;s HAMELS method, described in <i>Secrets of the Tide</i>) of either a one-year (369-day) or 9-month (273-day) time series of water-level observations at tide stations included in the <i>Tidewatch</i> network. VIMS tide predictions use up to 27 tidal constituents per station but do not include the solar annual (Sa) or solar semiannual (Ssa) constituents normally used to represent the <i>average</i> seasonal cycle, a cycle derived from monthly water levels averaged over several years. VIMS&rsquo; astronomic tides are displayed as a blue line labeled <i>Astronomic (m30)</i> together with corresponding observed water levels shown as a red line in the <b><i>Tidewatch</i> 30-day window</b> (Fig. 1). Within this window, the astronomic tide is referenced to the observed water level averaged over the past 30 days, a level drawn as a teal dash-dot line marked <i>m30</i> at the right of the chart. As a short-term moving average, the m30 line approximates sea level in real time&mdash;a constantly changing level that responds to the <i>actual</i> seasonal cycle as well as longer term oceanographic signals as they appear during the year at hand.</p>
+
+<p><span class="h">Residuals</span> &ndash; The difference between observed water level and predicted astronomic tide (the <i>residual</i>) provides a measure of the non-tidal water-level change. Shown as a green line in the <i>Tidewatch</i> charts, the residual represents water-level change forced primarily by local winds and variations in atmospheric pressure and for this reason is sometimes called the <i>weather tide</i>. Because the astronomic tide and the observed water level have the same mean over the past 30 days in the <i>Tidewatch</i> application, the average residual during this period is zero. Thus a negative residual indicates weather acting to lower water levels locally whereas a positive residual indicates the reverse (Fig. 2). When a storm occurs and positive residuals exceed a certain height, the resulting green line depicts a <i>storm surge</i>, as in the residual of about 2 feet during 23&ndash;27 September in Fig. 1.</p>
+
+<p class="headkeep"><span class="h">36-hour Water-Level Forecasts</span> &ndash; <i>Tidewatch</i> 36-hour forecasts are generated by adding the astronomic tide (referenced to m30) to storm surge forecasts obtained from the National Weather Service (NOAA/NWS) Extratropical Storm Surge (ETSS) model, driven by winds and pressures derived from the NWS Global Forecast System (GFS) atmospheric model.</p>
+
+<figure>
+<img src="tw_fig1_30d_SWPT_MLLW.png" alt="Tidewatch 30-day window, Sewells Point">
+<figcaption><b>Figure 1.</b> <i>Tidewatch</i> 30-day window for Sewells Point (SWPT), 14 September to 14 October 2026 (latest observation 2026-10-14 04:36), showing observed (red), astronomic (m30) (blue) and residual (observed minus predicted, green) water levels. Scale at left indicates water level in feet above MLLW (chart datum). Datum lines are labeled at right with their elevation above MLLW: HAT+3, HAT+2 and HAT+1 (dotted), HAT 3.70, MHHW 2.76, NAVD88 1.61, MSL 1.36, MLLW 0.00 and LAT &minus;0.87, with m30 (2.64) drawn as a teal dash-dot line (see Tidal Datums). Observed high waters near 6 feet above MLLW occurred during 23&ndash;27 September while the residual stood near 2 feet.</figcaption>
+</figure>
+
+<figure>
+<img src="tw_fig2_3d_SWPT_MLLW.png" alt="Tidewatch 3-day window, Sewells Point">
+<figcaption><b>Figure 2.</b> <i>Tidewatch</i> 3-day window for Sewells Point, 13&ndash;15 October 2026 (latest observation 2026-10-15 23:36). Observed water levels (red) ran below the astronomic tide (blue) for most of the window, so the residual (green) was negative, by up to about half a foot, before returning to near zero on the evening of 15 October. The highest observed water level, near midday on 15 October, reached about the HAT line (3.70 feet above MLLW).</figcaption>
+</figure>
+
+<p class="cont"><span class="h">36-hour Water-Level Forecasts (continued)</span>
+The NWS extratropical storm surge model differs from similar hydrodynamic models by not including the astronomic tide or other types of oceanographic forcing broadly categorized as a sea-level anomaly. A water-level forecast similar to <i>Tidewatch</i> is generated by the NWS Meteorological Development Laboratory (MDL) for extratropical storms according to the following formula: forecast = tide + surge + anomaly. While NOAA tide predictions reference a fixed tidal datum (see Tidal Datums section below), <i>Tidewatch</i> includes the anomaly in its tidal predictions by referencing the tide to a dynamic datum (m30) and so uses tide + surge as its formula.</p>
+
+<p>Figure 3 illustrates how a typical <i>Tidewatch</i> water-level forecast is derived. It can be seen in this figure that the most recent observations can be extended as a forecast (red dashed line) by simply extending the residual using the ETSS forecast (green dashed line) and adding the astronomic tide. Tests conducted at VIMS with hind-cast data found that the extratropical surge model tends to over-predict in the lower Chesapeake Bay region. Consequently, ETSS output is first multiplied by a reduction factor (0.7) before applying an offset that brings it into agreement with the residual from the latest observation (where the solid green line meets the dashed green line in Fig. 3). The advantage of this approach lies in keeping the forecast component relatively short (36 hours typically covers the next three high waters) while updating observations and thus the residual as often as possible. Results of the original 2003 test of mean absolute error for forecast high water heights as a function of projection time are shown in Fig. 4; the expected error is about 0.3 feet for a high water projection approaching 36 hours ahead, reduced to about 0.2 feet when just 12 hours away.</p>
+
+<figure>
+<img src="tw_fig3_f36_SWPT_MLLW.png" alt="Tidewatch 36-hour forecast, Sewells Point">
+<figcaption><b>Figure 3.</b> <i>Tidewatch</i> 36-hour forecast for Sewells Point (latest observation 2026-10-15 19:36 EDT; forecast to about 08:00 on 17 October). Solid lines are observed water level (red), astronomic tide (m30) (blue) and residual (green); dashed lines are the 36-hour forecast (red) and the forecast residual (green), with the astronomic (m30) forecast continuing in blue. The forecast residual stays within about half a foot of zero; the highest of the three forecast high waters, early in the afternoon of 16 October, reaches about the HAT line (3.70 feet above MLLW).</figcaption>
+</figure>
+
+<figure class="small">
+<img src="tw_fig4_2003_SWPT_MAE.png" alt="2003 mean absolute error bar chart">
+<figcaption><b>Figure 4.</b> Bar graph of mean absolute error for high waters determined within class intervals of projection time at Norfolk (Sewells Point), VA, in 2003 (the original 2003 test, reproduced from the 2012 disclosure). Absolute error is the difference between forecast and observed high water ignoring the sign.</figcaption>
+</figure>
+
+<p><span class="h">Tidal Datums</span> &ndash; A set of datum lines is shown to the right of each <i>Tidewatch</i> chart (e.g., Figs. 1&ndash;3). Mean sea level (MSL) is a tidal datum derived by NOAA/NOS as the arithmetic average of the hourly heights recorded at government tide stations in the U.S. and its territories over a specific series of 19 years designated as the National Tidal Datum Epoch (NTDE). Mean higher high water (MHHW) and mean lower low water (MLLW) are similarly derived from the higher high water (lower low water) recorded each tidal day and averaged over the NTDE, which currently consists of the 19-year series 1983&ndash;2001. NOAA/NOS will revise the NTDE approximately every 20&ndash;25 years or as needed in response to sea-level change (past revisions have seen MSL, MHHW and MLLW each revised upwards by approximately 0.3 feet per revision). Highest Astronomic Tide (HAT) and Lowest Astronomic Tide (LAT) are derived as the highest (lowest) predicted tide relative to MSL over the 1983&ndash;2001 NTDE. As &lsquo;offsets&rsquo; from MSL, HAT, MHHW, MLLW and LAT will remain fixed relative to the land until a new NTDE is implemented and MSL is revised &ndash; in contrast to m30, which varies continuously with time.</p>
+
+<p>The datum-styled charts introduced this year draw HAT, MHHW, MSL, MLLW, LAT and NAVD88 (the North American Vertical Datum of 1988) as horizontal lines, taken from NOAA&rsquo;s published datums (NTDE 1983&ndash;2001) at NOAA stations and from NOAA VDatum grids at USGS and partner sites. Dotted lines mark 1-foot steps above HAT (HAT+1, HAT+2; HAT+3 also appears in Fig. 1), and m30 is drawn as a teal line. NOAA&rsquo;s current HAT and LAT differ slightly from the HAT83 and LAT83 shown on the Classic charts; at Sewells Point, for example, HAT is 3.70 feet and LAT &minus;0.87 feet above MLLW, versus HAT83 3.53 feet and LAT83 &minus;0.67 feet. At stations without a NOAA-published NAVD88 height, NAVD88 is converted from MLLW with NOAA VDatum (MDVAchb12 grid; VDatum uncertainty about &plusmn;0.25 feet):</p>
+
+<table>
+<tr><th>Station</th><th>NOAA ID</th><th>NAVD88 zero above MLLW</th><th>Source</th></tr>
+<tr><td>Chesapeake Bay Bridge Tunnel (CBBT)</td><td>8638901</td><td class="n">1.92 ft</td><td>NOAA VDatum (MDVAchb12)</td></tr>
+<tr><td>Money Point (MNPT)</td><td>8639348</td><td class="n">1.77 ft</td><td>NOAA VDatum (MDVAchb12)</td></tr>
+<tr><td>Dahlgren</td><td>8635027</td><td class="n">1.04 ft</td><td>NOAA published NAVD88</td></tr>
+<tr><td>Washington, DC</td><td>8594900</td><td class="n">1.40 ft</td><td>NOAA published NAVD88</td></tr>
+</table>
+
+<p>Tidal datums provide useful information on the tidal characteristics at each <i>Tidewatch</i> station. The mean diurnal range of tide at each station is found as the MHHW&ndash;MLLW difference; e.g., 2.76 feet at Sewells Point (Figs. 1&ndash;2). The m30&ndash;MSL difference (1.28 feet in Fig. 1) provides a comparison of short-term and long-term sea level at each station, furnishing important information on sea-level state (local sea-level anomaly) in advance of a major storm. The HAT datum is particularly useful as a reference for extreme water levels, a fixed datum roughly analogous to flood stage along inland rivers. When making comparisons between two tide stations, an extreme water level or <i>storm tide</i> measured in feet above HAT gives a direct indication of the flood potential at either station whereas an extreme measured above MLLW compares the difference in tidal range in addition to flood potential.</p>
+</body></html>
