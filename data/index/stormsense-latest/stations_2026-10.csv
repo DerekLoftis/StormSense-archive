@@ -1823,3 +1823,231 @@ cycle,asset,station,product,datum,html,csv,json,rows,first_time_z,last_time_z,so
 2026-10-23T00Z,stormsense_2026-10-23T0025Z.tar.xz,YRCG,7day,NAVD,1,1,1,1680,2026-10-15T22:42:00Z,2026-10-22T22:36:00Z,gauge observations; astronomical tide from NWS P-ETSS and NOAA CO-OPS predictions
 2026-10-23T00Z,stormsense_2026-10-23T0025Z.tar.xz,YRCG,fore72,MLLW,1,1,1,720,2026-10-22T22:36:00Z,2026-10-25T22:30:00Z,NWS P-ETSS (adaptive pick: until a week of skill history exists)
 2026-10-23T00Z,stormsense_2026-10-23T0025Z.tar.xz,YRCG,fore72,NAVD,1,1,1,720,2026-10-22T22:36:00Z,2026-10-25T22:30:00Z,NWS P-ETSS (adaptive pick: until a week of skill history exists)
+2026-10-23T00Z,stormsense_2026-10-23T0505Z.tar.xz,BISH,30day,MLLW,1,1,1,7198,2026-09-23T04:48:00Z,2026-10-23T04:30:00Z,gauge observations; astronomical tide from NWS P-ETSS and NOAA CO-OPS predictions
+2026-10-23T00Z,stormsense_2026-10-23T0505Z.tar.xz,BISH,30day,NAVD,1,1,1,7198,2026-09-23T04:48:00Z,2026-10-23T04:30:00Z,gauge observations; astronomical tide from NWS P-ETSS and NOAA CO-OPS predictions
+2026-10-23T00Z,stormsense_2026-10-23T0505Z.tar.xz,BISH,7day,MLLW,1,1,1,1680,2026-10-16T04:36:00Z,2026-10-23T04:30:00Z,gauge observations; astronomical tide from NWS P-ETSS and NOAA CO-OPS predictions
+2026-10-23T00Z,stormsense_2026-10-23T0505Z.tar.xz,BISH,7day,NAVD,1,1,1,1680,2026-10-16T04:36:00Z,2026-10-23T04:30:00Z,gauge observations; astronomical tide from NWS P-ETSS and NOAA CO-OPS predictions
+2026-10-23T00Z,stormsense_2026-10-23T0505Z.tar.xz,BISH,fore72,MLLW,1,1,1,720,2026-10-23T04:30:00Z,2026-10-26T04:24:00Z,NWS P-ETSS (adaptive pick: until a week of skill history exists)
+2026-10-23T00Z,stormsense_2026-10-23T0505Z.tar.xz,BISH,fore72,NAVD,1,1,1,720,2026-10-23T04:30:00Z,2026-10-26T04:24:00Z,NWS P-ETSS (adaptive pick: until a week of skill history exists)
+2026-10-23T00Z,stormsense_2026-10-23T0505Z.tar.xz,BRDH,30day,MLLW,1,1,1,7200,2026-09-23T04:30:00Z,2026-10-23T04:24:00Z,gauge observations; astronomical tide from NWS P-ETSS and NOAA CO-OPS predictions
+2026-10-23T00Z,stormsense_2026-10-23T0505Z.tar.xz,BRDH,30day,NAVD,1,1,1,7200,2026-09-23T04:30:00Z,2026-10-23T04:24:00Z,gauge observations; astronomical tide from NWS P-ETSS and NOAA CO-OPS predictions
+2026-10-23T00Z,stormsense_2026-10-23T0505Z.tar.xz,BRDH,7day,MLLW,1,1,1,1680,2026-10-16T04:30:00Z,2026-10-23T04:24:00Z,gauge observations; astronomical tide from NWS P-ETSS and NOAA CO-OPS predictions
+2026-10-23T00Z,stormsense_2026-10-23T0505Z.tar.xz,BRDH,7day,NAVD,1,1,1,1680,2026-10-16T04:30:00Z,2026-10-23T04:24:00Z,gauge observations; astronomical tide from NWS P-ETSS and NOAA CO-OPS predictions
+2026-10-23T00Z,stormsense_2026-10-23T0505Z.tar.xz,BRDH,fore72,MLLW,1,1,1,720,2026-10-23T04:24:00Z,2026-10-26T04:18:00Z,NWS P-ETSS (adaptive pick: until a week of skill history exists)
+2026-10-23T00Z,stormsense_2026-10-23T0505Z.tar.xz,BRDH,fore72,NAVD,1,1,1,720,2026-10-23T04:24:00Z,2026-10-26T04:18:00Z,NWS P-ETSS (adaptive pick: until a week of skill history exists)
+2026-10-23T00Z,stormsense_2026-10-23T0505Z.tar.xz,CBBT,30day,MLLW,1,1,1,7200,2026-09-23T05:00:00Z,2026-10-23T04:54:00Z,gauge observations; astronomical tide from NWS P-ETSS and NOAA CO-OPS predictions
+2026-10-23T00Z,stormsense_2026-10-23T0505Z.tar.xz,CBBT,30day,NAVD,1,1,1,7200,2026-09-23T05:00:00Z,2026-10-23T04:54:00Z,gauge observations; astronomical tide from NWS P-ETSS and NOAA CO-OPS predictions
+2026-10-23T00Z,stormsense_2026-10-23T0505Z.tar.xz,CBBT,7day,MLLW,1,1,1,1680,2026-10-16T05:00:00Z,2026-10-23T04:54:00Z,gauge observations; astronomical tide from NWS P-ETSS and NOAA CO-OPS predictions
+2026-10-23T00Z,stormsense_2026-10-23T0505Z.tar.xz,CBBT,7day,NAVD,1,1,1,1680,2026-10-16T05:00:00Z,2026-10-23T04:54:00Z,gauge observations; astronomical tide from NWS P-ETSS and NOAA CO-OPS predictions
+2026-10-23T00Z,stormsense_2026-10-23T0505Z.tar.xz,CBBT,fore72,MLLW,1,1,1,720,2026-10-23T04:54:00Z,2026-10-26T04:48:00Z,NWS P-ETSS (adaptive pick: until a week of skill history exists)
+2026-10-23T00Z,stormsense_2026-10-23T0505Z.tar.xz,CBBT,fore72,NAVD,1,1,1,720,2026-10-23T04:54:00Z,2026-10-26T04:48:00Z,NWS P-ETSS (adaptive pick: until a week of skill history exists)
+2026-10-23T00Z,stormsense_2026-10-23T0505Z.tar.xz,CNRC,30day,MLLW,1,1,1,8603,2026-09-23T04:40:00Z,2026-10-23T04:35:00Z,gauge observations; astronomical tide from NWS P-ETSS and NOAA CO-OPS predictions
+2026-10-23T00Z,stormsense_2026-10-23T0505Z.tar.xz,CNRC,30day,NAVD,1,1,1,8603,2026-09-23T04:40:00Z,2026-10-23T04:35:00Z,gauge observations; astronomical tide from NWS P-ETSS and NOAA CO-OPS predictions
+2026-10-23T00Z,stormsense_2026-10-23T0505Z.tar.xz,CNRC,7day,MLLW,1,1,1,2002,2026-10-16T04:40:00Z,2026-10-23T04:35:00Z,gauge observations; astronomical tide from NWS P-ETSS and NOAA CO-OPS predictions
+2026-10-23T00Z,stormsense_2026-10-23T0505Z.tar.xz,CNRC,7day,NAVD,1,1,1,2002,2026-10-16T04:40:00Z,2026-10-23T04:35:00Z,gauge observations; astronomical tide from NWS P-ETSS and NOAA CO-OPS predictions
+2026-10-23T00Z,stormsense_2026-10-23T0505Z.tar.xz,CNRC,fore72,MLLW,1,1,1,720,2026-10-23T04:35:00Z,2026-10-26T04:29:00Z,NWS P-ETSS (adaptive pick: until a week of skill history exists)
+2026-10-23T00Z,stormsense_2026-10-23T0505Z.tar.xz,CNRC,fore72,NAVD,1,1,1,720,2026-10-23T04:35:00Z,2026-10-26T04:29:00Z,NWS P-ETSS (adaptive pick: until a week of skill history exists)
+2026-10-23T00Z,stormsense_2026-10-23T0505Z.tar.xz,DAHL,30day,MLLW,1,1,1,7200,2026-09-23T05:00:00Z,2026-10-23T04:54:00Z,gauge observations; astronomical tide from NWS P-ETSS and NOAA CO-OPS predictions
+2026-10-23T00Z,stormsense_2026-10-23T0505Z.tar.xz,DAHL,30day,NAVD,1,1,1,7200,2026-09-23T05:00:00Z,2026-10-23T04:54:00Z,gauge observations; astronomical tide from NWS P-ETSS and NOAA CO-OPS predictions
+2026-10-23T00Z,stormsense_2026-10-23T0505Z.tar.xz,DAHL,7day,MLLW,1,1,1,1680,2026-10-16T05:00:00Z,2026-10-23T04:54:00Z,gauge observations; astronomical tide from NWS P-ETSS and NOAA CO-OPS predictions
+2026-10-23T00Z,stormsense_2026-10-23T0505Z.tar.xz,DAHL,7day,NAVD,1,1,1,1680,2026-10-16T05:00:00Z,2026-10-23T04:54:00Z,gauge observations; astronomical tide from NWS P-ETSS and NOAA CO-OPS predictions
+2026-10-23T00Z,stormsense_2026-10-23T0505Z.tar.xz,DAHL,fore72,MLLW,1,1,1,720,2026-10-23T04:54:00Z,2026-10-26T04:48:00Z,NWS P-ETSS (adaptive pick: until a week of skill history exists)
+2026-10-23T00Z,stormsense_2026-10-23T0505Z.tar.xz,DAHL,fore72,NAVD,1,1,1,720,2026-10-23T04:54:00Z,2026-10-26T04:48:00Z,NWS P-ETSS (adaptive pick: until a week of skill history exists)
+2026-10-23T00Z,stormsense_2026-10-23T0505Z.tar.xz,GS01,30day,MLLW,1,1,1,7196,2026-09-23T03:48:00Z,2026-10-23T03:42:00Z,gauge observations; astronomical tide from NWS P-ETSS and NOAA CO-OPS predictions
+2026-10-23T00Z,stormsense_2026-10-23T0505Z.tar.xz,GS01,30day,NAVD,1,1,1,7196,2026-09-23T03:48:00Z,2026-10-23T03:42:00Z,gauge observations; astronomical tide from NWS P-ETSS and NOAA CO-OPS predictions
+2026-10-23T00Z,stormsense_2026-10-23T0505Z.tar.xz,GS01,7day,MLLW,1,1,1,1680,2026-10-16T03:48:00Z,2026-10-23T03:42:00Z,gauge observations; astronomical tide from NWS P-ETSS and NOAA CO-OPS predictions
+2026-10-23T00Z,stormsense_2026-10-23T0505Z.tar.xz,GS01,7day,NAVD,1,1,1,1680,2026-10-16T03:48:00Z,2026-10-23T03:42:00Z,gauge observations; astronomical tide from NWS P-ETSS and NOAA CO-OPS predictions
+2026-10-23T00Z,stormsense_2026-10-23T0505Z.tar.xz,GS01,fore72,MLLW,1,1,1,360,2026-10-23T03:42:00Z,2026-10-24T15:36:00Z,VIMS Tidewatch 36-hour forecast (no P-ETSS point for this station)
+2026-10-23T00Z,stormsense_2026-10-23T0505Z.tar.xz,GS01,fore72,NAVD,1,1,1,360,2026-10-23T03:42:00Z,2026-10-24T15:36:00Z,VIMS Tidewatch 36-hour forecast (no P-ETSS point for this station)
+2026-10-23T00Z,stormsense_2026-10-23T0505Z.tar.xz,GS02,30day,MLLW,1,1,1,7196,2026-09-23T03:48:00Z,2026-10-23T03:42:00Z,gauge observations; astronomical tide from NWS P-ETSS and NOAA CO-OPS predictions
+2026-10-23T00Z,stormsense_2026-10-23T0505Z.tar.xz,GS02,30day,NAVD,1,1,1,7196,2026-09-23T03:48:00Z,2026-10-23T03:42:00Z,gauge observations; astronomical tide from NWS P-ETSS and NOAA CO-OPS predictions
+2026-10-23T00Z,stormsense_2026-10-23T0505Z.tar.xz,GS02,7day,MLLW,1,1,1,1680,2026-10-16T03:48:00Z,2026-10-23T03:42:00Z,gauge observations; astronomical tide from NWS P-ETSS and NOAA CO-OPS predictions
+2026-10-23T00Z,stormsense_2026-10-23T0505Z.tar.xz,GS02,7day,NAVD,1,1,1,1680,2026-10-16T03:48:00Z,2026-10-23T03:42:00Z,gauge observations; astronomical tide from NWS P-ETSS and NOAA CO-OPS predictions
+2026-10-23T00Z,stormsense_2026-10-23T0505Z.tar.xz,GS02,fore72,MLLW,1,1,1,360,2026-10-23T03:42:00Z,2026-10-24T15:36:00Z,VIMS Tidewatch 36-hour forecast (no P-ETSS point for this station)
+2026-10-23T00Z,stormsense_2026-10-23T0505Z.tar.xz,GS02,fore72,NAVD,1,1,1,360,2026-10-23T03:42:00Z,2026-10-24T15:36:00Z,VIMS Tidewatch 36-hour forecast (no P-ETSS point for this station)
+2026-10-23T00Z,stormsense_2026-10-23T0505Z.tar.xz,KIPT,30day,MLLW,1,1,1,7196,2026-09-23T04:48:00Z,2026-10-23T04:30:00Z,gauge observations; astronomical tide from NWS P-ETSS and NOAA CO-OPS predictions
+2026-10-23T00Z,stormsense_2026-10-23T0505Z.tar.xz,KIPT,30day,NAVD,1,1,1,7196,2026-09-23T04:48:00Z,2026-10-23T04:30:00Z,gauge observations; astronomical tide from NWS P-ETSS and NOAA CO-OPS predictions
+2026-10-23T00Z,stormsense_2026-10-23T0505Z.tar.xz,KIPT,7day,MLLW,1,1,1,1680,2026-10-16T04:36:00Z,2026-10-23T04:30:00Z,gauge observations; astronomical tide from NWS P-ETSS and NOAA CO-OPS predictions
+2026-10-23T00Z,stormsense_2026-10-23T0505Z.tar.xz,KIPT,7day,NAVD,1,1,1,1680,2026-10-16T04:36:00Z,2026-10-23T04:30:00Z,gauge observations; astronomical tide from NWS P-ETSS and NOAA CO-OPS predictions
+2026-10-23T00Z,stormsense_2026-10-23T0505Z.tar.xz,KIPT,fore72,MLLW,1,1,1,720,2026-10-23T04:30:00Z,2026-10-26T04:24:00Z,NWS P-ETSS (adaptive pick: until a week of skill history exists)
+2026-10-23T00Z,stormsense_2026-10-23T0505Z.tar.xz,KIPT,fore72,NAVD,1,1,1,720,2026-10-23T04:30:00Z,2026-10-26T04:24:00Z,NWS P-ETSS (adaptive pick: until a week of skill history exists)
+2026-10-23T00Z,stormsense_2026-10-23T0505Z.tar.xz,LEWI,30day,MLLW,1,1,1,7199,2026-09-23T03:48:00Z,2026-10-23T03:36:00Z,gauge observations; astronomical tide from NWS P-ETSS and NOAA CO-OPS predictions
+2026-10-23T00Z,stormsense_2026-10-23T0505Z.tar.xz,LEWI,30day,NAVD,1,1,1,7199,2026-09-23T03:48:00Z,2026-10-23T03:36:00Z,gauge observations; astronomical tide from NWS P-ETSS and NOAA CO-OPS predictions
+2026-10-23T00Z,stormsense_2026-10-23T0505Z.tar.xz,LEWI,7day,MLLW,1,1,1,1680,2026-10-16T03:42:00Z,2026-10-23T03:36:00Z,gauge observations; astronomical tide from NWS P-ETSS and NOAA CO-OPS predictions
+2026-10-23T00Z,stormsense_2026-10-23T0505Z.tar.xz,LEWI,7day,NAVD,1,1,1,1680,2026-10-16T03:42:00Z,2026-10-23T03:36:00Z,gauge observations; astronomical tide from NWS P-ETSS and NOAA CO-OPS predictions
+2026-10-23T00Z,stormsense_2026-10-23T0505Z.tar.xz,LEWI,fore72,MLLW,1,1,1,720,2026-10-23T03:36:00Z,2026-10-26T03:30:00Z,NWS P-ETSS (adaptive pick: until a week of skill history exists)
+2026-10-23T00Z,stormsense_2026-10-23T0505Z.tar.xz,LEWI,fore72,NAVD,1,1,1,720,2026-10-23T03:36:00Z,2026-10-26T03:30:00Z,NWS P-ETSS (adaptive pick: until a week of skill history exists)
+2026-10-23T00Z,stormsense_2026-10-23T0505Z.tar.xz,MNPT,30day,MLLW,1,1,1,7200,2026-09-23T05:00:00Z,2026-10-23T04:54:00Z,gauge observations; astronomical tide from NWS P-ETSS and NOAA CO-OPS predictions
+2026-10-23T00Z,stormsense_2026-10-23T0505Z.tar.xz,MNPT,30day,NAVD,1,1,1,7200,2026-09-23T05:00:00Z,2026-10-23T04:54:00Z,gauge observations; astronomical tide from NWS P-ETSS and NOAA CO-OPS predictions
+2026-10-23T00Z,stormsense_2026-10-23T0505Z.tar.xz,MNPT,7day,MLLW,1,1,1,1680,2026-10-16T05:00:00Z,2026-10-23T04:54:00Z,gauge observations; astronomical tide from NWS P-ETSS and NOAA CO-OPS predictions
+2026-10-23T00Z,stormsense_2026-10-23T0505Z.tar.xz,MNPT,7day,NAVD,1,1,1,1680,2026-10-16T05:00:00Z,2026-10-23T04:54:00Z,gauge observations; astronomical tide from NWS P-ETSS and NOAA CO-OPS predictions
+2026-10-23T00Z,stormsense_2026-10-23T0505Z.tar.xz,MNPT,fore72,MLLW,1,1,1,720,2026-10-23T04:54:00Z,2026-10-26T04:48:00Z,NWS P-ETSS (adaptive pick: until a week of skill history exists)
+2026-10-23T00Z,stormsense_2026-10-23T0505Z.tar.xz,MNPT,fore72,NAVD,1,1,1,720,2026-10-23T04:54:00Z,2026-10-26T04:48:00Z,NWS P-ETSS (adaptive pick: until a week of skill history exists)
+2026-10-23T00Z,stormsense_2026-10-23T0505Z.tar.xz,SWPT,30day,MLLW,1,1,1,7199,2026-09-23T04:48:00Z,2026-10-23T04:36:00Z,gauge observations; astronomical tide from NWS P-ETSS and NOAA CO-OPS predictions
+2026-10-23T00Z,stormsense_2026-10-23T0505Z.tar.xz,SWPT,30day,NAVD,1,1,1,7199,2026-09-23T04:48:00Z,2026-10-23T04:36:00Z,gauge observations; astronomical tide from NWS P-ETSS and NOAA CO-OPS predictions
+2026-10-23T00Z,stormsense_2026-10-23T0505Z.tar.xz,SWPT,7day,MLLW,1,1,1,1680,2026-10-16T04:42:00Z,2026-10-23T04:36:00Z,gauge observations; astronomical tide from NWS P-ETSS and NOAA CO-OPS predictions
+2026-10-23T00Z,stormsense_2026-10-23T0505Z.tar.xz,SWPT,7day,NAVD,1,1,1,1680,2026-10-16T04:42:00Z,2026-10-23T04:36:00Z,gauge observations; astronomical tide from NWS P-ETSS and NOAA CO-OPS predictions
+2026-10-23T00Z,stormsense_2026-10-23T0505Z.tar.xz,SWPT,fore72,MLLW,1,1,1,720,2026-10-23T04:36:00Z,2026-10-26T04:30:00Z,NWS P-ETSS (adaptive pick: until a week of skill history exists)
+2026-10-23T00Z,stormsense_2026-10-23T0505Z.tar.xz,SWPT,fore72,NAVD,1,1,1,720,2026-10-23T04:36:00Z,2026-10-26T04:30:00Z,NWS P-ETSS (adaptive pick: until a week of skill history exists)
+2026-10-23T00Z,stormsense_2026-10-23T0505Z.tar.xz,USAR,30day,MLLW,1,1,1,7132,2026-09-23T04:48:00Z,2026-10-23T00:30:00Z,gauge observations; astronomical tide from NWS P-ETSS and NOAA CO-OPS predictions
+2026-10-23T00Z,stormsense_2026-10-23T0505Z.tar.xz,USAR,30day,NAVD,1,1,1,7132,2026-09-23T04:48:00Z,2026-10-23T00:30:00Z,gauge observations; astronomical tide from NWS P-ETSS and NOAA CO-OPS predictions
+2026-10-23T00Z,stormsense_2026-10-23T0505Z.tar.xz,USAR,7day,MLLW,1,1,1,1680,2026-10-16T00:36:00Z,2026-10-23T00:30:00Z,gauge observations; astronomical tide from NWS P-ETSS and NOAA CO-OPS predictions
+2026-10-23T00Z,stormsense_2026-10-23T0505Z.tar.xz,USAR,7day,NAVD,1,1,1,1680,2026-10-16T00:36:00Z,2026-10-23T00:30:00Z,gauge observations; astronomical tide from NWS P-ETSS and NOAA CO-OPS predictions
+2026-10-23T00Z,stormsense_2026-10-23T0505Z.tar.xz,USAR,fore72,MLLW,1,1,1,360,2026-10-23T00:30:00Z,2026-10-24T12:24:00Z,VIMS Tidewatch 36-hour forecast (no P-ETSS point for this station)
+2026-10-23T00Z,stormsense_2026-10-23T0505Z.tar.xz,USAR,fore72,NAVD,1,1,1,360,2026-10-23T00:30:00Z,2026-10-24T12:24:00Z,VIMS Tidewatch 36-hour forecast (no P-ETSS point for this station)
+2026-10-23T00Z,stormsense_2026-10-23T0505Z.tar.xz,USBB,30day,MLLW,1,1,1,7121,2026-09-23T04:48:00Z,2026-10-23T00:24:00Z,gauge observations; astronomical tide from NWS P-ETSS and NOAA CO-OPS predictions
+2026-10-23T00Z,stormsense_2026-10-23T0505Z.tar.xz,USBB,30day,NAVD,1,1,1,7121,2026-09-23T04:48:00Z,2026-10-23T00:24:00Z,gauge observations; astronomical tide from NWS P-ETSS and NOAA CO-OPS predictions
+2026-10-23T00Z,stormsense_2026-10-23T0505Z.tar.xz,USBB,7day,MLLW,1,1,1,1669,2026-10-16T00:30:00Z,2026-10-23T00:24:00Z,gauge observations; astronomical tide from NWS P-ETSS and NOAA CO-OPS predictions
+2026-10-23T00Z,stormsense_2026-10-23T0505Z.tar.xz,USBB,7day,NAVD,1,1,1,1669,2026-10-16T00:30:00Z,2026-10-23T00:24:00Z,gauge observations; astronomical tide from NWS P-ETSS and NOAA CO-OPS predictions
+2026-10-23T00Z,stormsense_2026-10-23T0505Z.tar.xz,USBB,fore72,MLLW,1,1,1,360,2026-10-23T00:24:00Z,2026-10-24T12:18:00Z,VIMS Tidewatch 36-hour forecast (no P-ETSS point for this station)
+2026-10-23T00Z,stormsense_2026-10-23T0505Z.tar.xz,USBB,fore72,NAVD,1,1,1,360,2026-10-23T00:24:00Z,2026-10-24T12:18:00Z,VIMS Tidewatch 36-hour forecast (no P-ETSS point for this station)
+2026-10-23T00Z,stormsense_2026-10-23T0505Z.tar.xz,USBC,30day,MLLW,1,1,1,7119,2026-09-23T04:48:00Z,2026-10-23T00:24:00Z,gauge observations; astronomical tide from NWS P-ETSS and NOAA CO-OPS predictions
+2026-10-23T00Z,stormsense_2026-10-23T0505Z.tar.xz,USBC,30day,NAVD,1,1,1,7119,2026-09-23T04:48:00Z,2026-10-23T00:24:00Z,gauge observations; astronomical tide from NWS P-ETSS and NOAA CO-OPS predictions
+2026-10-23T00Z,stormsense_2026-10-23T0505Z.tar.xz,USBC,7day,MLLW,1,1,1,1668,2026-10-16T00:30:00Z,2026-10-23T00:24:00Z,gauge observations; astronomical tide from NWS P-ETSS and NOAA CO-OPS predictions
+2026-10-23T00Z,stormsense_2026-10-23T0505Z.tar.xz,USBC,7day,NAVD,1,1,1,1668,2026-10-16T00:30:00Z,2026-10-23T00:24:00Z,gauge observations; astronomical tide from NWS P-ETSS and NOAA CO-OPS predictions
+2026-10-23T00Z,stormsense_2026-10-23T0505Z.tar.xz,USBC,fore72,MLLW,1,1,1,360,2026-10-23T00:24:00Z,2026-10-24T12:18:00Z,VIMS Tidewatch 36-hour forecast (no P-ETSS point for this station)
+2026-10-23T00Z,stormsense_2026-10-23T0505Z.tar.xz,USBC,fore72,NAVD,1,1,1,360,2026-10-23T00:24:00Z,2026-10-24T12:18:00Z,VIMS Tidewatch 36-hour forecast (no P-ETSS point for this station)
+2026-10-23T00Z,stormsense_2026-10-23T0505Z.tar.xz,USBK,30day,MLLW,1,1,1,7132,2026-09-23T04:48:00Z,2026-10-23T00:30:00Z,gauge observations; astronomical tide from NWS P-ETSS and NOAA CO-OPS predictions
+2026-10-23T00Z,stormsense_2026-10-23T0505Z.tar.xz,USBK,30day,NAVD,1,1,1,7132,2026-09-23T04:48:00Z,2026-10-23T00:30:00Z,gauge observations; astronomical tide from NWS P-ETSS and NOAA CO-OPS predictions
+2026-10-23T00Z,stormsense_2026-10-23T0505Z.tar.xz,USBK,7day,MLLW,1,1,1,1680,2026-10-16T00:36:00Z,2026-10-23T00:30:00Z,gauge observations; astronomical tide from NWS P-ETSS and NOAA CO-OPS predictions
+2026-10-23T00Z,stormsense_2026-10-23T0505Z.tar.xz,USBK,7day,NAVD,1,1,1,1680,2026-10-16T00:36:00Z,2026-10-23T00:30:00Z,gauge observations; astronomical tide from NWS P-ETSS and NOAA CO-OPS predictions
+2026-10-23T00Z,stormsense_2026-10-23T0505Z.tar.xz,USBK,fore72,MLLW,1,1,1,720,2026-10-23T00:30:00Z,2026-10-26T00:24:00Z,NWS P-ETSS (adaptive pick: until a week of skill history exists)
+2026-10-23T00Z,stormsense_2026-10-23T0505Z.tar.xz,USBK,fore72,NAVD,1,1,1,720,2026-10-23T00:30:00Z,2026-10-26T00:24:00Z,NWS P-ETSS (adaptive pick: until a week of skill history exists)
+2026-10-23T00Z,stormsense_2026-10-23T0505Z.tar.xz,USBM,30day,MLLW,1,1,1,7121,2026-09-23T04:48:00Z,2026-10-23T00:24:00Z,gauge observations; astronomical tide from NWS P-ETSS and NOAA CO-OPS predictions
+2026-10-23T00Z,stormsense_2026-10-23T0505Z.tar.xz,USBM,30day,NAVD,1,1,1,7121,2026-09-23T04:48:00Z,2026-10-23T00:24:00Z,gauge observations; astronomical tide from NWS P-ETSS and NOAA CO-OPS predictions
+2026-10-23T00Z,stormsense_2026-10-23T0505Z.tar.xz,USBM,7day,MLLW,1,1,1,1669,2026-10-16T00:30:00Z,2026-10-23T00:24:00Z,gauge observations; astronomical tide from NWS P-ETSS and NOAA CO-OPS predictions
+2026-10-23T00Z,stormsense_2026-10-23T0505Z.tar.xz,USBM,7day,NAVD,1,1,1,1669,2026-10-16T00:30:00Z,2026-10-23T00:24:00Z,gauge observations; astronomical tide from NWS P-ETSS and NOAA CO-OPS predictions
+2026-10-23T00Z,stormsense_2026-10-23T0505Z.tar.xz,USBM,fore72,MLLW,1,1,1,360,2026-10-23T00:24:00Z,2026-10-24T12:18:00Z,VIMS Tidewatch 36-hour forecast (no P-ETSS point for this station)
+2026-10-23T00Z,stormsense_2026-10-23T0505Z.tar.xz,USBM,fore72,NAVD,1,1,1,360,2026-10-23T00:24:00Z,2026-10-24T12:18:00Z,VIMS Tidewatch 36-hour forecast (no P-ETSS point for this station)
+2026-10-23T00Z,stormsense_2026-10-23T0505Z.tar.xz,USCB,30day,MLLW,1,1,1,7128,2026-09-23T03:48:00Z,2026-10-23T00:24:00Z,gauge observations; astronomical tide from NWS P-ETSS and NOAA CO-OPS predictions
+2026-10-23T00Z,stormsense_2026-10-23T0505Z.tar.xz,USCB,30day,NAVD,1,1,1,7128,2026-09-23T03:48:00Z,2026-10-23T00:24:00Z,gauge observations; astronomical tide from NWS P-ETSS and NOAA CO-OPS predictions
+2026-10-23T00Z,stormsense_2026-10-23T0505Z.tar.xz,USCB,7day,MLLW,1,1,1,1669,2026-10-16T00:30:00Z,2026-10-23T00:24:00Z,gauge observations; astronomical tide from NWS P-ETSS and NOAA CO-OPS predictions
+2026-10-23T00Z,stormsense_2026-10-23T0505Z.tar.xz,USCB,7day,NAVD,1,1,1,1669,2026-10-16T00:30:00Z,2026-10-23T00:24:00Z,gauge observations; astronomical tide from NWS P-ETSS and NOAA CO-OPS predictions
+2026-10-23T00Z,stormsense_2026-10-23T0505Z.tar.xz,USCB,fore72,MLLW,1,1,1,360,2026-10-23T00:24:00Z,2026-10-24T12:18:00Z,VIMS Tidewatch 36-hour forecast (no P-ETSS point for this station)
+2026-10-23T00Z,stormsense_2026-10-23T0505Z.tar.xz,USCB,fore72,NAVD,1,1,1,360,2026-10-23T00:24:00Z,2026-10-24T12:18:00Z,VIMS Tidewatch 36-hour forecast (no P-ETSS point for this station)
+2026-10-23T00Z,stormsense_2026-10-23T0505Z.tar.xz,USFM,30day,MLLW,1,1,1,7128,2026-09-23T03:48:00Z,2026-10-23T00:24:00Z,gauge observations; astronomical tide from NWS P-ETSS and NOAA CO-OPS predictions
+2026-10-23T00Z,stormsense_2026-10-23T0505Z.tar.xz,USFM,30day,NAVD,1,1,1,7128,2026-09-23T03:48:00Z,2026-10-23T00:24:00Z,gauge observations; astronomical tide from NWS P-ETSS and NOAA CO-OPS predictions
+2026-10-23T00Z,stormsense_2026-10-23T0505Z.tar.xz,USFM,7day,MLLW,1,1,1,1669,2026-10-16T00:30:00Z,2026-10-23T00:24:00Z,gauge observations; astronomical tide from NWS P-ETSS and NOAA CO-OPS predictions
+2026-10-23T00Z,stormsense_2026-10-23T0505Z.tar.xz,USFM,7day,NAVD,1,1,1,1669,2026-10-16T00:30:00Z,2026-10-23T00:24:00Z,gauge observations; astronomical tide from NWS P-ETSS and NOAA CO-OPS predictions
+2026-10-23T00Z,stormsense_2026-10-23T0505Z.tar.xz,USFM,fore72,MLLW,1,1,1,720,2026-10-23T00:24:00Z,2026-10-26T00:18:00Z,NWS P-ETSS (adaptive pick: until a week of skill history exists)
+2026-10-23T00Z,stormsense_2026-10-23T0505Z.tar.xz,USFM,fore72,NAVD,1,1,1,720,2026-10-23T00:24:00Z,2026-10-26T00:18:00Z,NWS P-ETSS (adaptive pick: until a week of skill history exists)
+2026-10-23T00Z,stormsense_2026-10-23T0505Z.tar.xz,USHR,30day,MLLW,1,1,1,7137,2026-09-23T03:48:00Z,2026-10-23T00:24:00Z,gauge observations; astronomical tide from NWS P-ETSS and NOAA CO-OPS predictions
+2026-10-23T00Z,stormsense_2026-10-23T0505Z.tar.xz,USHR,30day,NAVD,1,1,1,7137,2026-09-23T03:48:00Z,2026-10-23T00:24:00Z,gauge observations; astronomical tide from NWS P-ETSS and NOAA CO-OPS predictions
+2026-10-23T00Z,stormsense_2026-10-23T0505Z.tar.xz,USHR,7day,MLLW,1,1,1,1669,2026-10-16T00:30:00Z,2026-10-23T00:24:00Z,gauge observations; astronomical tide from NWS P-ETSS and NOAA CO-OPS predictions
+2026-10-23T00Z,stormsense_2026-10-23T0505Z.tar.xz,USHR,7day,NAVD,1,1,1,1669,2026-10-16T00:30:00Z,2026-10-23T00:24:00Z,gauge observations; astronomical tide from NWS P-ETSS and NOAA CO-OPS predictions
+2026-10-23T00Z,stormsense_2026-10-23T0505Z.tar.xz,USHR,fore72,MLLW,1,1,1,720,2026-10-23T00:24:00Z,2026-10-26T00:18:00Z,NWS P-ETSS (adaptive pick: until a week of skill history exists)
+2026-10-23T00Z,stormsense_2026-10-23T0505Z.tar.xz,USHR,fore72,NAVD,1,1,1,720,2026-10-23T00:24:00Z,2026-10-26T00:18:00Z,NWS P-ETSS (adaptive pick: until a week of skill history exists)
+2026-10-23T00Z,stormsense_2026-10-23T0505Z.tar.xz,USJT,30day,MLLW,1,1,1,7123,2026-09-23T04:48:00Z,2026-10-23T00:00:00Z,gauge observations; astronomical tide from NWS P-ETSS and NOAA CO-OPS predictions
+2026-10-23T00Z,stormsense_2026-10-23T0505Z.tar.xz,USJT,30day,NAVD,1,1,1,7123,2026-09-23T04:48:00Z,2026-10-23T00:00:00Z,gauge observations; astronomical tide from NWS P-ETSS and NOAA CO-OPS predictions
+2026-10-23T00Z,stormsense_2026-10-23T0505Z.tar.xz,USJT,7day,MLLW,1,1,1,1670,2026-10-16T00:06:00Z,2026-10-23T00:00:00Z,gauge observations; astronomical tide from NWS P-ETSS and NOAA CO-OPS predictions
+2026-10-23T00Z,stormsense_2026-10-23T0505Z.tar.xz,USJT,7day,NAVD,1,1,1,1670,2026-10-16T00:06:00Z,2026-10-23T00:00:00Z,gauge observations; astronomical tide from NWS P-ETSS and NOAA CO-OPS predictions
+2026-10-23T00Z,stormsense_2026-10-23T0505Z.tar.xz,USJT,fore72,MLLW,1,1,1,720,2026-10-23T00:00:00Z,2026-10-25T23:54:00Z,NWS P-ETSS (adaptive pick: until a week of skill history exists)
+2026-10-23T00Z,stormsense_2026-10-23T0505Z.tar.xz,USJT,fore72,NAVD,1,1,1,720,2026-10-23T00:00:00Z,2026-10-25T23:54:00Z,NWS P-ETSS (adaptive pick: until a week of skill history exists)
+2026-10-23T00Z,stormsense_2026-10-23T0505Z.tar.xz,USLB,30day,MLLW,1,1,1,7121,2026-09-23T04:48:00Z,2026-10-23T00:24:00Z,gauge observations; astronomical tide from NWS P-ETSS and NOAA CO-OPS predictions
+2026-10-23T00Z,stormsense_2026-10-23T0505Z.tar.xz,USLB,30day,NAVD,1,1,1,7121,2026-09-23T04:48:00Z,2026-10-23T00:24:00Z,gauge observations; astronomical tide from NWS P-ETSS and NOAA CO-OPS predictions
+2026-10-23T00Z,stormsense_2026-10-23T0505Z.tar.xz,USLB,7day,MLLW,1,1,1,1669,2026-10-16T00:30:00Z,2026-10-23T00:24:00Z,gauge observations; astronomical tide from NWS P-ETSS and NOAA CO-OPS predictions
+2026-10-23T00Z,stormsense_2026-10-23T0505Z.tar.xz,USLB,7day,NAVD,1,1,1,1669,2026-10-16T00:30:00Z,2026-10-23T00:24:00Z,gauge observations; astronomical tide from NWS P-ETSS and NOAA CO-OPS predictions
+2026-10-23T00Z,stormsense_2026-10-23T0505Z.tar.xz,USLB,fore72,MLLW,1,1,1,360,2026-10-23T00:24:00Z,2026-10-24T12:18:00Z,VIMS Tidewatch 36-hour forecast (no P-ETSS point for this station)
+2026-10-23T00Z,stormsense_2026-10-23T0505Z.tar.xz,USLB,fore72,NAVD,1,1,1,360,2026-10-23T00:24:00Z,2026-10-24T12:18:00Z,VIMS Tidewatch 36-hour forecast (no P-ETSS point for this station)
+2026-10-23T00Z,stormsense_2026-10-23T0505Z.tar.xz,USLI,30day,MLLW,1,1,1,91,2019-11-25T09:48:00Z,2019-11-25T18:48:00Z,gauge observations; astronomical tide from NWS P-ETSS and NOAA CO-OPS predictions
+2026-10-23T00Z,stormsense_2026-10-23T0505Z.tar.xz,USLI,30day,NAVD,1,1,1,91,2019-11-25T09:48:00Z,2019-11-25T18:48:00Z,gauge observations; astronomical tide from NWS P-ETSS and NOAA CO-OPS predictions
+2026-10-23T00Z,stormsense_2026-10-23T0505Z.tar.xz,USLI,7day,MLLW,1,1,1,91,2019-11-25T09:48:00Z,2019-11-25T18:48:00Z,gauge observations; astronomical tide from NWS P-ETSS and NOAA CO-OPS predictions
+2026-10-23T00Z,stormsense_2026-10-23T0505Z.tar.xz,USLI,7day,NAVD,1,1,1,91,2019-11-25T09:48:00Z,2019-11-25T18:48:00Z,gauge observations; astronomical tide from NWS P-ETSS and NOAA CO-OPS predictions
+2026-10-23T00Z,stormsense_2026-10-23T0505Z.tar.xz,USLI,fore72,MLLW,1,1,1,0,,,VIMS Tidewatch 36-hour forecast (no P-ETSS point for this station)
+2026-10-23T00Z,stormsense_2026-10-23T0505Z.tar.xz,USLI,fore72,NAVD,1,1,1,0,,,VIMS Tidewatch 36-hour forecast (no P-ETSS point for this station)
+2026-10-23T00Z,stormsense_2026-10-23T0505Z.tar.xz,USLN,30day,MLLW,1,1,1,7113,2026-09-23T04:48:00Z,2026-10-23T00:24:00Z,gauge observations; astronomical tide from NWS P-ETSS and NOAA CO-OPS predictions
+2026-10-23T00Z,stormsense_2026-10-23T0505Z.tar.xz,USLN,30day,NAVD,1,1,1,7113,2026-09-23T04:48:00Z,2026-10-23T00:24:00Z,gauge observations; astronomical tide from NWS P-ETSS and NOAA CO-OPS predictions
+2026-10-23T00Z,stormsense_2026-10-23T0505Z.tar.xz,USLN,7day,MLLW,1,1,1,1669,2026-10-16T00:30:00Z,2026-10-23T00:24:00Z,gauge observations; astronomical tide from NWS P-ETSS and NOAA CO-OPS predictions
+2026-10-23T00Z,stormsense_2026-10-23T0505Z.tar.xz,USLN,7day,NAVD,1,1,1,1669,2026-10-16T00:30:00Z,2026-10-23T00:24:00Z,gauge observations; astronomical tide from NWS P-ETSS and NOAA CO-OPS predictions
+2026-10-23T00Z,stormsense_2026-10-23T0505Z.tar.xz,USLN,fore72,MLLW,1,1,1,720,2026-10-23T00:24:00Z,2026-10-26T00:18:00Z,NWS P-ETSS (adaptive pick: until a week of skill history exists)
+2026-10-23T00Z,stormsense_2026-10-23T0505Z.tar.xz,USLN,fore72,NAVD,1,1,1,720,2026-10-23T00:24:00Z,2026-10-26T00:18:00Z,NWS P-ETSS (adaptive pick: until a week of skill history exists)
+2026-10-23T00Z,stormsense_2026-10-23T0505Z.tar.xz,USLN-X,30day,MLLW,1,1,1,2574,2026-10-09T01:12:00Z,2026-10-23T04:30:00Z,gauge observations; astronomical tide from NWS P-ETSS and NOAA CO-OPS predictions
+2026-10-23T00Z,stormsense_2026-10-23T0505Z.tar.xz,USLN-X,30day,NAVD,1,1,1,2574,2026-10-09T01:12:00Z,2026-10-23T04:30:00Z,gauge observations; astronomical tide from NWS P-ETSS and NOAA CO-OPS predictions
+2026-10-23T00Z,stormsense_2026-10-23T0505Z.tar.xz,USLN-X,7day,MLLW,1,1,1,1267,2026-10-16T04:42:00Z,2026-10-23T04:30:00Z,gauge observations; astronomical tide from NWS P-ETSS and NOAA CO-OPS predictions
+2026-10-23T00Z,stormsense_2026-10-23T0505Z.tar.xz,USLN-X,7day,NAVD,1,1,1,1267,2026-10-16T04:42:00Z,2026-10-23T04:30:00Z,gauge observations; astronomical tide from NWS P-ETSS and NOAA CO-OPS predictions
+2026-10-23T00Z,stormsense_2026-10-23T0505Z.tar.xz,USLN-X,fore72,MLLW,1,1,1,720,2026-10-23T04:30:00Z,2026-10-26T04:24:00Z,NWS P-ETSS (adaptive pick: until a week of skill history exists)
+2026-10-23T00Z,stormsense_2026-10-23T0505Z.tar.xz,USLN-X,fore72,NAVD,1,1,1,720,2026-10-23T04:30:00Z,2026-10-26T04:24:00Z,NWS P-ETSS (adaptive pick: until a week of skill history exists)
+2026-10-23T00Z,stormsense_2026-10-23T0505Z.tar.xz,USLR,30day,MLLW,1,1,1,7115,2026-09-23T04:48:00Z,2026-10-23T00:24:00Z,gauge observations; astronomical tide from NWS P-ETSS and NOAA CO-OPS predictions
+2026-10-23T00Z,stormsense_2026-10-23T0505Z.tar.xz,USLR,30day,NAVD,1,1,1,7115,2026-09-23T04:48:00Z,2026-10-23T00:24:00Z,gauge observations; astronomical tide from NWS P-ETSS and NOAA CO-OPS predictions
+2026-10-23T00Z,stormsense_2026-10-23T0505Z.tar.xz,USLR,7day,MLLW,1,1,1,1669,2026-10-16T00:30:00Z,2026-10-23T00:24:00Z,gauge observations; astronomical tide from NWS P-ETSS and NOAA CO-OPS predictions
+2026-10-23T00Z,stormsense_2026-10-23T0505Z.tar.xz,USLR,7day,NAVD,1,1,1,1669,2026-10-16T00:30:00Z,2026-10-23T00:24:00Z,gauge observations; astronomical tide from NWS P-ETSS and NOAA CO-OPS predictions
+2026-10-23T00Z,stormsense_2026-10-23T0505Z.tar.xz,USLR,fore72,MLLW,1,1,1,360,2026-10-23T00:24:00Z,2026-10-24T12:18:00Z,VIMS Tidewatch 36-hour forecast (no P-ETSS point for this station)
+2026-10-23T00Z,stormsense_2026-10-23T0505Z.tar.xz,USLR,fore72,NAVD,1,1,1,360,2026-10-23T00:24:00Z,2026-10-24T12:18:00Z,VIMS Tidewatch 36-hour forecast (no P-ETSS point for this station)
+2026-10-23T00Z,stormsense_2026-10-23T0505Z.tar.xz,USMB,30day,MLLW,1,1,1,7127,2026-09-23T03:48:00Z,2026-10-23T00:24:00Z,gauge observations; astronomical tide from NWS P-ETSS and NOAA CO-OPS predictions
+2026-10-23T00Z,stormsense_2026-10-23T0505Z.tar.xz,USMB,30day,NAVD,1,1,1,7127,2026-09-23T03:48:00Z,2026-10-23T00:24:00Z,gauge observations; astronomical tide from NWS P-ETSS and NOAA CO-OPS predictions
+2026-10-23T00Z,stormsense_2026-10-23T0505Z.tar.xz,USMB,7day,MLLW,1,1,1,1669,2026-10-16T00:30:00Z,2026-10-23T00:24:00Z,gauge observations; astronomical tide from NWS P-ETSS and NOAA CO-OPS predictions
+2026-10-23T00Z,stormsense_2026-10-23T0505Z.tar.xz,USMB,7day,NAVD,1,1,1,1669,2026-10-16T00:30:00Z,2026-10-23T00:24:00Z,gauge observations; astronomical tide from NWS P-ETSS and NOAA CO-OPS predictions
+2026-10-23T00Z,stormsense_2026-10-23T0505Z.tar.xz,USMB,fore72,MLLW,1,1,1,360,2026-10-23T00:24:00Z,2026-10-24T12:18:00Z,VIMS Tidewatch 36-hour forecast (no P-ETSS point for this station)
+2026-10-23T00Z,stormsense_2026-10-23T0505Z.tar.xz,USMB,fore72,NAVD,1,1,1,360,2026-10-23T00:24:00Z,2026-10-24T12:18:00Z,VIMS Tidewatch 36-hour forecast (no P-ETSS point for this station)
+2026-10-23T00Z,stormsense_2026-10-23T0505Z.tar.xz,USNC,30day,MLLW,1,1,1,6981,2026-09-23T03:48:00Z,2026-10-23T00:24:00Z,gauge observations; astronomical tide from NWS P-ETSS and NOAA CO-OPS predictions
+2026-10-23T00Z,stormsense_2026-10-23T0505Z.tar.xz,USNC,30day,NAVD,1,1,1,6981,2026-09-23T03:48:00Z,2026-10-23T00:24:00Z,gauge observations; astronomical tide from NWS P-ETSS and NOAA CO-OPS predictions
+2026-10-23T00Z,stormsense_2026-10-23T0505Z.tar.xz,USNC,7day,MLLW,1,1,1,1519,2026-10-16T00:30:00Z,2026-10-23T00:24:00Z,gauge observations; astronomical tide from NWS P-ETSS and NOAA CO-OPS predictions
+2026-10-23T00Z,stormsense_2026-10-23T0505Z.tar.xz,USNC,7day,NAVD,1,1,1,1519,2026-10-16T00:30:00Z,2026-10-23T00:24:00Z,gauge observations; astronomical tide from NWS P-ETSS and NOAA CO-OPS predictions
+2026-10-23T00Z,stormsense_2026-10-23T0505Z.tar.xz,USNC,fore72,MLLW,1,1,1,360,2026-10-23T00:24:00Z,2026-10-24T12:18:00Z,VIMS Tidewatch 36-hour forecast (no P-ETSS point for this station)
+2026-10-23T00Z,stormsense_2026-10-23T0505Z.tar.xz,USNC,fore72,NAVD,1,1,1,360,2026-10-23T00:24:00Z,2026-10-24T12:18:00Z,VIMS Tidewatch 36-hour forecast (no P-ETSS point for this station)
+2026-10-23T00Z,stormsense_2026-10-23T0505Z.tar.xz,USNR,30day,MLLW,1,1,1,6957,2026-09-23T03:48:00Z,2026-10-23T00:30:00Z,gauge observations; astronomical tide from NWS P-ETSS and NOAA CO-OPS predictions
+2026-10-23T00Z,stormsense_2026-10-23T0505Z.tar.xz,USNR,30day,NAVD,1,1,1,6957,2026-09-23T03:48:00Z,2026-10-23T00:30:00Z,gauge observations; astronomical tide from NWS P-ETSS and NOAA CO-OPS predictions
+2026-10-23T00Z,stormsense_2026-10-23T0505Z.tar.xz,USNR,7day,MLLW,1,1,1,1495,2026-10-16T00:36:00Z,2026-10-23T00:30:00Z,gauge observations; astronomical tide from NWS P-ETSS and NOAA CO-OPS predictions
+2026-10-23T00Z,stormsense_2026-10-23T0505Z.tar.xz,USNR,7day,NAVD,1,1,1,1495,2026-10-16T00:36:00Z,2026-10-23T00:30:00Z,gauge observations; astronomical tide from NWS P-ETSS and NOAA CO-OPS predictions
+2026-10-23T00Z,stormsense_2026-10-23T0505Z.tar.xz,USNR,fore72,MLLW,1,1,1,360,2026-10-23T00:30:00Z,2026-10-24T12:24:00Z,VIMS Tidewatch 36-hour forecast (no P-ETSS point for this station)
+2026-10-23T00Z,stormsense_2026-10-23T0505Z.tar.xz,USNR,fore72,NAVD,1,1,1,360,2026-10-23T00:30:00Z,2026-10-24T12:24:00Z,VIMS Tidewatch 36-hour forecast (no P-ETSS point for this station)
+2026-10-23T00Z,stormsense_2026-10-23T0505Z.tar.xz,USPA,30day,MLLW,1,1,1,7114,2026-09-23T04:48:00Z,2026-10-23T00:24:00Z,gauge observations; astronomical tide from NWS P-ETSS and NOAA CO-OPS predictions
+2026-10-23T00Z,stormsense_2026-10-23T0505Z.tar.xz,USPA,30day,NAVD,1,1,1,7114,2026-09-23T04:48:00Z,2026-10-23T00:24:00Z,gauge observations; astronomical tide from NWS P-ETSS and NOAA CO-OPS predictions
+2026-10-23T00Z,stormsense_2026-10-23T0505Z.tar.xz,USPA,7day,MLLW,1,1,1,1669,2026-10-16T00:30:00Z,2026-10-23T00:24:00Z,gauge observations; astronomical tide from NWS P-ETSS and NOAA CO-OPS predictions
+2026-10-23T00Z,stormsense_2026-10-23T0505Z.tar.xz,USPA,7day,NAVD,1,1,1,1669,2026-10-16T00:30:00Z,2026-10-23T00:24:00Z,gauge observations; astronomical tide from NWS P-ETSS and NOAA CO-OPS predictions
+2026-10-23T00Z,stormsense_2026-10-23T0505Z.tar.xz,USPA,fore72,MLLW,1,1,1,360,2026-10-23T00:24:00Z,2026-10-24T12:18:00Z,VIMS Tidewatch 36-hour forecast (no P-ETSS point for this station)
+2026-10-23T00Z,stormsense_2026-10-23T0505Z.tar.xz,USPA,fore72,NAVD,1,1,1,360,2026-10-23T00:24:00Z,2026-10-24T12:18:00Z,VIMS Tidewatch 36-hour forecast (no P-ETSS point for this station)
+2026-10-23T00Z,stormsense_2026-10-23T0505Z.tar.xz,USPT,30day,MLLW,1,1,1,7005,2026-09-23T04:48:00Z,2026-10-23T00:24:00Z,gauge observations; astronomical tide from NWS P-ETSS and NOAA CO-OPS predictions
+2026-10-23T00Z,stormsense_2026-10-23T0505Z.tar.xz,USPT,30day,NAVD,1,1,1,7005,2026-09-23T04:48:00Z,2026-10-23T00:24:00Z,gauge observations; astronomical tide from NWS P-ETSS and NOAA CO-OPS predictions
+2026-10-23T00Z,stormsense_2026-10-23T0505Z.tar.xz,USPT,7day,MLLW,1,1,1,1669,2026-10-16T00:30:00Z,2026-10-23T00:24:00Z,gauge observations; astronomical tide from NWS P-ETSS and NOAA CO-OPS predictions
+2026-10-23T00Z,stormsense_2026-10-23T0505Z.tar.xz,USPT,7day,NAVD,1,1,1,1669,2026-10-16T00:30:00Z,2026-10-23T00:24:00Z,gauge observations; astronomical tide from NWS P-ETSS and NOAA CO-OPS predictions
+2026-10-23T00Z,stormsense_2026-10-23T0505Z.tar.xz,USPT,fore72,MLLW,1,1,1,720,2026-10-23T00:24:00Z,2026-10-26T00:18:00Z,NWS P-ETSS (adaptive pick: until a week of skill history exists)
+2026-10-23T00Z,stormsense_2026-10-23T0505Z.tar.xz,USPT,fore72,NAVD,1,1,1,720,2026-10-23T00:24:00Z,2026-10-26T00:18:00Z,NWS P-ETSS (adaptive pick: until a week of skill history exists)
+2026-10-23T00Z,stormsense_2026-10-23T0505Z.tar.xz,USSB,30day,MLLW,1,1,1,7137,2026-09-23T03:48:00Z,2026-10-23T00:24:00Z,gauge observations; astronomical tide from NWS P-ETSS and NOAA CO-OPS predictions
+2026-10-23T00Z,stormsense_2026-10-23T0505Z.tar.xz,USSB,30day,NAVD,1,1,1,7137,2026-09-23T03:48:00Z,2026-10-23T00:24:00Z,gauge observations; astronomical tide from NWS P-ETSS and NOAA CO-OPS predictions
+2026-10-23T00Z,stormsense_2026-10-23T0505Z.tar.xz,USSB,7day,MLLW,1,1,1,1669,2026-10-16T00:30:00Z,2026-10-23T00:24:00Z,gauge observations; astronomical tide from NWS P-ETSS and NOAA CO-OPS predictions
+2026-10-23T00Z,stormsense_2026-10-23T0505Z.tar.xz,USSB,7day,NAVD,1,1,1,1669,2026-10-16T00:30:00Z,2026-10-23T00:24:00Z,gauge observations; astronomical tide from NWS P-ETSS and NOAA CO-OPS predictions
+2026-10-23T00Z,stormsense_2026-10-23T0505Z.tar.xz,USSB,fore72,MLLW,1,1,1,360,2026-10-23T00:24:00Z,2026-10-24T12:18:00Z,VIMS Tidewatch 36-hour forecast (no P-ETSS point for this station)
+2026-10-23T00Z,stormsense_2026-10-23T0505Z.tar.xz,USSB,fore72,NAVD,1,1,1,360,2026-10-23T00:24:00Z,2026-10-24T12:18:00Z,VIMS Tidewatch 36-hour forecast (no P-ETSS point for this station)
+2026-10-23T00Z,stormsense_2026-10-23T0505Z.tar.xz,USSC,30day,MLLW,1,1,1,6981,2026-09-23T03:48:00Z,2026-10-23T00:24:00Z,gauge observations; astronomical tide from NWS P-ETSS and NOAA CO-OPS predictions
+2026-10-23T00Z,stormsense_2026-10-23T0505Z.tar.xz,USSC,30day,NAVD,1,1,1,6981,2026-09-23T03:48:00Z,2026-10-23T00:24:00Z,gauge observations; astronomical tide from NWS P-ETSS and NOAA CO-OPS predictions
+2026-10-23T00Z,stormsense_2026-10-23T0505Z.tar.xz,USSC,7day,MLLW,1,1,1,1519,2026-10-16T00:30:00Z,2026-10-23T00:24:00Z,gauge observations; astronomical tide from NWS P-ETSS and NOAA CO-OPS predictions
+2026-10-23T00Z,stormsense_2026-10-23T0505Z.tar.xz,USSC,7day,NAVD,1,1,1,1519,2026-10-16T00:30:00Z,2026-10-23T00:24:00Z,gauge observations; astronomical tide from NWS P-ETSS and NOAA CO-OPS predictions
+2026-10-23T00Z,stormsense_2026-10-23T0505Z.tar.xz,USSC,fore72,MLLW,1,1,1,360,2026-10-23T00:24:00Z,2026-10-24T12:18:00Z,VIMS Tidewatch 36-hour forecast (no P-ETSS point for this station)
+2026-10-23T00Z,stormsense_2026-10-23T0505Z.tar.xz,USSC,fore72,NAVD,1,1,1,360,2026-10-23T00:24:00Z,2026-10-24T12:18:00Z,VIMS Tidewatch 36-hour forecast (no P-ETSS point for this station)
+2026-10-23T00Z,stormsense_2026-10-23T0505Z.tar.xz,USSF,30day,MLLW,1,1,1,6957,2026-09-23T03:48:00Z,2026-10-23T00:30:00Z,gauge observations; astronomical tide from NWS P-ETSS and NOAA CO-OPS predictions
+2026-10-23T00Z,stormsense_2026-10-23T0505Z.tar.xz,USSF,30day,NAVD,1,1,1,6957,2026-09-23T03:48:00Z,2026-10-23T00:30:00Z,gauge observations; astronomical tide from NWS P-ETSS and NOAA CO-OPS predictions
+2026-10-23T00Z,stormsense_2026-10-23T0505Z.tar.xz,USSF,7day,MLLW,1,1,1,1495,2026-10-16T00:36:00Z,2026-10-23T00:30:00Z,gauge observations; astronomical tide from NWS P-ETSS and NOAA CO-OPS predictions
+2026-10-23T00Z,stormsense_2026-10-23T0505Z.tar.xz,USSF,7day,NAVD,1,1,1,1495,2026-10-16T00:36:00Z,2026-10-23T00:30:00Z,gauge observations; astronomical tide from NWS P-ETSS and NOAA CO-OPS predictions
+2026-10-23T00Z,stormsense_2026-10-23T0505Z.tar.xz,USSF,fore72,MLLW,1,1,1,360,2026-10-23T00:30:00Z,2026-10-24T12:24:00Z,VIMS Tidewatch 36-hour forecast (no P-ETSS point for this station)
+2026-10-23T00Z,stormsense_2026-10-23T0505Z.tar.xz,USSF,fore72,NAVD,1,1,1,360,2026-10-23T00:30:00Z,2026-10-24T12:24:00Z,VIMS Tidewatch 36-hour forecast (no P-ETSS point for this station)
+2026-10-23T00Z,stormsense_2026-10-23T0505Z.tar.xz,USTC,30day,MLLW,1,1,1,7119,2026-09-23T04:48:00Z,2026-10-23T00:24:00Z,gauge observations; astronomical tide from NWS P-ETSS and NOAA CO-OPS predictions
+2026-10-23T00Z,stormsense_2026-10-23T0505Z.tar.xz,USTC,30day,NAVD,1,1,1,7119,2026-09-23T04:48:00Z,2026-10-23T00:24:00Z,gauge observations; astronomical tide from NWS P-ETSS and NOAA CO-OPS predictions
+2026-10-23T00Z,stormsense_2026-10-23T0505Z.tar.xz,USTC,7day,MLLW,1,1,1,1669,2026-10-16T00:30:00Z,2026-10-23T00:24:00Z,gauge observations; astronomical tide from NWS P-ETSS and NOAA CO-OPS predictions
+2026-10-23T00Z,stormsense_2026-10-23T0505Z.tar.xz,USTC,7day,NAVD,1,1,1,1669,2026-10-16T00:30:00Z,2026-10-23T00:24:00Z,gauge observations; astronomical tide from NWS P-ETSS and NOAA CO-OPS predictions
+2026-10-23T00Z,stormsense_2026-10-23T0505Z.tar.xz,USTC,fore72,MLLW,1,1,1,360,2026-10-23T00:24:00Z,2026-10-24T12:18:00Z,VIMS Tidewatch 36-hour forecast (no P-ETSS point for this station)
+2026-10-23T00Z,stormsense_2026-10-23T0505Z.tar.xz,USTC,fore72,NAVD,1,1,1,360,2026-10-23T00:24:00Z,2026-10-24T12:18:00Z,VIMS Tidewatch 36-hour forecast (no P-ETSS point for this station)
+2026-10-23T00Z,stormsense_2026-10-23T0505Z.tar.xz,WACH,30day,MLLW,1,1,1,7199,2026-09-23T03:48:00Z,2026-10-23T03:36:00Z,gauge observations; astronomical tide from NWS P-ETSS and NOAA CO-OPS predictions
+2026-10-23T00Z,stormsense_2026-10-23T0505Z.tar.xz,WACH,30day,NAVD,1,1,1,7199,2026-09-23T03:48:00Z,2026-10-23T03:36:00Z,gauge observations; astronomical tide from NWS P-ETSS and NOAA CO-OPS predictions
+2026-10-23T00Z,stormsense_2026-10-23T0505Z.tar.xz,WACH,7day,MLLW,1,1,1,1680,2026-10-16T03:42:00Z,2026-10-23T03:36:00Z,gauge observations; astronomical tide from NWS P-ETSS and NOAA CO-OPS predictions
+2026-10-23T00Z,stormsense_2026-10-23T0505Z.tar.xz,WACH,7day,NAVD,1,1,1,1680,2026-10-16T03:42:00Z,2026-10-23T03:36:00Z,gauge observations; astronomical tide from NWS P-ETSS and NOAA CO-OPS predictions
+2026-10-23T00Z,stormsense_2026-10-23T0505Z.tar.xz,WACH,fore72,MLLW,1,1,1,720,2026-10-23T03:36:00Z,2026-10-26T03:30:00Z,NWS P-ETSS (adaptive pick: until a week of skill history exists)
+2026-10-23T00Z,stormsense_2026-10-23T0505Z.tar.xz,WACH,fore72,NAVD,1,1,1,720,2026-10-23T03:36:00Z,2026-10-26T03:30:00Z,NWS P-ETSS (adaptive pick: until a week of skill history exists)
+2026-10-23T00Z,stormsense_2026-10-23T0505Z.tar.xz,WADC,30day,MLLW,1,1,1,7199,2026-09-23T05:00:00Z,2026-10-23T04:54:00Z,gauge observations; astronomical tide from NWS P-ETSS and NOAA CO-OPS predictions
+2026-10-23T00Z,stormsense_2026-10-23T0505Z.tar.xz,WADC,30day,NAVD,1,1,1,7199,2026-09-23T05:00:00Z,2026-10-23T04:54:00Z,gauge observations; astronomical tide from NWS P-ETSS and NOAA CO-OPS predictions
+2026-10-23T00Z,stormsense_2026-10-23T0505Z.tar.xz,WADC,7day,MLLW,1,1,1,1680,2026-10-16T05:00:00Z,2026-10-23T04:54:00Z,gauge observations; astronomical tide from NWS P-ETSS and NOAA CO-OPS predictions
+2026-10-23T00Z,stormsense_2026-10-23T0505Z.tar.xz,WADC,7day,NAVD,1,1,1,1680,2026-10-16T05:00:00Z,2026-10-23T04:54:00Z,gauge observations; astronomical tide from NWS P-ETSS and NOAA CO-OPS predictions
+2026-10-23T00Z,stormsense_2026-10-23T0505Z.tar.xz,WADC,fore72,MLLW,1,1,1,720,2026-10-23T04:54:00Z,2026-10-26T04:48:00Z,NWS P-ETSS (adaptive pick: until a week of skill history exists)
+2026-10-23T00Z,stormsense_2026-10-23T0505Z.tar.xz,WADC,fore72,NAVD,1,1,1,720,2026-10-23T04:54:00Z,2026-10-26T04:48:00Z,NWS P-ETSS (adaptive pick: until a week of skill history exists)
+2026-10-23T00Z,stormsense_2026-10-23T0505Z.tar.xz,WMPT,30day,MLLW,1,1,1,7199,2026-09-23T03:48:00Z,2026-10-23T03:36:00Z,gauge observations; astronomical tide from NWS P-ETSS and NOAA CO-OPS predictions
+2026-10-23T00Z,stormsense_2026-10-23T0505Z.tar.xz,WMPT,30day,NAVD,1,1,1,7199,2026-09-23T03:48:00Z,2026-10-23T03:36:00Z,gauge observations; astronomical tide from NWS P-ETSS and NOAA CO-OPS predictions
+2026-10-23T00Z,stormsense_2026-10-23T0505Z.tar.xz,WMPT,7day,MLLW,1,1,1,1680,2026-10-16T03:42:00Z,2026-10-23T03:36:00Z,gauge observations; astronomical tide from NWS P-ETSS and NOAA CO-OPS predictions
+2026-10-23T00Z,stormsense_2026-10-23T0505Z.tar.xz,WMPT,7day,NAVD,1,1,1,1680,2026-10-16T03:42:00Z,2026-10-23T03:36:00Z,gauge observations; astronomical tide from NWS P-ETSS and NOAA CO-OPS predictions
+2026-10-23T00Z,stormsense_2026-10-23T0505Z.tar.xz,WMPT,fore72,MLLW,1,1,1,720,2026-10-23T03:36:00Z,2026-10-26T03:30:00Z,NWS P-ETSS (adaptive pick: until a week of skill history exists)
+2026-10-23T00Z,stormsense_2026-10-23T0505Z.tar.xz,WMPT,fore72,NAVD,1,1,1,720,2026-10-23T03:36:00Z,2026-10-26T03:30:00Z,NWS P-ETSS (adaptive pick: until a week of skill history exists)
+2026-10-23T00Z,stormsense_2026-10-23T0505Z.tar.xz,YRCG,30day,MLLW,1,1,1,7199,2026-09-23T03:48:00Z,2026-10-23T03:36:00Z,gauge observations; astronomical tide from NWS P-ETSS and NOAA CO-OPS predictions
+2026-10-23T00Z,stormsense_2026-10-23T0505Z.tar.xz,YRCG,30day,NAVD,1,1,1,7199,2026-09-23T03:48:00Z,2026-10-23T03:36:00Z,gauge observations; astronomical tide from NWS P-ETSS and NOAA CO-OPS predictions
+2026-10-23T00Z,stormsense_2026-10-23T0505Z.tar.xz,YRCG,7day,MLLW,1,1,1,1680,2026-10-16T03:42:00Z,2026-10-23T03:36:00Z,gauge observations; astronomical tide from NWS P-ETSS and NOAA CO-OPS predictions
+2026-10-23T00Z,stormsense_2026-10-23T0505Z.tar.xz,YRCG,7day,NAVD,1,1,1,1680,2026-10-16T03:42:00Z,2026-10-23T03:36:00Z,gauge observations; astronomical tide from NWS P-ETSS and NOAA CO-OPS predictions
+2026-10-23T00Z,stormsense_2026-10-23T0505Z.tar.xz,YRCG,fore72,MLLW,1,1,1,720,2026-10-23T03:36:00Z,2026-10-26T03:30:00Z,NWS P-ETSS (adaptive pick: until a week of skill history exists)
+2026-10-23T00Z,stormsense_2026-10-23T0505Z.tar.xz,YRCG,fore72,NAVD,1,1,1,720,2026-10-23T03:36:00Z,2026-10-26T03:30:00Z,NWS P-ETSS (adaptive pick: until a week of skill history exists)
