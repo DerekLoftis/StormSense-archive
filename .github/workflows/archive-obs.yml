@@ -1,0 +1,83 @@
+# Archives StormSense's own gauge observations (straight from CO-OPS, USGS, the VIMS THREDDS gauge,
+# FloodVISION and GreenStream; no web4), one tarball per UTC day on that month's release obs-YYYY-MM,
+# with the day and gauge index committed under data/index/obs/. The fetch and QC code is
+# DerekLoftis/StormSense_forecastmodel's ssmodel/obs.py. Each run catches up the last 10 finished days,
+# so a skipped or late scheduled run loses nothing; a dispatch with `since` backfills further.
+name: Archive StormSense observations
+
+on:
+  schedule:
+    - cron: "10 4 * * *"
+  pull_request:  # a dry run: reads two days, uploads and commits nothing
+    paths: [archiver/obs_archive.py, .github/workflows/archive-obs.yml]
+  workflow_dispatch:
+    inputs:
+      since:
+        description: "Backfill every day from this date (YYYY-MM-DD; USGS keeps about 120 days online)"
+        required: false
+        default: ""
+
+concurrency:
+  group: archive-obs
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  archive:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/checkout@v4
+        with:
+          repository: DerekLoftis/StormSense_forecastmodel
+          path: forecastmodel
+          ref: ${{ github.event_name == 'pull_request' && github.head_ref || '' }}
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install
+        run: pip install -q numpy pandas
+
+      - name: Read the gauges
+        id: fetch
+        continue-on-error: true
+        env:
+          SINCE: ${{ github.event.inputs.since }}
+          DRY: ${{ github.event_name == 'pull_request' }}
+        run: |
+          set -o pipefail
+          if [ "$DRY" = true ]; then ARGS="--days 2 --index $RUNNER_TEMP/index"; else ARGS="${SINCE:+--since $SINCE}"; fi
+          python archiver/obs_archive.py --model forecastmodel --out out $ARGS 2>&1 | tee obs_log.txt
+
+      - name: Upload the tarballs to the month's release
+        if: steps.fetch.outputs.archived == 'true' && github.event_name != 'pull_request'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          while read -r TAG ASSET; do
+            gh release view "$TAG" >/dev/null 2>&1 || \
+              gh release create "$TAG" --title "StormSense observations ${TAG#obs-}" \
+                --notes "StormSense's own gauge observations, one tarball per UTC day: raw/ (every reading, ft MLLW, QC flag), 6min/ (QC'd 6-minute series), stations.csv, report.csv. data/index/obs/ lists every day and gauge."
+            gh release upload "$TAG" "$ASSET" --clobber
+          done < out/assets.txt
+
+      - name: Commit the index
+        if: steps.fetch.outputs.archived == 'true' && github.event_name != 'pull_request'
+        run: |
+          git config user.name "stormsense-archive"
+          git config user.email "actions@users.noreply.github.com"
+          git add data/index/obs
+          git diff --cached --quiet || git commit -q -m "Archive StormSense observations $(head -n1 out/assets.txt | sed 's/.*obs_//;s/.tar.xz//') to $(tail -n1 out/assets.txt | sed 's/.*obs_//;s/.tar.xz//')"
+          for i in 1 2 3 4; do git pull --rebase -q && git push -q && break; sleep $((2**i)); done
+
+      - name: Show the end of a failed archive as an annotation
+        if: steps.fetch.outcome == 'failure'
+        run: |
+          echo "::error title=observation archive failed::$(tail -n 40 obs_log.txt | sed ':a;N;$!ba;s/%/%25/g;s/\n/%0A/g')"
+          exit 1
