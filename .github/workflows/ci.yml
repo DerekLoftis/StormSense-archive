@@ -27,3 +27,18 @@ jobs:
           while IFS=, read -r st src n last err; do
             if [ "$n" = "0" ]; then echo "::warning title=obs $st ($src)::${err:-no data}"; else echo "::notice title=obs $st ($src)::$n values, last $last"; fi
           done < obs_report.txt
+
+  greenstream-probe:
+    # temporary: finds how GS01/GS02 can be read with the VIMS GreenStream key
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -q playwright && python -m playwright install --with-deps chromium > /dev/null
+      - run: python tools/probe_greenstream.py
+        env:
+          GREENSTREAM_API_KEY: ${{ secrets.GREENSTREAM_API_KEY }}
