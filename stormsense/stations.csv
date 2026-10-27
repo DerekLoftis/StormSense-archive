@@ -1,0 +1,76 @@
+station,name,lat,lon,obs,navd88_above_mllw_ft,stage_datum,stage_to_mllw_ft,datum_change_utc,stage_to_mllw_before_ft,nws_lid,petss_point,tidewatch_id,alias_of,suspect_obs,added,note
+ALEV,Four Mile Run above Highway 1 at Alexandria,38.840277777778,-77.053333333333,nwis:01652545;nwps:ALEV2,1.351,NAVD88,1.351,,,ALEV2,8634214,,,,2026-10-27,
+ARPV,Appomattox River at Pocahontas,37.236119,-77.403999,nwps:ARPV2,1.798,gauge,-6.232,,,ARPV2,8637712,,,,2026-10-27,"stage on a local gauge datum, NAVD88 = stage - 8.03 ft (NWPS)"
+AXTV,Potomac River at Alexandria,38.805277777778,-77.038333333333,nwis:0165258890;nwps:AXTV2,1.321,NAVD88,1.321,,,AXTV2,8634214,,,,2026-10-27,
+BBIV,Long Creek Canal at Canal Road,36.90249,-76.06125,nwps:BBIV2,1.43,MLLW,0.0,,,BBIV2,est2340,,,,2026-10-27,
+BISH,Chesapeake Bay at Bishops Head (IN MLLW),38.22,-76.0383333,coops:8571421,1.21,,,,,BISM2,8571421,BISH,,,,
+BPAD,Anacostia River at Buzzard Point in Washington DC,38.8652777777778,-77.0102777777778,nwis:01651827;nwps:BPAD2,1.429,NAVD88,1.429,,,BPAD2,8594900,,,,2026-10-27,
+BRDH,Back River at Dandy Haven Marina (VIMS gauge),37.097565,-76.297431,thredds:https://tds.vims.edu/thredds/dodsC/daveAll/drf/Tidewatch/BRDH.nc,1.626,,,,,,8638610,,,,,MLLW = 9.71 - value
+CBBT,Chesapeake Bay at Chesapeake Bay Bridge Tunnel (IN MLLW),37.03291,-76.08325,coops:8638901,1.92,,,,,CHBV2,8638901,,,,,
+CCHV,Atlantic Coast near Anheuser Busch Coastal Res. Center,37.2889694,-75.923545553,nwps:CCHV2,2.857,MLLW,0.0,,,CCHV2,8631044,,,,2026-10-27,
+CHIV,Chincoteague Channel near Chincoteague Bay Inlet,37.9023,-75.4078,nwps:CHIV2,1.54,MLLW,0.0,,,CHIV2,8631044,,,,2026-10-27,
+CNRC,Accokeek Creek at Crow's Nest Research Center (GreenStream sensor),38.36258,-77.30022,archive:greenstream/CNRC,0.691,,,,,,8635027,,,,,GreenStream level_ft_navd88
+CRSM,Chesapeake Bay above Little Annemessex River at Crisfield MD,37.9783,-75.8636,nwis:01485755;nwps:CRSM2,1.16,MLLW,0.0,,,CRSM2,8571091,,,,2026-10-27,
+DAHL,Upper Machodoc Creek near Dahlgren (IN MLLW),38.319722222222,-77.036666666667,coops:8635027,1.04,,,,,NCDV2,8635027,,,,,
+DPCV,Deep Creek at Deep Creek Lock Park,36.746388888889,-76.340555555556,nwps:DPCV2,1.657,gauge,-0.9,,,DPCV2,8639348,,,,2026-10-27,"stage on a local gauge datum with no published tie; MLLW = stage -0.90 ft, estimated from low waters at the nearest NOAA gauge (about +/-0.2 ft)"
+ELGV,Eastern Branch Elizabeth River at Grandy Village,36.8398,-76.2502,nwps:ELGV2,1.79,MLLW,0.0,,,ELGV2,est2337,,,,2026-10-27,
+EZMV,Elizabeth River at the Midtown Tunnel,36.862,-76.3095,nwis:0204288831;nwps:EZMV2,1.76,MLLW,0.0,,,EZMV2,est2337,,,,2026-10-27,
+FEDV,Rappahannock River at Fredericksburg,38.3049,-77.4562,nwps:FEDV2,1.877,gauge,-2.45,,,FEDV2,est2345,,,,2026-10-27,"stage on a local gauge datum with no published tie; MLLW = stage -2.45 ft, estimated from low waters at the nearest NOAA gauge (about +/-0.2 ft)"
+GS01,Chickahominy River at Mamanahunt,37.38845,-76.93164,,1.344,,,,,,8637712,GS01,,yes,,GreenStream API needs a key; not fetched yet
+GS02,Pamunkey River at Lay Landing Rd,37.57611,-76.99236,,1.651,,,,,,8637689,GS02,,,,GreenStream API needs a key; not fetched yet
+GTND,Potomac River at Georgetown / Wisconsin Ave,38.9033611,-77.0676667,nwis:01647600;nwps:GTND2,1.384,gauge,-0.9,,,GTND2,8594900,,,,2026-10-27,"stage on a local gauge datum with no published tie; MLLW = stage -0.90 ft, estimated from low waters at the nearest NOAA gauge (about +/-0.2 ft)"
+HPPV,Elizabeth River at Hunts Pointe Park,36.8294401,-76.2040757,nwps:HPPV2,1.76,MLLW,0.0,,,HPPV2,est2337,,,,2026-10-27,
+IHDM,Potomac River at Indian Head,38.60095185,-77.1819244,nwis:01655480;nwps:IHDM2,0.954,MLLW,0.0,,,IHDM2,8579381,,,,2026-10-27,NWPS datum entry inconsistent; the record matches MLLW at neighbouring NOAA gauges; treated as MLLW
+JLMV,James River at Leeward Marina,37.0118,-76.4551,nwps:JLMV2,1.69,NAVD88,1.69,2026-10-15T13:48:00Z,0.0,JLMV2,8638610,,,,2026-10-27,gauge switched from MLLW to NAVD88 at 2026-10-15T13:48Z (a 1.69 ft step); earlier readings are MLLW
+JPHV,James River near Jordan Point below Hopewell,37.3156,-77.2233,nwps:JPHV2,1.56,MLLW,0.0,,,JPHV2,8637712,,,,2026-10-27,
+KIPT,Chesapeake Bay near Kiptopeke (IN MLLW),37.165,-75.9883333,coops:8632200,1.9,,,,,KPTV2,8632200,KIPT,,,,
+KMNV,Knitting Mill Creek at North Colley,36.8862,-76.294,nwps:KMNV2,1.75,MLLW,0.0,,,KMNV2,8638610,,,,2026-10-27,
+LCEV,Little Creek at East Beach Marina,36.92302,-76.183479,nwps:LCEV2,1.81,MLLW,0.0,,,LCEV2,8638863,,,,2026-10-27,
+LENM,McIntosh Run near Leonardtown,38.3039,-76.6564,nwis:01661350;nwps:LENM2,0.997,NAVD88,0.997,,,LENM2,est0037,,,,2026-10-27,
+LEWI,Potomac River at Lewisetta (IN MLLW),37.995,-76.465,coops:8635750,0.83,,,,,LWTV2,8635750,LEWI,,,,
+LSPV,Potomac River at Leesylvania State Park,38.5912,-77.2466,nwps:LSPV2,0.912,MLLW,0.0,,,LSPV2,est0036,,,,2026-10-27,NWPS datum entry inconsistent; the record matches MLLW at neighbouring NOAA gauges; treated as MLLW
+MNPT,Elizabeth River near Money Point (IN MLLW),36.778333333333,-76.301666666667,coops:8639348,1.77,,,,,MNPV2,8639348,,,,,
+NRSV,Nansemond River at Sleepy Hole Park,36.8424132,-76.5224197,nwps:NRSV2,1.8,MLLW,0.0,,,NRSV2,est2346,,,,2026-10-27,
+ONAV,South Branch Onancock Creek at Onancock,37.71112,-75.7545,nwps:ONAV2,1.6,MLLW,0.0,,,ONAV2,est2349,,,,2026-10-27,
+PCCV,Elizabeth River at Scuffeltown Creek,36.808608,-76.287114,nwps:PCCV2,1.84,MLLW,0.0,,,PCCV2,8639348,,,,2026-10-27,
+PRTV,Chesapeake Bay at Port Isobel/Tangier Island,37.834596,-75.979416,nwps:PRTV2,1.3,MLLW,0.0,,,PRTV2,est2350,,,,2026-10-27,
+RDIV,Atlantic Coast near Rudee Inlet,36.82927,-75.97029,nwps:RDIV2,2.25,MLLW,0.0,,,RDIV2,est2341,,,,2026-10-27,
+RICV,James River (VA) at Richmond Locks,37.525,-77.421111111111,nwis:02037705;nwps:RICV2,1.675,NAVD88,1.675,,,RICV2,8637712,,,,2026-10-27,
+SAXV,Chesapeake Bay near Starling Creek at Saxis,37.9188,-75.7275,nwps:SAXV2,1.53,MLLW,0.0,,,SAXV2,8633777,,,,2026-10-27,
+SGSM,St. George Creek at Straits Point,38.138333333333,-76.5,nwps:SGSM2,0.888,MLLW,0.0,,,SGSM2,est0037,,,,2026-10-27,NWPS datum entry inconsistent; the record matches MLLW at neighbouring NOAA gauges; treated as MLLW
+SLIM,Patuxent River at Solomons Island,38.32,-76.45,coops:8577330;nwps:SLIM2,0.86,MLLW,0.0,,,SLIM2,8577330,,,,2026-10-27,
+SLRV,Salters Creek at 25th Street,36.9901,-76.3984,nwps:SLRV2,1.68,NAVD88,1.68,2026-10-15T13:54:00Z,0.0,SLRV2,8638610,,,,2026-10-27,gauge switched from MLLW to NAVD88 at 2026-10-15T13:54Z (a 1.68 ft step); earlier readings are MLLW
+SMSV,Pagan River at Smithfield Station,36.9823,-76.6211,nwps:SMSV2,1.536,gauge,1.1,,,SMSV2,est2347,,,,2026-10-27,"NWPS lists MLLW but the record sits 1.1 ft below MLLW at Sewells Point and Yorktown; MLLW = stage +1.10 ft, estimated from those gauges (about +/-0.2 ft)"
+SWPT,James River (VA) at Sewell's Point (IN MLLW),36.946666666667,-76.33,coops:8638610,1.61,,,,,SWPV2,8638610,SWPT,,,,
+USAR,"Little Annemessex at Crisfield, MD",37.9784722,-75.86375,nwis:01485755,1.166,,,,,,8571091,USAR,,yes,,
+USBB,"Dawley Corners, Beggars Bridge Creek, Virginia Beach",36.67980556,-75.984,nwis:0204300267,1.645,,,,,,est2301,USBB,,yes,,
+USBC,Elizabeth River at Bailey Creek near Chesapeake VA (IN MLLW),36.8057,-76.4087,nwis:0204288905,1.827,,,,,BLYV2,8639348,USBC,,,,
+USBK,Brick Kiln Creek near Poquoson (IN MLLW),37.105,-76.385277777778,nwis:0167862550,1.517,,,,,BKNV2,est0033,USBK,,,,
+USBM,USBM,,,nwis:0204288539,1.816,,,,,,8639348,USBM,,,,
+USCB,"Chincoteague Bay Inlet at Chincoteague, VA",37.902389,-75.407889,nwis:01484746,1.955,,,,,,8630440,USCB,,yes,,
+USFM,James River (VA) at Fort Monroe (IN MLLW),37.001944444444,-76.315,nwis:0204289994,1.697,,,,,FTMV2,8638288,USFM,,,,
+USHR,Hampton River near Hampton (IN MLLW),37.032222222222,-76.336666666667,nwis:0204289985,1.677,,,,,HMNV2,est0034,USHR,,,,
+USJT,James River (VA) at Jamestown/Scotland Ferry (IN MLLW),37.220139,-76.791453,nwis:02042770,1.113,,,,,JSFV2,8637712,USJT,,,,
+USLB,London Bridge Creek at Route 58 in VA Beach,36.841027,-76.057044,nwis:0204293125,1.654,,,,,LONV2,est2339,USLB,,,,
+USLI,Lynnhaven River near Lynnhaven Inlet (IN MLLW),36.906611,-76.095583,nwis:0204292275,1.65,,,,,LHNV2,est0035,USLI,,,,
+USLN,Little Neck Creek at Pinewood Rd in Virginia Beach (MLLW),36.859269,-75.984473,nwis:0204295505,1.372,,,,,LTCV2,est2340,USLN,,,,
+USLN-X,Little Neck Creek at Pinewood Rd webcam (FloodVISION-AI ML water level),36.859269,-75.984473,archive:floodvision/USLN-X,1.372,,,,,,est2340,,,,,"FloodVISION-AI v2, ml_ft_navd88"
+USLR,Lake Rudee near Bells Rd in Virginia Beach (MLLW),36.8247258,-75.985253,nwis:0204297575,2.038,,,,,LRBV2,est2341,USLR,,,,
+USMB,USMB,,,nwis:02042928,1.655,,,,,,est2339,USMB,,,,
+USNC,New Market Creek near Hampton (IN MLLW),37.045,-76.367777777778,nwis:0167892964,1.496,,,,,NMCV2,est0034,USNC,,,,
+USNR,"Nansemond River at Rte 460 at Suffolk, VA",36.739111,-76.58275,nwis:02042822,1.798,,,,,,est2346,USNR,USSF,yes,,same USGS site as USSF
+USPA,Elizabeth River at Route 165 in Virginia Beach,36.827589,-76.165338,nwis:0204288721,1.797,,,,,EBRV2,est2337,USPA,,,,
+USPT,Elizabeth River near Pinehurst in Portsmouth (IN MLLW),36.8436,-76.3647,nwis:02042893,1.78,,,,,ELZV2,8638339,USPT,,,,
+USSB,USSB,,,nwis:01484812,1.302,,,,,,est2349,USSB,,yes,,
+USSC,"Starling Creek at Port of Saxis at Saxis, VA",37.918828,-75.727539,nwis:01484938,1.414,,,,,,8633777,USSC,,yes,,
+USSF,Nansemond River at Suffolk (IN MLLW),36.739166666667,-76.582777777778,nwis:02042822,1.798,,,,,NMDV2,est2346,USSF,,,,
+USTC,Thalia Creek at Route 58 in Thalia,36.843179,-76.124409,nwis:0204291317,1.695,,,,,THAV2,est0035,USTC,,,,
+WACH,Atlantic Coast at Wachapreague (IN MLLW),37.6083333,-75.685,coops:8631044,2.61,,,,,WAHV2,8631044,WACH,,,,
+WADC,Washington Channel at SW Waterfront (IN MLLW),38.873333333333,-77.021111111111,coops:8594900,1.4,,,,,WASD2,8594900,,,,,
+WCKV,Piankatank River above Wharf Creek near Hudgins VA,37.489189,-76.310231,nwps:WCKV2,1.1,MLLW,0.0,,,WCKV2,est2348,,,,2026-10-27,
+WMPT,Chesapeake Bay at Windmill Point (IN MLLW),37.615,-76.29,coops:8636580,1.18,,,,,WNDV2,8636580,WMPT,,,,
+WRDV,Warwick River at Denbigh Blvd,37.1235,-76.568,nwps:WRDV2,1.66,NAVD88,1.66,2026-10-15T14:00:00Z,0.0,WRDV2,est2347,,,,2026-10-27,gauge switched from MLLW to NAVD88 at 2026-10-15T14:00Z (a 1.66 ft step); earlier readings are MLLW
+WRSV,Warwick River at Shellabarger Dr,37.1582,-76.5644,nwps:WRSV2,1.7,NAVD88,1.7,2026-10-15T14:18:00Z,0.0,WRSV2,est2347,,,,2026-10-27,gauge switched from MLLW to NAVD88 at 2026-10-15T14:18Z (a 1.70 ft step); earlier readings are MLLW
+WRVV,Ware River near Schley,37.3793,-76.4254,nwps:WRVV2,1.64,MLLW,0.0,,,WRVV2,est2336,,,,2026-10-27,
+WSPV,York River near West Point,37.537031,-76.786194,nwps:WSPV2,2,MLLW,0.0,,,WSPV2,8637689,,,,2026-10-27,
+YRCG,Chesapeake Bay near Yorktown (IN MLLW),37.226666666667,-76.478333333333,coops:8637689,1.53,,,,,YKTV2,8637689,YRCG,,,,

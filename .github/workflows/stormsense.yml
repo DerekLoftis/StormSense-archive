@@ -1,0 +1,119 @@
+# The StormSense run, every 6 hours: reads every gauge and forecast, makes StormSense's own forecast,
+# scores the archive, archives the run on this repository's releases and publishes the two public
+# sites (StormSense-latest and StormSense-ensemble), which hold only the published pages and data.
+#
+# Publishing needs the secret STORMSENSE_PUBLISH_TOKEN: a fine-grained token with Contents read and
+# write on DerekLoftis/StormSense-latest and DerekLoftis/StormSense-ensemble. The run pushes each
+# site to that repository's `site` branch (one commit, history replaced each time) and sends it a
+# `publish` repository_dispatch, which its deploy.yml turns into a GitHub Pages deployment.
+# Without the secret the run still builds and archives, and says that it did not publish.
+#
+# A pull request runs a dry build of a few stations: nothing is uploaded or published; the sites
+# are kept as a workflow artifact.
+name: StormSense
+
+on:
+  schedule:
+    - cron: "20 0,6,12,18 * * *"
+  workflow_dispatch:
+    inputs:
+      rescore_all:
+        description: "Rescore every archived run (after a change to the skill scoring)"
+        type: boolean
+        default: false
+  pull_request:
+    paths: [stormsense/**, harmonics/**, requirements.txt, .github/workflows/stormsense.yml]
+
+concurrency:
+  group: stormsense-${{ github.event_name == 'pull_request' && github.head_ref || 'main' }}
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+env:
+  LATEST_REPO: DerekLoftis/StormSense-latest
+  ENSEMBLE_REPO: DerekLoftis/StormSense-ensemble
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install
+        run: pip install -q -r requirements.txt
+
+      - name: Build
+        id: build
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ github.token }}
+          DRY: ${{ github.event_name == 'pull_request' }}
+          RESCORE: ${{ github.event.inputs.rescore_all }}
+        run: |
+          set -o pipefail
+          ARGS=""
+          if [ "$DRY" = true ]; then ARGS="--stations SWPT,USJT,BRDH,CNRC,USLN-X,ALEV,JLMV,SLIM"; fi
+          if [ "$RESCORE" = true ]; then ARGS="$ARGS --rescore-all"; fi
+          python -m stormsense.build --latest site/latest --ensemble site/ensemble --work work $ARGS 2>&1 | tee build_log.txt
+          cp build_log.txt site/latest/ && cp build_log.txt site/ensemble/
+
+      - name: Archive the run on this repository's releases
+        if: steps.build.outcome == 'success' && github.event_name != 'pull_request'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          while read -r TAG ASSET; do
+            case "$TAG" in
+              ensemble-*) NOTES="StormSense Ensemble runs (ens72 csv/json, every member's native series, skill tables), one tarball per 6-hourly cycle, plus the cumulative skill scores." ;;
+              stormsense-*) NOTES="StormSense Latest runs, one tarball per build (archive-latest.yml), plus fore72_history.csv.gz, the hourly record of every published forecast that the uncertainty cone is built from." ;;
+              *) NOTES="StormSense archive" ;;
+            esac
+            gh release view "$TAG" >/dev/null 2>&1 || gh release create "$TAG" --title "$TAG" --notes "$NOTES"
+            gh release upload "$TAG" "$ASSET" --clobber
+          done < work/archive/assets.txt
+
+      - name: Publish the public sites
+        if: steps.build.outcome == 'success' && github.event_name != 'pull_request'
+        env:
+          TOKEN: ${{ secrets.STORMSENSE_PUBLISH_TOKEN }}
+        run: |
+          if [ -z "$TOKEN" ]; then
+            echo "::warning title=not published::STORMSENSE_PUBLISH_TOKEN is not set; the run was built and archived but the public sites were not updated."
+            exit 0
+          fi
+          publish() {  # site folder, repository
+            cd "$1"
+            git init -q -b site
+            git config user.name "stormsense-archive"
+            git config user.email "actions@users.noreply.github.com"
+            git add -A
+            git commit -q -m "StormSense run $(date -u +%Y-%m-%dT%H:%MZ)"
+            for i in 1 2 3 4; do git push -q -f "https://x-access-token:${TOKEN}@github.com/$2.git" site && break; sleep $((2**i)); done
+            cd - >/dev/null
+            curl -sSf -X POST -H "Authorization: Bearer ${TOKEN}" -H "Accept: application/vnd.github+json" \
+              "https://api.github.com/repos/$2/dispatches" -d '{"event_type":"publish"}'
+          }
+          publish site/latest "$LATEST_REPO"
+          publish site/ensemble "$ENSEMBLE_REPO"
+
+      - name: Keep the dry-run sites
+        if: github.event_name == 'pull_request'
+        uses: actions/upload-artifact@v4
+        with:
+          name: sites
+          path: site
+          retention-days: 7
+
+      - name: Show the end of a failed build as an annotation
+        if: steps.build.outcome == 'failure'
+        run: |
+          echo "::error title=build failed::$(tail -n 40 build_log.txt | sed ':a;N;$!ba;s/%/%25/g;s/\n/%0A/g')"
+          exit 1
