@@ -36,7 +36,10 @@ NWIS = ("https://waterservices.usgs.gov/nwis/iv/?format=json&sites={site}&parame
 NWPS = "https://api.water.noaa.gov/nwps/v1/gauges/{lid}/stageflow/observed"
 OGC = ("https://api.waterdata.usgs.gov/ogcapi/v0/collections/continuous/items?f=json&limit=10000"
        "&monitoring_location_id=USGS-{site}&parameter_code={pc}&datetime={a}/{b}")
-RAW = "https://raw.githubusercontent.com/DerekLoftis/tidewatch_latest/main/"
+# USLN-X/CNRC archives, read from both places and merged while Tidewatch's capture moves to its private
+# repo: the tidewatch_latest Pages site (obs/<folder>/) and tidewatch_latest's main branch (<folder>/)
+ARCHIVE_URLS = ("https://derekloftis.github.io/tidewatch_latest/obs/{folder}/{name}",
+                "https://raw.githubusercontent.com/DerekLoftis/tidewatch_latest/main/{folder}/{name}")
 ARCHIVE_COLUMN = {"floodvision": ("ml_ft_navd88", "v2"), "greenstream": ("level_ft_navd88", None)}
 GAUGE_MLLW = {"BRDH": 9.71}  # VIMS radar gauges: MLLW lies this far below the sensor (ft)
 NAVD_PARAM = "62620"  # estuary or ocean water surface elevation above NAVD88, ft
@@ -181,19 +184,20 @@ def thredds(url, gauge_mllw, a, b):
 
 
 def archive(source_id, a, b):
-    """USLN-X / CNRC monthly archive CSVs in tidewatch_latest, ft NAVD88 between a and b."""
+    """USLN-X / CNRC monthly archive CSVs published by Tidewatch, ft NAVD88 between a and b."""
     folder, st = source_id.split("/")
     col, model = ARCHIVE_COLUMN[folder]
     rows = {}
     y, m = a.year, a.month
     while (y, m) <= (b.year, b.month):
-        try:
-            text = get(f"{RAW}{folder}/{st}_{y:04d}-{m:02d}.csv", tries=1).decode()
-        except Exception:
-            text = ""
-        for r in csv.DictReader(io.StringIO(text)):
-            if r.get(col) and (model is None or r.get("model", model) == model):
-                rows[r["time_utc"]] = float(r[col])
+        for url in ARCHIVE_URLS:
+            try:
+                text = get(url.format(folder=folder, name=f"{st}_{y:04d}-{m:02d}.csv"), tries=1).decode()
+            except Exception:
+                continue
+            for r in csv.DictReader(io.StringIO(text)):
+                if r.get(col) and (model is None or r.get("model", model) == model):
+                    rows.setdefault(r["time_utc"], float(r[col]))
         y, m = (y + 1, 1) if m == 12 else (y, m + 1)
     t = np.array([utc(k) for k in sorted(rows)])
     v = np.array([rows[k] for k in sorted(rows)])
