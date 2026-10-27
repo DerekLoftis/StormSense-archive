@@ -176,7 +176,9 @@ table{border-collapse:collapse;font-size:.92rem}
 th,td{border:1px solid #d5dbe3;padding:4px 8px;text-align:left;white-space:nowrap}
 thead th{background:#eef6fa;text-align:center}
 .code{font-family:ui-monospace,monospace;font-weight:normal;color:#555}
-a{color:#0d6e8a}"""
+a{color:#0d6e8a}
+td.small{font-size:5pt;line-height:1.25;white-space:normal;width:18em;min-width:18em;max-width:18em}
+td.small.src{overflow-wrap:anywhere}"""
 DISC = ('<p class="disc">Disclaimer: StormSense&trade; Predictive Plots are computer-generated operational storm tide '
         'forecasts; the user assumes any and all risk.</p>')
 
@@ -199,8 +201,9 @@ def latest_index(site, table, built, missing, thr, updated):
         cells = "".join(f"<td>{links(site, p, st, d)}</td>" for p, _ in prods for d in ("MLLW", "NAVD"))
         t = thr.get(st)
         nws = f'<a href="https://water.noaa.gov/gauges/{t["lid"]}">{t["lid"]}</a>' if t else ""
-        rows.append(f"<tr><th>{st}</th><td>{H.escape(table[st]['name'])}</td>{cells}<td>{nws}</td>"
-                    f"<td>{H.escape(built[st])}</td></tr>")
+        src = H.escape(built[st])
+        src = f'<td class="small src">{src}</td>' if len(built[st]) > 20 else f"<td>{src}</td>"
+        rows.append(f"<tr><th>{st}</th><td class=\"small\">{H.escape(table[st]['name'])}</td>{cells}<td>{nws}</td>{src}</tr>")
     miss = "".join(f"<li>{st} ({H.escape(table[st]['name'])}): {H.escape(why)}</li>" for st, why in sorted(missing.items()))
     meta = "; ".join(f'{p}: MLLW <a href="metadata/stormsense-metadata-for-{p}-csv-data.pdf">PDF</a> '
                      f'<a href="metadata/stormsense-metadata-for-{p}-csv-data.json">JSON</a>, NAVD88 '
