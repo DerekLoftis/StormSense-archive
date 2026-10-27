@@ -1,86 +1,114 @@
 # StormSense: project knowledge for Claude
 
-This file carries what the original "Tidewatch Charts into StormSense" Claude project learned
-about StormSense (Oct 2026), so a new StormSense project can start without it. The same file
-sits in DerekLoftis/StormSense-latest and DerekLoftis/StormSense-ensemble. Supporting material
-copied out of that project's shared folder (skill code, baselines, notes, station sheet,
-disclosures) is in the private repo DerekLoftis/StormSense-archive under `handoff/`
-(see `handoff/README.md` there); paths below starting with `handoff/` are in that repo.
+What the StormSense Claude projects have learned (Oct 2026). Since 2026-10-27 all StormSense code lives
+in this private repo, DerekLoftis/StormSense-archive; the public repos StormSense-latest and
+StormSense-ensemble only hold the published pages and data. Material copied from the old Tidewatch
+project's shared folder (skill code, baselines, notes, station sheet, disclosures) is under `handoff/`.
 
 ## People and goal
 
 - Owner: Derek (Jon Derek Loftis), research assistant professor at VIMS (William & Mary). Writes in English.
 - StormSense is VIMS's storm tide forecast and sensor service. It grew out of Tidewatch
   (John Boon's harmonic tide + ETSS surge system on web4.vims.edu, which the old project keeps).
-- Goal of this project: archive every StormSense forecast separately from Tidewatch, then develop
-  StormSense's own 72-hour forecast instead of only republishing or ensembling existing guidance.
+- Goal: archive every StormSense forecast separately from Tidewatch and develop StormSense's own 72-hour
+  forecast. Derek (2026-10-27) adopted Boon's "Proposed Changes to VIMS TIDEWATCH" for StormSense: m30 line
+  back on the 72-h charts, Boon's m30-locked VIMS tide instead of the P-ETSS tide, own observations (no
+  web4), calibrated uncertainty, flood-stage chances, XHW peak labels, and scoring of what floods people.
+  Derek confers with Dave Forrest about Tidewatch itself; StormSense is Derek's to develop as he likes.
 
-## What is live (all on GitHub Actions, independent of any Claude project)
+## Architecture (one pipeline, private)
 
-| Repo | Site | Schedule (UTC) | Archive |
-|---|---|---|---|
-| DerekLoftis/StormSense-latest (public) | https://derekloftis.github.io/StormSense-latest/ | `publish.yml` 00:20/06:20/12:20/18:20 | every build as `stormsense_<build time>.tar.xz` on release `stormsense-YYYY-MM` in private StormSense-archive (its `archive-latest.yml`, hourly) |
-| DerekLoftis/StormSense-ensemble (public) | https://derekloftis.github.io/StormSense-ensemble/ | `ensemble.yml` 00:40/06:40/12:40/18:40 | one `ensemble_<cycle>.tar.gz` per run on release `ensemble-YYYY-MM` (since 2026-10-16) |
+| What | Where | Schedule (UTC) |
+|---|---|---|
+| The StormSense run: `python -m stormsense.build` | `.github/workflows/stormsense.yml` here | 00:20/06:20/12:20/18:20 |
+| StormSense Latest site (fore72, 7day, 30day) | public DerekLoftis/StormSense-latest, `site` branch, https://derekloftis.github.io/StormSense-latest/ | pushed by the run |
+| StormSense Ensemble site (ens72, skill/) | public DerekLoftis/StormSense-ensemble, `site` branch, https://derekloftis.github.io/StormSense-ensemble/ | pushed by the run |
+| Archive of the Latest site as published | `archive-latest.yml` here, `stormsense_<build time>.tar.xz` on `stormsense-YYYY-MM` | :50 hourly |
+| Gauge observations, one tarball per day | `archive-obs.yml` here, `obs_YYYY-MM-DD.tar.xz` on `obs-YYYY-MM` | 04:10 daily |
+| Harmonic tide refit | `harmonics.yml` here, commits `harmonics/<ST>.json` | 2nd of month |
 
-GitHub cron starts late or skips sometimes; there is no fallback. publish.yml runs have started 1-5 h late
-(the 06:20 run of 2026-10-20 started 11:49) and only ~3 a day land, so the archive checks hourly. Pages source is "GitHub Actions".
-`SCHEDULE` strings in publish.py / ensemble.py must match the workflow cron.
+- Publishing: the run force-pushes each site as one commit to the public repo's `site` branch and sends a
+  `publish` repository_dispatch; the public repo's `deploy.yml` (on main) deploys that branch to Pages
+  (the github-pages environment only takes the default branch). Needs secret `STORMSENSE_PUBLISH_TOKEN`
+  here (fine-grained, Contents read/write on both public repos); without it the run builds and archives
+  and warns "not published". Pages source stays "GitHub Actions".
+- Pages are self-contained: jQuery + Highcharts 6.2.0 from the site's own `jslib/` (no CDN; Derek's
+  browser hung on CDN scripts). `stormsense/charts.py` writes them (the old styler's JS ported).
+- Run archive: `ensemble_<cycle>.tar.gz` (latest.json with `"obs_basis": "stormsense"`, ens72 csv/json,
+  members_native.json, skill/) and the cumulative `skill_scores.csv.gz`, `flood_scores.csv.gz`,
+  `skill_runs.csv` on this repo's `ensemble-YYYY-MM`; `fore72_history.csv.gz` (hourly record of every
+  published fore72, what the cone is built from) on `stormsense-YYYY-MM`. Runs before 2026-10-27 are on the
+  public StormSense-ensemble's `ensemble-2026-10` release; `stormsense/releases.py` reads both.
+- GitHub cron starts late or skips sometimes; there is no fallback. `SCHEDULE` in build.py must match the cron.
+- The old DerekLoftis/StormSense_forecastmodel (ssmodel/) was folded in as `stormsense/`.
 
-### StormSense Latest (`publish.py`, `products.py`, `petss.py`, `styler/`)
-- Products: `fore72/`, `7day/`, `30day/`, files `<ST>_<prod>_<MLLW|NAVD>.html|csv|json`, 35 stations.
-- fore72 = NWS P-ETSS (NOMADS, newest GOOD cycle; NOMADS keeps 2 days): hourly surge/bias low-passed
-  (3 h Hann) onto P-ETSS 6-min tide, 72 h, aligned to the gauge by the median gap over the prior 24 h
-  ("est" sites differ up to 0.75 ft). 10-90% cone in StormSense dark blue rgba(20,38,96,0.5). No m30 line.
-  Stations without a P-ETSS point fall back to Tidewatch's 36 h.
-- 7day/30day = gauge observations **taken from Tidewatch's web4 3d/30d files** plus P-ETSS / CO-OPS tide.
-  StormSense therefore still depends on web4 for most observations (see Roadmap).
-- CSV/JSON fields carry units: fore72 `date_time_z, astro_tide_ft, surge_ft, bias_ft, residual_ft,
-  SSforecast_ft, SSforecast_p10_ft, SSforecast_p90_ft, surge_p10_ft, surge_p90_ft`; 7day/30day
-  `date_time_z, water_level_ft, astro_tide_ft, residual_ft`. Every CSV has a .json twin (metadata header
-  + records, null for blanks). Metadata PDFs + JSON in `metadata/` (tools/make_metadata.py; Liberation
-  Sans). Derek said to stop tweaking the PDFs.
-- `guidance.json` picks fore72's guidance: `"mode": "override", "override": "petss"` (Derek's ask until
-  adaptive selection is live). Each chart names its guidance under the disclaimer and in JSON `source`.
-- Flood thresholds: `make_thresholds.py` from the NWPS gauge API (`stations_nws.csv`), fallback
-  `thresholds.json`. Colors Action #FFFF00, Minor #FF9900, Moderate #FF0000, Major #CC33FF.
-- web4 sometimes serves empty/partial pages; publish retries and skips them. `build_log.txt` is
-  published with the site; a failed build posts its log tail as a "build failed" check-run annotation.
+## The run (`stormsense/`)
 
-### StormSense Ensemble (`ensemble.py`, `members.py`, `petss.py`, `etss.py`, `psurge.py`, `pages.py`)
-- `ens72/<ST>_ens72_<MLLW|NAVD>.html|csv|json`, one column per member; `latest.json` lists run times and
-  per-station alignment shifts. `stations.csv` lists 51 stations and model coverage.
-- Members: P-ETSS mean + cone, STOFS-2D, STOFS-3D (12Z), CBOFS, NWM short and medium, NWS official (NWPS),
-  Tidewatch f36 px30, tide-plus-persistence baseline, ETSS (tgftp FQUS23 KWNO bulletin added to P-ETSS
-  tide, 9-11 stations; NOMADS ETSS is 403 from Actions; runs high, e.g. SWPT 4.3 vs P-ETSS 3.6 ft), NHC
-  P-Surge e50 (17 stations, only while NHC advisories are out). Details: README.md, NEW_MEMBERS.md.
-- Alignment: median(obs - member) over the last 24 h of overlap (>=30 six-minute obs), newest run with the
-  previous one stitched in front. NWS and Tidewatch are not shifted.
-- Design and phases: `handoff/ensemble_design.md`. Phase 1 (StormSense-ensemble) is live. Phase 2 (skill-based pick
-  per station and lead band 0-12/12-36/36-72 h, switch only after another member wins two updates in a
-  row, one line in StormSense-latest `guidance.json`) needs about a week of ensemble archive (from
-  ~2026-10-23). Phase 3: regime rules (QPF/rivers, NHC advisories, nor'easter winds). Phase 4: analog and
-  learned weights from the archive and AWS/IEM backfills.
+- `stations.csv` (generated by `tools/make_stations.py`): 75 stations, 38 from before plus 37 added
+  2026-10-27 (the Tidewatch stand-in stations). `obs` is a source chain tried in order (`coops:<id>`,
+  `nwis:<site>` param 62620 NAVD88, `nwps:<LID>` stage via datum, `thredds`, `floodvision`, `greenstream`);
+  `stage_datum`/`stage_to_mllw_ft` convert NWPS stages; `petss_point` (P-ETSS csv point, proxies for
+  stations without one); `tidewatch_id` (the Tidewatch f36 member); `alias_of`; `suspect_obs`.
+  GS01/GS02 have no keyless source (GreenStream API needs Derek's key). USAR = CRSM and USNR = USSF are
+  the same USGS sites. Datums ft above MLLW in `data/datums/<ST>.json` (NOAA or VDatum).
+- `observe.py`/`obs.py`: 40 days of every gauge's own record, QC'd, 6-minute, ft MLLW. No web4.
+  `STORMSENSE_OBS_DIR` reads local `<ST>.csv` instead (testing).
+- `tide.py`: UTide, 27 constituents no Sa/Ssa (13 under ~6 months), stored fits `harmonics/<ST>.json`
+  or fitted per run from 40 days (>=29 d). m30 lock: tide shifted so its mean over the last 30 days of
+  observations equals m30 (only when >=15 days observed). m30 drawn on fore72 as a VIMS-teal line.
+- `thresholds.py`: NWS categories from NWPS per gauge datum, plus `mllw`; fallback `data/thresholds_fallback.json`.
+- `members_run.py` + `members.py`/`petss.py`/`etss.py`/`psurge.py`: P-ETSS, ETSS (surge only, tgftp;
+  403 from the sandbox), STOFS-2D/3D, CBOFS, NWM short/medium, NWS official, NHC P-Surge, Tidewatch f36
+  px30 from web4 (the one web4 read; NAVD CSV + our navd88). `station.py` lines them up with the gauge
+  (median obs - member over the last 24 h, >=30 obs; NWS and Tidewatch not shifted); P-ETSS and ETSS also
+  keep their surge (`petss_surge_ft`, `etss_surge_ft` in ens72) so the model puts it on our tide.
+- StormSense model member (`surge.py`, `corrector.py`): gauge residual handed over (TAU 12 h) to a
+  1/RMSE^2 blend of the members' surges on our tide, then the site predictor-corrector from the last week
+  of archived runs. `stormsense_raw` = before the corrector (reference only).
+- Primary forecast (fore72, `station.primary`): m30 tide + residual of the picked guidance per band
+  (0-12/12-36/36-72, fallback P-ETSS > StormSense > ETSS > baseline, point by point), handed over from the
+  gauge's current residual, eased 1 h at band edges. `data/guidance.json`: `{"mode": "adaptive"}` or
+  `{"mode": "override", "override": "petss"}`. Chart names its guidance under the disclaimer.
+- Cone (`uncertainty.py`): 10th/90th weighted percentiles of StormSense's own past errors (obs - fc) by
+  lead hour, 30-day window, weight exp(-age/7 d), other stations x0.1; >=8 verified forecasts or it falls
+  back to P-ETSS's spread. Flood chance = weighted share of whole past error trajectories added to the
+  forecast whose maximum reaches the level; shown as "Action 2.39 (12%)" on NAVD charts and in fore72
+  JSON `chance_of_reaching_within_72h`. The old P-ETSS cone held only 33% of obs at 0-12 h.
+- XHW labels (`flood.py`): forecast high waters >= Action - 0.5 ft (NAVD charts) or > HAT (MLLW
+  charts), "(XHW: 4.23)" in chart units; also `xhw_peaks` in fore72 JSON.
+- Products: fore72 fields `date_time_z, astro_tide_ft, surge_ft, bias_ft, residual_ft, SSforecast_ft,
+  SSforecast_p10_ft, SSforecast_p90_ft, surge_p10_ft, surge_p90_ft, m30_ft`; 7day/30day `date_time_z,
+  water_level_ft, astro_tide_ft, residual_ft` (our obs, our m30 tide); ens72 one column per member plus
+  `primary_ft` (+p10/p90). Every CSV has a .json twin. Metadata PDFs + JSON in `data/metadata/`
+  (tools/make_metadata.py; Liberation Sans). Derek said to stop tweaking the PDFs.
+- Skill (`skill.py`): every archived run x station x member scored per window: bands 0-12/12-36/36-72
+  (pick), 0-36, 0-72, `full` (member's own period), 6-h segments 0-6..66-72; plus high waters (peak-height
+  and timing error, hit/miss/false alarm per NWS category, `flood_scores`). Truth = the gauges' own obs;
+  runs on Tidewatch's basis (no `obs_basis`) are read from their NAVD CSVs + our navd88. Last 5 days
+  rescored each run (`--rescore-all` or old-format cache rescoring all). Three tables per station
+  (under each ens72 chart, `skill/tables/<ST>_skill_*.csv|json`) and over all stations (`skill/`),
+  ordered by SS-Skill over each forecast's period. Pick: best recent skill (10 d, e-fold 3 d), must lead by
+  0.01 for 2 updates; P-ETSS until 7 days verified and >=12 scores. Never picked: tidewatch, baseline,
+  tide, stormsense_raw, primary; suspect stations USSC USAR USCB USNR USSB GS01 USBB stay on P-ETSS.
+- Testing locally: `PYTHONPATH=. STORMSENSE_OBS_DIR=<dir> python -m stormsense.build --now
+  2026-10-27T00:20 --stations SWPT,USJT --latest /tmp/l --ensemble /tmp/e --work /tmp/w [--no-skill]`.
+  A pull request runs a dry build of 8 stations on Actions and keeps the sites as an artifact.
 
-## Station sources that are not Tidewatch (in both StormSense repos and tidewatch_latest)
+## Station sources that are not Tidewatch
 
-`noaa_override.py` is copied in StormSense-latest, StormSense-ensemble and tidewatch_latest; keep the
-copies in step (tidewatch_latest stays with the Tidewatch project).
-- CBBT 8638901, MNPT 8639348, DAHL 8635027, WADC 8594900: rebuilt from NOAA CO-OPS 6-min obs (MLLW, 31 d),
-  27-constituent UTide fit (no Sa/Ssa) to `harmonics/<ST>_hourly.csv.gz` (refit: `python noaa_override.py
-  --hourly harmonics`), 36 h = tide + 0.7 x P-ETSS mean surge offset to the last residual. NAVD88 above
-  MLLW: CBBT 1.92, MNPT 1.77 (VDatum MDVAchb12), DAHL 1.04, WADC 1.40 (NOAA). Tidewatch's CBBT/MNPT froze
-  2022-05-27; Tidewatch's DAHL and WADC series are another gauge's (see aliasing below).
+- CBBT 8638901, MNPT 8639348, DAHL 8635027, WADC 8594900: NOAA CO-OPS. NAVD88 above MLLW: CBBT 1.92,
+  MNPT 1.77 (VDatum MDVAchb12), DAHL 1.04, WADC 1.40 (NOAA). Tidewatch's CBBT/MNPT froze 2022-05-27;
+  Tidewatch's DAHL and WADC series are another gauge's (see aliasing below). tidewatch_latest keeps its own
+  `noaa_override.py` (Tidewatch project).
 - BRDH (Back River, VIMS radar gauge): THREDDS https://tds.vims.edu/thredds/dodsC/daveAll/drf/Tidewatch/BRDH.nc
-  (1-min since 2017; MLLW = 9.71 - value; QC'd), Sewells Point P-ETSS surge, NAVD88 1.63 ft above MLLW.
-- USLN-X: FloodVISION-AI webcam water level at Little Neck Creek from https://usgs-ngwos.vims.edu/
-  (Streamlit; payload only in the rendered page). Scraped by tidewatch_latest `floodvision.py`
-  (workflow floodvision.yml) into `floodvision/USLN-X_YYYY-MM.csv` (NAVD88; model v2 since 2026-10-09).
-- CNRC (Accokeek Creek at Crow's Nest): GreenStream/VDEM sensor, vdem.greenstream.io websocket history,
-  level NAVD = 5.89 - stage; archived by tidewatch_latest `greenstream.py` to `greenstream/CNRC_YYYY-MM.csv`
-  (from Sept 16). Tide fitted to that archive (13 constituents until 6 months), Dahlgren P-ETSS surge,
-  NAVD88 0.691 above MLLW. No key needed (the GreenStream API proper needs Derek's key).
+  (1-min since 2017; MLLW = 9.71 - value; QC'd), NAVD88 1.63 ft above MLLW.
+- USLN-X: FloodVISION-AI webcam water level at Little Neck Creek, scraped by tidewatch_latest
+  `floodvision.py` into `floodvision/USLN-X_YYYY-MM.csv` (NAVD88; model v2 since 2026-10-09), read here
+  from raw.githubusercontent.
+- CNRC (Accokeek Creek at Crow's Nest): GreenStream/VDEM sensor archived by tidewatch_latest
+  `greenstream.py` to `greenstream/CNRC_YYYY-MM.csv` (level NAVD = 5.89 - stage), NAVD88 0.691 above MLLW.
 - Station ids may contain '-'. **USLN-X and CNRC history lives in tidewatch_latest**; moving those
-  scrapers here is a decision for Derek (see Roadmap).
+  scrapers here is a decision for Derek.
 
 ## Datums and station facts
 
@@ -106,7 +134,9 @@ copies in step (tidewatch_latest stays with the Tidewatch project).
   merge MAE/RMSE and weight R² least; don't change the formula without him.
 - Known results: Sept 2026 36-h RMSE NWS 0.24 vs Tidewatch 0.28 ft (NWS better at 10 of 11; nor'easter
   0.29 vs 0.52). King tide 8-12 Oct 2026: NWS 0.21, Tidewatch 0.26, STOFS-2D 0.18 (vs TW 0.22), CBOFS 0.25,
-  STOFS-3D 0.31 (bias -0.25), NWM 0.73. P-ETSS not yet verified against obs: an early task here.
+  STOFS-3D 0.31 (bias -0.25), NWM 0.73. First ensemble scores (runs 16-18 Oct 2026, ~1.5 ft surge event,
+  mean over stations): 0-12 h RMSE ETSS 0.24, Tidewatch 0.25, STOFS-2D 0.27, P-ETSS 0.32 ft; 36-72 h STOFS-3D
+  0.65, STOFS-2D 0.70, P-ETSS 0.86 ft (bias +0.77, everyone high); P-ETSS 10-90% cone held 33% of obs at 0-12 h.
 - Event look-backs use Derek's deck format (`handoff/notes/flood-event-validation-format.md`): pptx with
   autoplay mp4 per forecast, station stats table first, ROYGBIV forecast colors, halo-labelled composite.
 
@@ -131,32 +161,24 @@ copies in step (tidewatch_latest stays with the Tidewatch project).
 - Claude sessions can't create repos, buckets, releases (from the sandbox), delete branches or change repo
   settings: do release uploads inside workflows; ask Derek for the rest. Dispatching a workflow needs Derek's yes.
 
-## Roadmap for the StormSense project (suggested order)
+## Roadmap
 
-1. **Archive StormSense Latest** (built 2026-10-20): StormSense-archive `archive-latest.yml` (:50 every
-   hour) reads the public site's latest.json and, for a build not yet in the index, downloads every linked
-   fore72/7day/30day html+csv+json plus index, latest.json, thresholds, build log, metadata JSON and jslib into
-   one `stormsense_<build time>.tar.xz` (~10 MB; manifest.csv inside) on release `stormsense-YYYY-MM`.
-   Index in that repo: `data/index/stormsense-latest/runs_YYYY-MM.csv` (one row per build: slot cycle,
-   P-ETSS cycle, counts, sha256) and `stations_YYYY-MM.csv` (per build/station/product/datum: formats, rows,
-   first/last time, guidance source). Code: `archiver/latest_archive.py`.
-2. Verify P-ETSS and every ensemble member with the skill code against obs as the archive grows.
-3. Phase 2 adaptive pick (skill per station and lead band, hysteresis) writing `guidance.json`.
-4. **StormSense's own 72-h forecast**: own harmonic tide per gauge (UTide, as noaa_override.py does),
-   own observations (CO-OPS, USGS NWIS, THREDDS, GreenStream, FloodVISION) so web4 is no longer needed,
-   and a surge model of StormSense's own, e.g. a skill-weighted blend or a regression/ML correction of
-   member surges using recent residual, wind, pressure, QPF and river flow, trained on the archives
-   (ensemble releases, tidewatch_archive model/NWPS releases, AWS STOFS/NWM history, IEM NWS HML).
-   Publish it as its own member first, and let the adaptive pick choose it only once it scores best.
-5. Embeddable interactive archive viewer (iframe for pages like
-   https://www.vims.edu/people/loftis_jd/StormSense/forecasts/noaa/swpt/): needs a public-read Cloudflare
-   R2 or VIMS S3 bucket with its key as repo secrets (Derek creates).
+Done: archive of every build (2026-10-20); adaptive pick (phase 2); own observations, own m30 tide,
+StormSense model member, calibrated cone, flood chances, XHW labels, peak and flood-stage scoring, one
+private pipeline (2026-10-27).
+Next: Boon's remaining proposals (see the Claude Doc reviewing them, https://claude.ai/artifact/ChchgM35wx6tKVc9VfUQWf);
+phase 3 regime rules (QPF/rivers, NHC advisories, nor'easter winds); phase 4 analog and learned weights from
+the archives (ensemble releases, tidewatch_archive model/NWPS releases, AWS STOFS/NWM history, IEM NWS HML);
+GreenStream key for GS01/GS02; embeddable interactive archive viewer (iframe for pages like
+https://www.vims.edu/people/loftis_jd/StormSense/forecasts/noaa/swpt/), which needs a public-read Cloudflare
+R2 or VIMS S3 bucket with its key as repo secrets (Derek creates).
 
 ## Where the history lives
 
-- Ensemble runs since 2026-10-16: StormSense-ensemble's `ensemble-YYYY-MM` releases.
-- StormSense Latest builds (once archive-latest.yml is merged): StormSense-archive's `stormsense-YYYY-MM`
-  releases, indexed in its `data/index/stormsense-latest/`.
+- Ensemble runs 2026-10-16 to 27: public StormSense-ensemble's `ensemble-2026-10` release; since then this
+  repo's `ensemble-YYYY-MM` releases (with the cumulative skill and flood scores).
+- StormSense Latest builds: this repo's `stormsense-YYYY-MM` releases, indexed in `data/index/stormsense-latest/`,
+  plus `fore72_history.csv.gz`. Gauge observations: `obs-YYYY-MM`, indexed in `data/index/obs/`.
 - Tidewatch f36/3d/30d, Classic, NWPS, NWS CFW and STOFS/NWM/CBOFS model files since 16 Sept 2026: private
   DerekLoftis/tidewatch_archive, releases `archive-YYYY-MM` (one tarball per run; index CSVs in the repo
   under `data/index/`), plus `nws-backfill` (IEM NWS HML for Sept 2026, Oct 2025, Oct 2016) and

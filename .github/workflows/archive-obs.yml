@@ -1,7 +1,7 @@
 # Archives StormSense's own gauge observations (straight from CO-OPS, USGS, the VIMS THREDDS gauge,
 # FloodVISION and GreenStream; no web4), one tarball per UTC day on that month's release obs-YYYY-MM,
 # with the day and gauge index committed under data/index/obs/. The fetch and QC code is
-# DerekLoftis/StormSense_forecastmodel's ssmodel/obs.py. Each run catches up the last 10 finished days,
+# stormsense/obs.py (each gauge's sources in stormsense/stations.csv). Each run catches up the last 10 finished days,
 # so a skipped or late scheduled run loses nothing; a dispatch with `since` backfills further.
 name: Archive StormSense observations
 
@@ -9,7 +9,7 @@ on:
   schedule:
     - cron: "10 4 * * *"
   pull_request:  # a dry run: reads two days, uploads and commits nothing
-    paths: [archiver/obs_archive.py, .github/workflows/archive-obs.yml]
+    paths: [archiver/obs_archive.py, stormsense/obs.py, stormsense/stations.csv, .github/workflows/archive-obs.yml]
   workflow_dispatch:
     inputs:
       since:
@@ -31,12 +31,6 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: actions/checkout@v4
-        with:
-          repository: DerekLoftis/StormSense_forecastmodel
-          path: forecastmodel
-          ref: ${{ github.event_name == 'pull_request' && github.head_ref || '' }}
-
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
@@ -53,7 +47,7 @@ jobs:
         run: |
           set -o pipefail
           if [ "$DRY" = true ]; then ARGS="--days 2 --index $RUNNER_TEMP/index"; else ARGS="${SINCE:+--since $SINCE}"; fi
-          python archiver/obs_archive.py --model forecastmodel --out out $ARGS 2>&1 | tee obs_log.txt
+          python archiver/obs_archive.py --out out $ARGS 2>&1 | tee obs_log.txt
 
       - name: Upload the tarballs to the month's release
         if: steps.fetch.outputs.archived == 'true' && github.event_name != 'pull_request'

@@ -1,11 +1,11 @@
 """Archive StormSense's own gauge observations, one UTC day at a time.
 
-    python archiver/obs_archive.py [--model forecastmodel] [--index data/index/obs] [--out out]
+    python archiver/obs_archive.py [--index data/index/obs] [--out out]
                                    [--since YYYY-MM-DD] [--days 10]
 
 Reads every gauge StormSense observes for itself straight from its source (NOAA CO-OPS, USGS
 NWIS, the VIMS THREDDS gauge, the FloodVISION and GreenStream archives), with the fetch and QC
-code of DerekLoftis/StormSense_forecastmodel (ssmodel/obs.py, checked out at --model), and for
+code of this repository's stormsense/obs.py (each gauge's source chain in stormsense/stations.csv), and for
 each finished UTC day not yet in the index writes out/obs_YYYY-MM-DD.tar.xz holding
 
     raw/<ST>.csv     every reading as the source gave it, ft MLLW, with its QC flag
@@ -101,14 +101,13 @@ def days_to_archive(done, now, since=None, days=10):
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--model", default="forecastmodel")
     ap.add_argument("--index", default="data/index/obs")
     ap.add_argument("--out", default="out")
     ap.add_argument("--since", default="")
     ap.add_argument("--days", type=int, default=10)
     a = ap.parse_args()
-    sys.path.insert(0, os.path.abspath(a.model))
-    from ssmodel import obs
+    sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+    from stormsense import obs
 
     now = datetime.now(timezone.utc)
     since = datetime.strptime(a.since, "%Y-%m-%d").replace(tzinfo=timezone.utc) if a.since else None
@@ -121,11 +120,13 @@ def main():
     print(f"archiving {len(todo)} day(s), {todo[0]:%Y-%m-%d} to {todo[-1]:%Y-%m-%d}")
 
     table = obs.stations()
-    gauges = [st for st, r in sorted(table.items()) if r["source"] and not r["alias_of"]]
+    gauges = [st for st, r in sorted(table.items()) if r["chain"] and not r["alias_of"]]
+
+    used = {}
 
     def one(st):
         try:
-            t, v = obs.fetch_raw(st, span_a, span_b, table[st])
+            t, v = obs.fetch_raw(st, span_a, span_b, table[st], used)
             return st, obs.qc_flags(np.array(t), np.array(v, float)), ""
         except Exception as e:
             return st, None, f"{type(e).__name__}: {e}"[:200]
@@ -140,18 +141,21 @@ def main():
             t, v, f = res
             six[st] = obs.on_six_minutes(t[f == 0], v[f == 0])
 
-    used = to_csv(["station", "source", "source_id", "navd88_above_mllw_ft", "name"],
-                  [[st, table[st]["source"], table[st]["source_id"], table[st]["navd88_above_mllw_ft"],
+    def src(st):  # (source, id) that answered, else the first in the station's chain
+        return ((used.get(st) or table[st]["obs"].split(";")[0]) + ":").split(":")[:2]
+
+    stations_csv = to_csv(["station", "source", "source_id", "navd88_above_mllw_ft", "name"],
+                  [[st, *src(st), table[st]["navd88_above_mllw_ft"],
                     table[st]["name"]] for st in gauges])
     os.makedirs(a.out, exist_ok=True)
     assets, status = [], 0
     for day in todo:
         end = day + timedelta(days=1)
-        files, rows = {"stations.csv": used}, []
+        files, rows = {"stations.csv": stations_csv}, []
         for st in gauges:
             res, err = got[st]
-            row = {"day": f"{day:%Y-%m-%d}", "station": st, "source": table[st]["source"],
-                   "source_id": table[st]["source_id"], "readings": 0, "flag_range": 0, "flag_spike": 0,
+            row = {"day": f"{day:%Y-%m-%d}", "station": st, "source": src(st)[0],
+                   "source_id": src(st)[1], "readings": 0, "flag_range": 0, "flag_spike": 0,
                    "flag_flatline": 0, "six_min": 0, "coverage_pct": 0.0, "first_time_z": "",
                    "last_time_z": "", "error": err}
             if res is not None:

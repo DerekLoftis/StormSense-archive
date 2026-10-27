@@ -1,6 +1,31 @@
 # StormSense-archive
 
-Private archive of StormSense forecasts, kept separately from Tidewatch's (DerekLoftis/tidewatch_archive).
+Private home of StormSense: the code that makes the StormSense forecasts, the archive of every run, and the
+data it ingests. The public repos DerekLoftis/StormSense-latest and DerekLoftis/StormSense-ensemble only hold
+what is published (html charts, csv, json). Tidewatch's own archive stays in DerekLoftis/tidewatch_archive.
+
+## The StormSense run
+
+`.github/workflows/stormsense.yml` runs `python -m stormsense.build` at 00:20, 06:20, 12:20 and 18:20 UTC:
+
+1. NWS flood categories (NWPS) and 40 days of every gauge's own observations, straight from NOAA CO-OPS,
+   USGS, NWPS, the VIMS THREDDS gauge, FloodVISION and GreenStream (`stormsense/obs.py`; no web4).
+2. StormSense's harmonic tide per gauge (`harmonics/`, refit monthly by `harmonics.yml`), locked to m30,
+   the 30-day mean water level (John Boon's VIMS tide).
+3. Every forecast member: NWS P-ETSS and ETSS, STOFS-2D and 3D, CBOFS, NWM, the NWS official forecast, NHC
+   P-Surge, VIMS Tidewatch's 36-hour forecast, tide + persistence, and the StormSense model.
+4. Skill of every archived run (`stormsense/skill.py`): Derek's SS-Skill per lead band and per 6 hours,
+   peak-height and peak-timing errors, hits, misses and false alarms at each NWS flood stage; the
+   adaptive pick of each station's guidance.
+5. The StormSense Latest 72-hour forecast, its uncertainty cone from its own past errors, the chance of
+   reaching each flood stage, and XHW labels on the forecast high waters.
+6. Both sites (`site/latest`, `site/ensemble`), pushed to the public repos' `site` branches and deployed
+   to GitHub Pages by their `deploy.yml` (needs the secret `STORMSENSE_PUBLISH_TOKEN`).
+7. The run's archive on this repo's releases: `ensemble_<cycle>.tar.gz` and the cumulative scores on
+   `ensemble-YYYY-MM`, `fore72_history.csv.gz` on `stormsense-YYYY-MM`.
+
+Station list and sources: `stormsense/stations.csv` (regenerate with `tools/make_stations.py`).
+Tests: `python -m pytest tests`. A pull request runs a dry build of a few stations.
 
 ## StormSense Latest runs
 

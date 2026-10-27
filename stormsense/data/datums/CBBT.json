@@ -1,0 +1,12 @@
+{
+ "HAT": 3.972,
+ "MHHW": 3.01,
+ "MSL": 1.47,
+ "MLLW": 0.0,
+ "LAT": -0.798,
+ "NAVD88": 1.92,
+ "_estimated": [
+  "NAVD88"
+ ],
+ "_source": "NOAA CO-OPS 8638901, epoch 1983-2001"
+}
