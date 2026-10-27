@@ -33,7 +33,10 @@ def render():
                 except Exception:
                     body = ""
                 seen.append(r.url)
-                print(f"RESP {r.status} {r.request.method} {r.url}\n    {show(body, 400)}")
+                print(f"RESP {r.status} {r.request.method} {r.url}\n    {show(body, 400 if 'graphql' not in r.url else 6000)}")
+                if "graphql" in r.url:
+                    print("    REQHDR", {k: v for k, v in r.request.headers.items() if k.lower() not in ("user-agent",)})
+                    print("    REQBODY", show(r.request.post_data or "", 3000))
 
         page.on("response", resp)
         page.on("websocket", lambda ws: print(f"WS {ws.url}") or ws.on(
@@ -56,6 +59,12 @@ def render():
                 print("JSPATH", m)
             for m in sorted(set(re.findall(r"[\"'`]((?:x-)?api[-_]?key|Authorization|apikey)[\"'`]", js, re.I))):
                 print("JSHDR", m)
+            for m in sorted(set(re.findall(r"(?:query|mutation)\s+(\w+)\s*[({]", js))):
+                print("JSOP", m)
+            for m in re.finditer(r"(?:query|mutation)\s+\w+\s*\([^`]{0,600}", js):
+                print("JSQ", show(m.group(0), 600))
+            for m in sorted(set(re.findall(r"https?://[a-zA-Z0-9.-]+\.(?:amazonaws\.com|execute-api[^\"'`]*)[a-zA-Z0-9./_-]*", js))):
+                print("JSAWS", m)
         b.close()
     return seen
 
