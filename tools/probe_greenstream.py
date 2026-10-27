@@ -100,10 +100,45 @@ def try_api():
                 print(f"API {code} {h} {url}\n    {show(body, 500)}")
 
 
-if __name__ == "__main__":
+GQL = ["https://tvusvjd6afeipodylci64oe5hy.appsync-api.us-east-1.amazonaws.com/graphql",
+       "https://ebkrbuiepncdzkjpgclwpifxxi.appsync-api.us-east-1.amazonaws.com/graphql"]
+MSG = """query getMessages($id:ID!, $start:AWSDate!, $end:AWSDate!, $nextToken: String){
+  getMessages(id:$id, start:$start, end:$end, nextToken:$nextToken){
+    site{ sk name readings{ MLLW elevation name type unit } }
+    messages{ msg{ timestamp vega{distance} senix{mm} maxbotix{mm} } } nextToken } }"""
+SITES = "query GetSites($id:ID!){ getSites(id:$id){ customer{ abbreviation name } sites{ pk sk active name lastUpdate } } }"
+COUNTY = "query SitesByCounty($county:String){ getSitesByCounty(county:$county){ pk active name thingName lastUpdate } }"
+
+
+def gql(url, q, v):
+    req = urllib.request.Request(url, data=json.dumps({"query": q, "variables": v}).encode(),
+                                 headers={"content-type": "application/graphql", "x-api-key": KEY})
     try:
-        render()
+        with urllib.request.urlopen(req, timeout=60) as r:
+            return r.status, r.read().decode("utf-8", "replace")
+    except urllib.error.HTTPError as e:
+        return e.code, e.read(500).decode("utf-8", "replace")
     except Exception as e:
-        print("render failed:", e)
+        return "ERR", str(e)
+
+
+def try_graphql():
+    if not KEY:
+        print("no GREENSTREAM_API_KEY; skipping")
+        return
+    for url in GQL:
+        code, body = gql(url, MSG, {"id": "SITE#" + SITE, "start": "2026-10-20", "end": "2026-10-28"})
+        n = body.count('"timestamp"')
+        print(f"GQL {code} getMessages GS02 {url}  timestamps={n}\n    {show(body, 700)}")
+        for cid in ("VIMS", "vims", "CUSTOMER#VIMS", "GS01", "GS02"):
+            code, body = gql(url, SITES, {"id": cid})
+            print(f"GQL {code} getSites {cid!r} {url}\n    {show(body, 1500)}")
+        for county in ("New Kent", "Charles City", "James City", "King William", "Hanover"):
+            code, body = gql(url, COUNTY, {"county": county})
+            print(f"GQL {code} sitesByCounty {county!r} {url}\n    {show(body, 1500)}")
+
+
+if __name__ == "__main__":
+    try_graphql()
     try_api()
     print(json.dumps({"done": True}))

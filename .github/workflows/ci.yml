@@ -38,7 +38,7 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-      - run: pip install -q playwright && python -m playwright install --with-deps chromium > /dev/null
+      - run: echo "no browser needed"
       - run: python tools/probe_greenstream.py
         env:
           GREENSTREAM_API_KEY: ${{ secrets.GREENSTREAM_API_KEY }}
