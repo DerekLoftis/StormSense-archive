@@ -66,6 +66,7 @@ USSB,USSB,,,nwis:01484812,1.302,,,,,,est2349,USSB,,yes,,
 USSC,"Starling Creek at Port of Saxis at Saxis, VA",37.918828,-75.727539,nwis:01484938,1.414,,,,,,8633777,USSC,,yes,,
 USSF,Nansemond River at Suffolk (IN MLLW),36.739166666667,-76.582777777778,nwis:02042822,1.798,,,,,NMDV2,est2346,USSF,,,,
 USTC,Thalia Creek at Route 58 in Thalia,36.843179,-76.124409,nwis:0204291317,1.695,,,,,THAV2,est0035,USTC,,,,
+VIMS,Virginia Institute of Marine Science at Gloucester Point,37.248188,-76.504634,coops:8637689,1.53,,,,,,8637689,,YRCG,,2026-10-28,"Stand-in until the VIMS boat basin GreenStream gauge is installed: NOAA Yorktown 8637689 (YRCG), 3 km across the York River"
 WACH,Atlantic Coast at Wachapreague (IN MLLW),37.6083333,-75.685,coops:8631044,2.61,,,,,WAHV2,8631044,WACH,,,,
 WADC,Washington Channel at SW Waterfront (IN MLLW),38.873333333333,-77.021111111111,coops:8594900,1.4,,,,,WASD2,8594900,,,,,
 WCKV,Piankatank River above Wharf Creek near Hudgins VA,37.489189,-76.310231,nwps:WCKV2,1.1,MLLW,0.0,,,WCKV2,est2348,,,,2026-10-27,

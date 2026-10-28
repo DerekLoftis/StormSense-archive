@@ -59,7 +59,7 @@ jobs:
         run: |
           set -o pipefail
           ARGS=""
-          if [ "$DRY" = true ]; then ARGS="--stations SWPT,USJT,BRDH,CNRC,USLN-X,ALEV,JLMV,SLIM"; fi
+          if [ "$DRY" = true ]; then ARGS="--stations SWPT,USJT,BRDH,CNRC,USLN-X,ALEV,JLMV,SLIM,VIMS"; fi
           if [ "$RESCORE" = true ]; then ARGS="$ARGS --rescore-all"; fi
           python -m stormsense.build --latest site/latest --ensemble site/ensemble --work work $ARGS 2>&1 | tee build_log.txt
           cp build_log.txt site/latest/ && cp build_log.txt site/ensemble/
