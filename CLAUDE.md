@@ -20,7 +20,7 @@ project's shared folder (skill code, baselines, notes, station sheet, disclosure
 
 | What | Where | Schedule (UTC) |
 |---|---|---|
-| The StormSense run: `python -m stormsense.build` | `.github/workflows/stormsense.yml` here | 00:20/06:20/12:20/18:20 |
+| The StormSense run: `python -m stormsense.build` | `.github/workflows/stormsense.yml` here | 00:20/06:20/12:20/18:20 via cron-job.org |
 | StormSense Latest site (fore72, 7day, 30day) | public DerekLoftis/StormSense-latest, `site` branch, https://derekloftis.github.io/StormSense-latest/ | pushed by the run |
 | StormSense Ensemble site (ens72, skill/) | public DerekLoftis/StormSense-ensemble, `site` branch, https://derekloftis.github.io/StormSense-ensemble/ | pushed by the run |
 | Archive of the Latest site as published | `archive-latest.yml` here, `stormsense_<build time>.tar.xz` on `stormsense-YYYY-MM` | :50 hourly |
@@ -39,7 +39,9 @@ project's shared folder (skill code, baselines, notes, station sheet, disclosure
   `skill_runs.csv` on this repo's `ensemble-YYYY-MM`; `fore72_history.csv.gz` (hourly record of every
   published fore72, what the cone is built from) on `stormsense-YYYY-MM`. Runs before 2026-10-27 are on the
   public StormSense-ensemble's `ensemble-2026-10` release; `stormsense/releases.py` reads both.
-- GitHub cron starts late or skips sometimes; there is no fallback. `SCHEDULE` in build.py must match the cron.
+- The run is started by cron-job.org (workflow_dispatch on stormsense.yml at :20 past 00/06/12/18 UTC; Derek
+  2026-10-28); GitHub's own schedule was removed from stormsense.yml because it ran late and doubled runs.
+  `SCHEDULE` in build.py must match. archive-latest, archive-obs and harmonics keep their GitHub schedules.
 - The old DerekLoftis/StormSense_forecastmodel (ssmodel/) was folded in as `stormsense/`.
 
 ## The run (`stormsense/`)

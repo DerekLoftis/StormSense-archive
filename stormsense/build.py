@@ -32,7 +32,7 @@ from . import (archive as ARC, charts as C, corrector, members_run as MR, observ
                uncertainty as U)
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-SCHEDULE = "00:20, 06:20, 12:20 and 18:20 UTC"  # keep in step with .github/workflows/stormsense.yml
+SCHEDULE = "00:20, 06:20, 12:20 and 18:20 UTC"  # keep in step with the cron-job.org schedule that starts stormsense.yml
 LATEST_URL = "https://derekloftis.github.io/StormSense-latest/"
 ENSEMBLE_URL = "https://derekloftis.github.io/StormSense-ensemble/"
 MAX_OBS_AGE = timedelta(hours=12)

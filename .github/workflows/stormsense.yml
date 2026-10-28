@@ -1,4 +1,5 @@
-# The StormSense run, every 6 hours: reads every gauge and forecast, makes StormSense's own forecast,
+# The StormSense run, every 6 hours (started by cron-job.org through workflow_dispatch at :20 past
+# 00, 06, 12 and 18 UTC; GitHub's own schedule was removed because it ran late and doubled runs): reads every gauge and forecast, makes StormSense's own forecast,
 # scores the archive, archives the run on this repository's releases and publishes the two public
 # sites (StormSense-latest and StormSense-ensemble), which hold only the published pages and data.
 #
@@ -13,8 +14,6 @@
 name: StormSense
 
 on:
-  schedule:
-    - cron: "20 0,6,12,18 * * *"
   workflow_dispatch:
     inputs:
       rescore_all:
