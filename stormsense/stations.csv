@@ -34,6 +34,7 @@ NRSV,Nansemond River at Sleepy Hole Park,36.8424132,-76.5224197,nwps:NRSV2,1.8,M
 ONAV,South Branch Onancock Creek at Onancock,37.71112,-75.7545,nwps:ONAV2,1.6,MLLW,0.0,,,ONAV2,est2349,,,,2026-10-27,
 PCCV,Elizabeth River at Scuffeltown Creek,36.808608,-76.287114,nwps:PCCV2,1.84,MLLW,0.0,,,PCCV2,8639348,,,,2026-10-27,
 PRTV,Chesapeake Bay at Port Isobel/Tangier Island,37.834596,-75.979416,nwps:PRTV2,1.3,MLLW,0.0,,,PRTV2,est2350,,,,2026-10-27,
+RAPV,Rappahannock River at Tappahannock,37.9504,-76.8867,nwps:RAPV2,1.295,MLLW,0.0,,,RAPV2,est2345,,,,2026-10-28,NWPS stage in MLLW (gauge has no NAVD88 tie); NAVD88 1.295 ft above MLLW from NOAA VDatum MDVAchb12
 RDIV,Atlantic Coast near Rudee Inlet,36.82927,-75.97029,nwps:RDIV2,2.25,MLLW,0.0,,,RDIV2,est2341,,,,2026-10-27,
 RICV,James River (VA) at Richmond Locks,37.525,-77.421111111111,nwis:02037705;nwps:RICV2,1.675,NAVD88,1.675,,,RICV2,8637712,,,,2026-10-27,
 SAXV,Chesapeake Bay near Starling Creek at Saxis,37.9188,-75.7275,nwps:SAXV2,1.53,MLLW,0.0,,,SAXV2,8633777,,,,2026-10-27,
