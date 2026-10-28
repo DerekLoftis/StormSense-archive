@@ -87,6 +87,10 @@ def main():
                      "stage_to_mllw_before_ft": r["stage_to_mllw_before_ft"], "nws_lid": r["nwps_lid"],
                      "petss_point": PETSS.get(st, r["surge_from"]), "tidewatch_id": "", "alias_of": "",
                      "suspect_obs": "", "added": "2026-10-27", "note": r["note"]})
+    have = {r["station"] for r in rows}
+    old = os.path.join(ROOT, "stormsense", "stations.csv")
+    if os.path.exists(old):  # keep stations added by hand (stand-ins such as VIMS)
+        rows += [r for r in csv.DictReader(open(old)) if r["station"] not in have]
     rows.sort(key=lambda x: x["station"])
     with open(os.path.join(ROOT, "stormsense", "stations.csv"), "w", newline="") as f:
         w = csv.DictWriter(f, fieldnames=FIELDS)

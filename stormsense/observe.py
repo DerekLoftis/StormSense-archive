@@ -61,5 +61,7 @@ def gather(table, now, days=DAYS, workers=8, local=None):
                 errors[st] = str(e)[:300]
     for st, info in table.items():
         if info["alias_of"] and info["alias_of"] in out:
-            out[st], used[st] = out[info["alias_of"]], f"same gauge as {info['alias_of']}"
+            out[st] = out[info["alias_of"]]
+            standin = info["note"].lower().startswith("stand-in")
+            used[st] = f"{'stand-in' if standin else 'same gauge'}: {info['alias_of']} ({used[info['alias_of']]})"
     return out, used, errors
