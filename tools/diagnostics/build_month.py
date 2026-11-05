@@ -41,6 +41,8 @@ NWS_LID = {"SWPT": "SWPV2", "USJT": "JSFV2", "JLMV": "JLMV2"}
 NWS_TO_MLLW = {"SWPV2": 0.0, "JSFV2": 0.0}  # NWPS stage datum MLLW
 # JLMV2 stage was MLLW until 2026-10-15T13:48Z, NAVD88 (MLLW - 1.69 ft) after.
 JLMV_CHANGE, JLMV_NAVD = datetime(2026, 10, 15, 13, 48, tzinfo=UTC), 1.69
+TW_REPO = "https://github.com/DerekLoftis/tidewatch_archive/releases/download"
+NAVD_ABOVE_MLLW = {"SWPT": 1.61, "USJT": 1.113, "JLMV": 1.69, "CNRC": 0.691}
 NAMES = {
     "SWPT": "Sewells Point (NOAA 8638610)",
     "USJT": "James River at Jamestown/Scotland Ferry (USGS 02042770)",
@@ -121,23 +123,24 @@ def tidewatch_runs(st, a, start, end):
         files[os.path.basename(os.path.dirname(p))] = p
     by_run = {}
     for cyc, fetched, run, sha in idx:
-        if cyc in files:
-            by_run.setdefault(run, (cyc, fetched))
+        by_run.setdefault(run, []).append((cyc, fetched))
     runs, seen = [], set()
     t = start
     while t < end:
         e = t + timedelta(hours=6)
-        fresh = sorted(r for r in by_run if t <= r < e)
+        fresh = sorted(r for r in by_run if t <= r < e and any(c in files for c, _ in by_run[r]))
         if fresh:
             r = fresh[0]
-            cyc, _ = by_run[r]
-            runs.append(dict(model="TW", slot=t, issued=r, path=files[cyc], cycle=cyc, stale=False))
+            rows_r = by_run[r]
+            cyc = next(c for c, _ in rows_r if c in files)
+            runs.append(dict(model="TW", slot=t, issued=r, path=files[cyc], cycle=cyc, stale=False,
+                             fetches=sorted(f for _, f in rows_r)))
             seen.add(r)
         else:
             caps = [(c, f, r) for c, f, r, _ in idx if t <= f < e and c in files]
             if caps:
                 c, f, r = min(caps, key=lambda z: z[1])
-                runs.append(dict(model="TW", slot=t, issued=r, path=files[c], cycle=c, stale=True))
+                runs.append(dict(model="TW", slot=t, issued=r, path=files[c], cycle=c, stale=True, fetches=[f]))
         t = e
     out = []
     for r in runs:
@@ -150,11 +153,22 @@ def tidewatch_runs(st, a, start, end):
     return out
 
 
+def nws_fetches(lid, dirs):
+    """issuedTime -> [fetched_utc of captures holding that issuance] from the nwps indexes."""
+    out = {}
+    for d in dirs:
+        for f in glob.glob(os.path.join(d, "*.csv")):
+            for x in csv.DictReader(open(f)):
+                if x["station"] == lid and x["status"] == "ok" and "forecast issued" in x["note"]:
+                    out.setdefault(x["note"].split()[-1], []).append(T(x["fetched_utc"]))
+    return out
+
+
 def nws_captures(lid, a):
     caps = []
     for p in sorted(glob.glob(os.path.join(a.nwps, "*", f"{lid}_stageflow.json.gz"))):
         try:
-            caps.append(json.load(gzip.open(p)))
+            caps.append((os.path.basename(os.path.dirname(p)), json.load(gzip.open(p))))
         except Exception:
             pass
     return caps
@@ -162,7 +176,7 @@ def nws_captures(lid, a):
 
 def nws_runs(lid, caps, start, end):
     out, seen = [], set()
-    for body in caps:
+    for cap_cycle, body in caps:
         fc = body.get("forecast") or {}
         iss = T(fc.get("issuedTime", ""))
         if not iss or iss in seen or not (start <= iss < end):
@@ -174,7 +188,7 @@ def nws_runs(lid, caps, start, end):
         s = pd.Series([float(p["primary"]) for p in pts], index=pd.DatetimeIndex([T(p["validTime"]) for p in pts]))
         s = nws_to_mllw(lid, s)
         out.append(dict(model="NWS", slot=slot_of(iss), issued=iss, t=s.index, v=s.to_numpy(float), stale=False,
-                        cycle=iss.strftime("%Y-%m-%dT%H%MZ")))
+                        cycle=iss.strftime("%Y-%m-%dT%H%MZ"), capture=cap_cycle))
     return sorted(out, key=lambda r: r["issued"])
 
 
@@ -275,6 +289,45 @@ def summarize(runs, model):
     return rnd(out)
 
 
+def load_assets(path):
+    """Release assets '<tag> <name>' -> [(datetime, url)]; name run_YYYY-MM-DDTHHMMZ[_project].tar.gz."""
+    out = []
+    if not path:
+        return out
+    import re
+    for line in open(path):
+        tag, name = line.split()
+        m = re.match(r"run_(\d{4})-(\d{2})-(\d{2})T(\d{2})(\d{2})Z", name)
+        if m:
+            y, mo, d, h, mi = map(int, m.groups())
+            out.append((datetime(y, mo, d, h, mi, tzinfo=UTC), f"{TW_REPO}/{tag}/{name}"))
+        elif name.startswith("backfill_"):
+            out.append((None, f"{TW_REPO}/{tag}/{name}"))
+    return out
+
+
+BACKFILL_END = datetime(2026, 10, 7, 22, 12, tzinfo=UTC)  # first per-run GitHub asset
+
+
+def asset_for(assets, fetched, tol_min=15):
+    """The release tarball of the GitHub capture that fetched the file: assets are
+    named by their capture's start time, so match the index row's fetched_utc."""
+    best = None
+    for ta, url in assets:
+        if ta is None:
+            continue
+        d = abs((ta - fetched).total_seconds())
+        if d <= tol_min * 60 and (best is None or d < best[0]):
+            best = (d, url)
+    if best:
+        return best[1]
+    if fetched <= BACKFILL_END:
+        for ta, url in assets:
+            if ta is None and "backfill_" + fetched.strftime("%Y-%m") in url:
+                return url
+    return None
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--month", required=True)
@@ -282,49 +335,61 @@ def main():
     ap.add_argument("--tw", default="")
     ap.add_argument("--tw-index", nargs="*", default=[])
     ap.add_argument("--nwps", default="")
+    ap.add_argument("--nwps-index", nargs="*", default=[], help="nwps index folders, for download links")
     ap.add_argument("--obs", default="")
     ap.add_argument("--tw30", default="")
     ap.add_argument("--fore72", nargs="*", default=[])
     ap.add_argument("--levels", default="")
     ap.add_argument("--coverage", default="", help="coverage JSON to carry into the index")
+    ap.add_argument("--assets", default="", help="release asset list: '<tag> <name>' per line (tidewatch_archive)")
+    ap.add_argument("--models", default="TW,NWS,SS", help="which models to include")
     ap.add_argument("--out", required=True)
     a = ap.parse_args()
     y, m = map(int, a.month.split("-"))
     start = datetime(y, m, 1, tzinfo=UTC)
     end = datetime(y + (m == 12), m % 12 + 1, 1, tzinfo=UTC)
     levels = json.load(open(a.levels)) if a.levels else {}
+    assets = load_assets(a.assets)
+    models = set(a.models.split(","))
     os.makedirs(os.path.join(a.out, "data"), exist_ok=True)
     index = {"month": a.month, "built_utc": datetime.now(UTC).strftime("%Y-%m-%d %H:%MZ"), "datum": "MLLW", "units": "ft",
              "stations": []}
     for st in a.stations.split(","):
         obs = load_obs(st, a, start - timedelta(days=1), end + timedelta(days=4))
         runs = []
-        if a.tw:
+        if a.tw and "TW" in models:
             runs += tidewatch_runs(st, a, start, end)
         lid = NWS_LID.get(st)
-        if lid and a.nwps:
+        if lid and a.nwps and ("NWS" in models or st == "JLMV"):
             caps = nws_captures(lid, a)
-            runs += nws_runs(lid, caps, start, end)
+            if "NWS" in models:
+                runs += nws_runs(lid, caps, start, end)
             if st == "JLMV":  # StormSense observes JLMV only from 2026-10-27; NWPS's own record before that
-                no = nwps_obs(lid, caps)
+                no = nwps_obs(lid, [b for _, b in caps])
                 no = no[~no.index.isin(obs.index)]
                 obs = pd.concat([obs, no.resample("6min").interpolate(limit=10).dropna()]).sort_index()
                 obs = obs[~obs.index.duplicated()]
-        if a.fore72:
+        if a.fore72 and "SS" in models:
             runs += stormsense_runs(st, a, start, end)
+        nwsf = nws_fetches(lid, a.nwps_index) if (lid and a.nwps_index) else {}
         for r in runs:
             r["id"] = f"{r['model']}_{r['issued'].strftime('%Y%m%dT%H%MZ')}"
             r["stats"] = score(r, obs)
+            fetches = r.get("fetches", [])
+            if r["model"] == "NWS":
+                fetches = sorted(nwsf.get(r["issued"].strftime("%Y-%m-%dT%H:%M:%SZ"), []))
+            r["download"] = next((u for u in (asset_for(assets, f) for f in fetches) if u), None)
         # observations on a regular 6-minute grid over the month (+ margins)
         grid = pd.date_range(start - timedelta(hours=12), end + timedelta(days=3), freq="6min", inclusive="left")
         og = obs.reindex(grid)
         doc = {
             "station": st, "name": NAMES.get(st, st), "month": a.month, "datum": "MLLW", "units": "ft",
-            "levels": levels.get(st), "obs": pack_series(grid, og.to_numpy(float)),
+            "levels": levels.get(st), "navd_offset_ft": NAVD_ABOVE_MLLW.get(st),
+            "obs": pack_series(grid, og.to_numpy(float)),
             "runs": [{
                 "id": r["id"], "model": r["model"], "slot": r["slot"].strftime("%Y-%m-%dT%HZ"),
                 "issued": r["issued"].strftime("%Y-%m-%dT%H:%MZ"), "stale": r["stale"], "source": r.get("cycle"),
-                "fc": pack_series(r["t"], r["v"]), "stats": rnd(r["stats"]),
+                "download": r.get("download"), "fc": pack_series(r["t"], r["v"]), "stats": rnd(r["stats"]),
             } for r in sorted(runs, key=lambda r: (r["model"], r["issued"]))],
         }
         for r, rr in zip(sorted(runs, key=lambda r: (r["model"], r["issued"])), doc["runs"]):
