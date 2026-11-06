@@ -100,6 +100,14 @@ def build(obs, tide_fn, raw, pet, pet_cycle, etss_surge=None, tw=None):
             for k, name in (("SSforecast", "petss"), ("low", "petss_p10"), ("high", "petss_p90")):
                 cols[name] = on_grid((f["time"], f[k] + adj), grid)
             surges["petss"] = on_grid((f["time"], f["residual"]), grid)
+            # its own hindcast over the last 24 h too, so the surge can be lined up with the gauge
+            # on our tide (surge.offset): the station CSV starts days before the cycle
+            ptide = petss.hindcast_tide(pet, pet["time"])
+            past = (grid < t0) & (grid >= t0 - timedelta(hours=24))
+            ok = ~np.isnan(pet["TWL"]) & ~np.isnan(ptide)
+            if ok.sum() > 1:
+                hc = on_grid((pet["time"][ok], pet["TWL"][ok] - ptide[ok]), grid)
+                surges["petss"][past] = hc[past]
             notes["petss"] = {"run": pet_cycle.strftime("%Y-%m-%dT%HZ"), "aligned_ft": round(adj, 3),
                               "point": pet.get("id")}
         except ValueError as e:
@@ -182,7 +190,8 @@ def guidance_residual(key, grid, t0, cols, surges, r0):
         return None
     if np.isnan(s[lead > 0]).all():
         return None
-    return SURGE.anchor(lead, s, r0, TAU_H), s
+    b = SURGE.offset(lead, s, cols["observed"] - tide)  # lined up with the gauge on our tide
+    return SURGE.anchor(lead, s, r0, TAU_H, b), s
 
 
 def primary(grid, t0, cols, surges, picks):

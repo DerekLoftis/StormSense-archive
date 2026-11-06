@@ -8,7 +8,7 @@ from datetime import datetime, timedelta, timezone
 import numpy as np
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from stormsense import corrector, obs, surge, tide  # noqa: E402
+from stormsense import corrector, obs, station, surge, tide  # noqa: E402
 
 T0 = datetime(2026, 9, 1, tzinfo=timezone.utc)
 
@@ -101,7 +101,8 @@ def test_surge_blend_starts_at_gauge_and_relaxes_to_members():
     lead = surge.lead_hours(grid, t0)
     tide_ = 1.3 + np.cos(2 * np.pi * lead / 12.42)
     observed = np.where(lead <= 0, tide_ + 0.8, np.nan)          # 0.8 ft residual now
-    cols = {"observed": observed, "petss": tide_ + 0.2, "stofs2d": tide_ + 0.4}
+    future = np.where(lead > 0, 1.0, np.nan)                   # no past: nothing to line up
+    cols = {"observed": observed, "petss": (tide_ + 0.2) * future, "stofs2d": (tide_ + 0.4) * future}
     out, notes = surge.forecast(grid, t0, cols, tide_)
     f = out["stormsense"] - tide_
     near, far = (lead > 0) & (lead < 0.3), lead > 70
@@ -112,6 +113,24 @@ def test_surge_blend_starts_at_gauge_and_relaxes_to_members():
     f2 = surge.forecast(grid, t0, cols, tide_, skill)[0]["stormsense"] - tide_
     assert abs(np.nanmean(f2[far]) - 0.22) < 0.01                # 1/RMSE^2 weights favour P-ETSS 9:1
     assert notes["members"] == ["petss", "stofs2d"]
+
+
+def test_surge_member_lined_up_with_the_gauge_on_our_tide():
+    t0 = T0 + timedelta(hours=24)
+    grid = np.array([T0 + timedelta(minutes=6 * i) for i in range(961)])
+    lead = surge.lead_hours(grid, t0)
+    tide_ = 1.3 + np.cos(2 * np.pi * lead / 12.42)
+    observed = np.where(lead <= 0, tide_ + 0.3, np.nan)
+    # the member's surge is measured from a level 0.5 ft above our tide's, past and future alike
+    cols = {"observed": observed, "petss": tide_ + 0.8}
+    out, notes = surge.forecast(grid, t0, cols, tide_)
+    f = out["stormsense"] - tide_
+    assert abs(np.nanmean(f[lead > 70]) - 0.3) < 0.01          # stays with the gauge, not 0.8
+    assert notes["member_offsets_ft"] == {"petss": -0.5}
+    # station.primary hands the published guidance over the same way
+    cols = {"observed": observed, "astro_tide": tide_}
+    prim, used, _ = station.primary(grid, t0, cols, {"petss": np.full(len(grid), 0.8)}, {})
+    assert used["36-72"] == "petss" and abs(np.nanmean(prim["residual"][lead > 70]) - 0.3) < 0.01
 
 
 def test_surge_without_members_is_persistence():
