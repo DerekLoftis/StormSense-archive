@@ -2,12 +2,13 @@
 # 00/06/12/18Z) from its public Pages site: one tarball per build on that month's release
 # (stormsense-YYYY-MM, about 120 a month, under the 1000-asset limit), with the run and station
 # index committed under data/index/stormsense-latest/. GitHub starts the publish runs up to
-# several hours late, so this checks every hour and skips a build that is already in the index.
+# several hours late, so this checks every 3 hours (reduced from hourly 2026-11-06 to save Actions
+# compute) and skips a build that is already in the index.
 name: Archive StormSense Latest
 
 on:
   schedule:
-    - cron: "50 * * * *"
+    - cron: "50 */3 * * *"
   workflow_dispatch:
 
 concurrency:
