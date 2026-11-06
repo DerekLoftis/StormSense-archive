@@ -54,9 +54,14 @@ button:focus-visible,select:focus-visible,a:focus-visible,tr:focus-visible{outli
 .big{font-size:20px}
 .pill{font-family:var(--mono);font-size:12.5px;border-radius:999px;padding:1px 8px;font-variant-numeric:tabular-nums;white-space:nowrap}
 .g{background:var(--goodbg);color:var(--good)}.f{background:var(--fairbg);color:var(--fair)}.p{background:var(--poorbg);color:var(--poor)}.n{background:var(--soft);color:var(--muted)}
-.bench{display:grid;grid-template-columns:minmax(300px,470px) minmax(0,1fr);gap:14px;align-items:start}
-@media (max-width:900px){.bench{grid-template-columns:minmax(0,1fr)}.masthead .logo{flex-basis:120px}.masthead .logo img{max-width:120px}}
-.list{max-height:880px;overflow:auto;padding:0}
+.bench{display:grid;grid-template-columns:minmax(300px,470px) minmax(0,1fr);gap:14px;align-items:stretch}
+@media (max-width:900px){.bench{grid-template-columns:minmax(0,1fr)}.masthead .logo{flex-basis:120px}.masthead .logo img{max-width:120px}.list{min-height:0;max-height:70vh;overflow:auto}.list .inner{position:static;overflow:visible}}
+.list{position:relative;padding:0;min-height:420px}
+.list .inner{position:absolute;inset:0;overflow:auto}
+th[title]{cursor:help}
+th.sort{cursor:pointer;user-select:none}
+th.sort .arr{font-size:9px;opacity:.4;margin-left:1px}
+th.sort.on .arr{opacity:1;color:var(--accent)}
 .filters{display:flex;flex-wrap:wrap;gap:6px;padding:10px 12px;border-bottom:1px solid var(--line);position:sticky;top:0;background:var(--panel);z-index:2}
 .chip{font-size:13px;padding:3px 10px;border-radius:999px;display:flex;align-items:center;gap:6px;border:1px solid var(--line);background:var(--panel);cursor:pointer}
 .chip[aria-pressed="false"]{opacity:.5}
@@ -107,28 +112,29 @@ a.dl[aria-disabled="true"]{color:var(--muted);opacity:.4;pointer-events:none}
 
   <div class="controls">
     <span><span class="seg-label">Month</span><select id="month"></select></span>
+    <span><span class="seg-label">Year</span><select id="year"></select></span>
     <span class="seg" role="group" aria-label="Datum"><span hidden></span>
       <button id="d-MLLW" aria-pressed="true">MLLW</button><button id="d-NAVD" aria-pressed="false">NAVD88</button>
     </span>
     <span class="seg" role="group" aria-label="Units">
-      <button id="u-ft" aria-pressed="true">feet</button><button id="u-m" aria-pressed="false">meters</button>
+      <button id="u-ft" aria-pressed="true">Feet</button><button id="u-m" aria-pressed="false">Meters</button>
     </span>
     <span class="tabs" role="group" aria-label="View">
-      <button id="v-runs" aria-pressed="true">Individual forecasts</button>
-      <button id="v-report" aria-pressed="false">Month report</button>
+      <button id="v-runs" aria-pressed="true">Individual Forecasts</button>
+      <button id="v-report" aria-pressed="false">Month Report</button>
     </span>
   </div>
 
   <div class="strip" id="strip"></div>
 
   <section id="runsView" class="bench">
-    <div class="card list">
+    <div class="card list"><div class="inner">
       <div class="filters" id="filters"></div>
-      <table class="runs" id="runTable"><thead><tr><th>Issued (UTC)</th><th></th><th>Model</th><th>Skill</th><th class="num">RMSE</th><th class="num">Bias</th><th class="num">Peak</th></tr></thead><tbody></tbody></table>
-    </div>
+      <table class="runs" id="runTable"><thead><tr><th class="sort" data-key="issued">Issued (UTC)<span class="arr"></span></th><th></th><th>Model</th><th class="sort" data-key="skill">Skill<span class="arr"></span></th><th class="num sort" data-key="rmse">RMSE<span class="arr"></span></th><th class="num sort" data-key="bias">Bias<span class="arr"></span></th><th class="num sort" data-key="peak">Peak<span class="arr"></span></th></tr></thead><tbody></tbody></table>
+    </div></div>
     <div class="charts">
       <div class="card">
-        <div class="runhead"><h2 id="runTitle">Select a forecast</h2><div class="opts">
+        <div class="runhead"><h2 id="runTitle">Select a Forecast</h2><div class="opts">
           <label for="optOthers"><input type="checkbox" id="optOthers" checked> NWS forecast issued nearest</label>
           <label for="optTide"><input type="checkbox" id="optTide"> TideWatch tide (pa30)</label>
         </div></div>
@@ -145,19 +151,19 @@ a.dl[aria-disabled="true"]{color:var(--muted);opacity:.4;pointer-events:none}
 
   <section id="reportView" hidden>
     <div class="charts">
-      <div class="card"><h2 id="repTitle">Month report</h2><p class="note" id="repLead"></p></div>
-      <div class="card"><h3>Skill of every forecast</h3><div id="skillChart" class="chart sm"></div><p class="disc">Click a point to open that forecast.</p></div>
-      <div class="card"><h3>First 6 hours of each forecast, stitched, against observations</h3><div id="stitchChart" class="chart"></div></div>
+      <div class="card"><h2 id="repTitle">Month Report</h2><p class="note" id="repLead"></p></div>
+      <div class="card"><h3>Skill of Every Forecast</h3><div id="skillChart" class="chart sm"></div><p class="disc">Click a point to open that forecast.</p></div>
+      <div class="card"><h3>First 6 Hours of Each Forecast, Stitched, Against Observations</h3><div id="stitchChart" class="chart"></div></div>
       <div class="row2">
-        <div class="card"><h3>Month means by lead time</h3><div class="scroll" id="bandTable"></div></div>
-        <div class="card"><h3>Archive coverage (00/06/12/18Z)</h3><div id="covGrid"></div><p class="disc" id="covKey"></p></div>
+        <div class="card"><h3>Month Means by Lead Time</h3><div class="scroll" id="bandTable"></div></div>
+        <div class="card"><h3>Archive Coverage (00/06/12/18Z)</h3><div id="covGrid"></div><p class="disc" id="covKey"></p></div>
       </div>
-      <div class="card"><h3 id="repTableTitle">Every forecast</h3><div class="scroll" id="repTable"></div></div>
+      <div class="card"><h3 id="repTableTitle">Every Forecast</h3><div class="scroll" id="repTable"></div></div>
     </div>
   </section>
 
   <p class="footer">Disclaimer: Tidewatch Charts&trade; are automated storm tide forecasts; User assumes all risk.<br>
-  Virginia Institute of Marine Science &middot; William &amp; Mary &middot; forecasts scored against the gauge's own observations.</p>
+  Virginia Institute of Marine Science | William &amp; Mary | Forecasts scored against the gauge's own observations.</p>
 </div>
 
 <script>__HIGHCHARTS__</script>
@@ -168,7 +174,7 @@ window.DIAG = __DATA__;
 (function(){
 const MODELS={TW:{name:"TideWatch f36",v:"--tw"},NWS:{name:"NWS official",v:"--nws"}};
 const DLSVG='<svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 2v8m0 0l-3.2-3.2M8 10l3.2-3.2M2.5 13.5h11"/></svg>';
-const state={month:null,data:null,sel:null,show:{TW:true,NWS:true},view:"runs",datum:"MLLW",units:"ft"};
+const state={month:null,data:null,sel:null,show:{TW:true,NWS:true},view:"runs",datum:"MLLW",units:"ft",sort:{key:"issued",dir:1}};
 const $=id=>document.getElementById(id);
 const css=v=>getComputedStyle(document.documentElement).getPropertyValue(v).trim();
 const fmt=(v,n=2)=>v==null||!isFinite(v)?"–":(+v).toFixed(n);
@@ -223,9 +229,18 @@ function init(){
   $("u-ft").onclick=()=>{state.units="ft";setSeg("u","ft");redrawAll()};
   $("u-m").onclick=()=>{state.units="m";setSeg("u","m");redrawAll()};
   const months=Object.keys(DIAG.months).sort();
-  $("month").innerHTML=months.map(m=>`<option value="${m}">${new Date(m+"-15").toLocaleString("en-US",{month:"long",year:"numeric",timeZone:"UTC"})}</option>`).join("");
-  $("month").value=months[months.length-1];
+  const monthLabel=m=>new Date(m+"-15").toLocaleString("en-US",{month:"long",timeZone:"UTC"});
+  const years=[...new Set(months.map(m=>m.slice(0,4)))];
+  $("year").innerHTML=years.map(y=>`<option value="${y}">${y}</option>`).join("");
+  const fillMonths=(y,pick)=>{const ms=months.filter(m=>m.slice(0,4)===y);
+    $("month").innerHTML=ms.map(m=>`<option value="${m}">${monthLabel(m)}</option>`).join("");
+    $("month").value=pick&&ms.includes(pick)?pick:ms[ms.length-1]};
+  const last=months[months.length-1];
+  $("year").value=last.slice(0,4);fillMonths(last.slice(0,4),last);
+  $("year").onchange=()=>{fillMonths($("year").value);loadMonth($("month").value)};
   $("month").onchange=()=>loadMonth($("month").value);
+  document.querySelectorAll("#runTable th.sort").forEach(th=>th.onclick=()=>{const k=th.dataset.key;
+    if(state.sort.key===k)state.sort.dir*=-1;else state.sort={key:k,dir:k==="issued"?1:-1};drawList()});
   $("v-runs").onclick=()=>setView("runs");$("v-report").onclick=()=>setView("report");
   $("optOthers").onchange=drawRun;$("optTide").onchange=drawRun;
   loadMonth($("month").value);
@@ -233,7 +248,7 @@ function init(){
 function loadMonth(m){
   state.month=m;state.data=DIAG.months[m].station;OBS=obsMap();
   const d=state.data;
-  $("subtitle").textContent=`${d.name} · ${$("month").selectedOptions[0].textContent} · built ${DIAG.months[m].built_utc}`;
+  $("subtitle").textContent=`${d.name} | ${$("month").selectedOptions[0].textContent} ${m.slice(0,4)} | Built ${DIAG.months[m].built_utc}`;
   drawFilters();
   const tw=d.runs.filter(r=>r.model==="TW"&&!r.stale&&r.stats.Skill!=null);
   const first=(d.summary.TW&&d.runs.find(r=>r.id===d.summary.TW.worst))||d.runs.find(r=>r.stats.Skill!=null);
@@ -250,11 +265,20 @@ function drawStrip(){
 }
 function drawFilters(){
   const d=state.data;
-  $("filters").innerHTML=Object.keys(MODELS).filter(k=>d.runs.some(r=>r.model===k)).map(k=>`<button class="chip" data-m="${k}" aria-pressed="${state.show[k]}"><span class="sw" style="background:var(${MODELS[k].v})"></span>${MODELS[k].name} (${d.runs.filter(r=>r.model===k).length})</button>`).join("");
+  $("filters").innerHTML=Object.keys(MODELS).filter(k=>d.runs.some(r=>r.model===k)).map(k=>`<button class="chip" data-m="${k}" aria-pressed="${state.show[k]}" title="${MODELS[k].name}: ${d.runs.filter(r=>r.model===k).length} forecasts archived this month. Click to show or hide this source in the table."><span class="sw" style="background:var(${MODELS[k].v})"></span>${MODELS[k].name} (${d.runs.filter(r=>r.model===k).length})</button>`).join("");
   $("filters").querySelectorAll("button").forEach(b=>b.onclick=()=>{state.show[b.dataset.m]=!state.show[b.dataset.m];b.setAttribute("aria-pressed",state.show[b.dataset.m]);drawList()});
 }
 function drawList(){
-  const rows=state.data.runs.filter(r=>state.show[r.model]).sort((a,b)=>a.issued<b.issued?-1:a.issued>b.issued?1:a.model<b.model?-1:1);
+  const KEYS={issued:r=>r.issued,skill:r=>r.stats.Skill,rmse:r=>r.stats.RMSE,bias:r=>r.stats.Bias,peak:r=>r.stats.PeakError};
+  const k=state.sort.key,dir=state.sort.dir,get=KEYS[k];
+  document.querySelectorAll("#runTable th.sort").forEach(th=>{const on=th.dataset.key===k;
+    th.classList.toggle("on",on);th.querySelector(".arr").textContent=on?(dir>0?" \u25b2":" \u25bc"):" \u25b4\u25be"});
+  const rows=state.data.runs.filter(r=>state.show[r.model]).sort((a,b)=>{
+    const va=get(a),vb=get(b);
+    if(va==null&&vb==null)return a.issued<b.issued?-1:1;
+    if(va==null)return 1;if(vb==null)return -1;
+    const c=typeof va==="string"?(va<vb?-1:va>vb?1:0):va-vb;
+    return c?c*dir:(a.issued<b.issued?-1:a.issued>b.issued?1:a.model<b.model?-1:1)});
   $("runTable").querySelector("tbody").innerHTML=rows.map(r=>`<tr data-id="${r.id}" tabindex="0" class="${r.id===state.sel?"sel":""} ${r.stale?"stale":""}"><td class="num">${isoShort(r.issued)}${r.stale?" stale":""}</td><td>${dlIcon(r)}</td><td><span class="tag" style="background:var(${MODELS[r.model].v})">${r.model}</span></td><td>${pill(r.stats.Skill)}</td><td class="num">${fmt(err(r.stats.RMSE),eDec())}</td><td class="num">${sgn(err(r.stats.Bias),eDec())}</td><td class="num">${sgn(err(r.stats.PeakError),eDec())}</td></tr>`).join("")||`<tr><td colspan="7" class="empty">No forecasts for the chosen models.</td></tr>`;
   $("runTable").querySelectorAll("tbody tr[data-id]").forEach(tr=>{
     const go=()=>{state.sel=tr.dataset.id;$("runTable").querySelectorAll("tr.sel").forEach(x=>x.classList.remove("sel"));tr.classList.add("sel");drawRun()};
@@ -273,7 +297,7 @@ function levelLines(){
 }
 function drawRun(){
   const r=run(state.sel);
-  if(!r){$("runTitle").textContent="Select a forecast";return}
+  if(!r){$("runTitle").textContent="Select a Forecast";return}
   $("tsDisc").textContent=`Water level in ${unitLabel()}, times in UTC. Click a legend entry to hide or show a line.`;
   const fc=series(r.fc);const t0=fc[0][0],t1=fc[fc.length-1][0];
   const lo=t0-12*3600e3;
@@ -282,6 +306,7 @@ function drawRun(){
   $("runTitle").innerHTML=`${MODELS[r.model].name}, issued ${isoShort(r.issued)} UTC ${r.stale?'<span class="pill f">stale: repeats an earlier run</span>':""} ${pill(r.stats.Skill)} ${dlIcon(r)}`;
   const S=[{name:"Observed",data:ob,color:css("--obs"),lineWidth:1.6,zIndex:3,marker:{enabled:false}},
     {name:MODELS[r.model].name+" "+isoShort(r.issued),data:fc,color:css(MODELS[r.model].v),lineWidth:2.6,zIndex:4,marker:{enabled:r.model!=="TW",radius:2}}];
+  if(r.tide)S.push({name:"TideWatch residual",data:r.tide.map((v,i)=>{const f=r.fc.v[i];return [fc[i][0],v==null||f==null?null:err(f-v)]}),color:css("--green"),dashStyle:"Dash",lineWidth:1.4,zIndex:2,marker:{enabled:false},tooltip:{valueSuffix:" "+state.units+" (residual)"}});
   if(r.tide&&$("optTide").checked)S.push({name:"TideWatch tide (pa30)",data:r.tide.map((v,i)=>[fc[i][0],conv(v)]),color:css("--tw"),dashStyle:"Dot",lineWidth:1.3,marker:{enabled:false}});
   if($("optOthers").checked)for(const k of Object.keys(MODELS)){if(k===r.model)continue;const n=nearest(k,r.issued);if(n)S.push({name:`${MODELS[k].name} ${isoShort(n.issued)}`,data:series(n.fc).filter(p=>p[0]>=lo&&p[0]<=t1),color:css(MODELS[k].v),dashStyle:"ShortDash",lineWidth:1.4,marker:{enabled:false},opacity:.85})}
   Highcharts.chart("tsChart",{chart:{zoomType:"x"},series:S,
@@ -320,7 +345,7 @@ function setView(v){state.view=v;$("v-runs").setAttribute("aria-pressed",v==="ru
 function drawReport(){
   const d=state.data,main=d.summary.TW?"TW":Object.keys(d.summary)[0];
   const mname=$("month").selectedOptions[0].textContent;
-  $("repTitle").textContent=`${d.station} · ${mname} accuracy report`;
+  $("repTitle").textContent=`${d.station} | ${mname} ${state.month.slice(0,4)} Accuracy Report`;
   const s=d.summary[main];
   if(!s){$("repLead").textContent="No scored forecasts this month.";return}
   const u=state.units,D=eDec();
@@ -328,8 +353,13 @@ function drawReport(){
   const others=Object.keys(d.summary).filter(k=>k!==main).map(k=>`${MODELS[k].name} ${fmt(d.summary[k].Skill,3)} (RMSE ${fmt(err(d.summary[k].RMSE),D)} ${u}, ${d.summary[k].runs} forecasts)`).join("; ");
   $("repLead").textContent=`${s.runs} ${MODELS[main].name} forecasts scored: mean skill ${fmt(s.Skill,3)}, RMSE ${fmt(err(s.RMSE),D)} ${u}, bias ${sgn(err(s.Bias),D)} ${u}. Best ${isoShort(best.issued)} (${fmt(best.stats.Skill,3)}), worst ${isoShort(worst.issued)} (${fmt(worst.stats.Skill,3)}).${others?" Other guidance over its own window: "+others+".":""} Stale runs are listed but left out of the means.`;
   const S=Object.keys(MODELS).filter(k=>d.runs.some(r=>r.model===k)).map(k=>({name:MODELS[k].name,color:css(MODELS[k].v),data:d.runs.filter(r=>r.model===k&&r.stats.Skill!=null&&!r.stale).map(r=>({x:Date.parse(r.issued.replace("Z",":00Z")),y:r.stats.Skill,id:r.id})),lineWidth:1.2,marker:{radius:3,enabled:true}}));
-  Highcharts.chart("skillChart",{series:S,xAxis:{type:"datetime"},yAxis:{title:{text:"Skill"},max:1,plotBands:[{from:0,to:0.45,color:"rgba(128,128,128,.08)",label:{text:"no skill ≈ 0.45",align:"left",style:{color:css("--muted"),fontSize:"11px"}}}]},
-    tooltip:{xDateFormat:"%b %e %H:%M UTC",valueDecimals:3},plotOptions:{series:{animation:false,cursor:"pointer",point:{events:{click(){state.sel=this.options.id;setView("runs");drawList()}}}}}});
+  const mm=d.runs.filter(r=>r.model==="TW"&&!r.stale).sort((a,b)=>a.issued<b.issued?-1:1);
+  if(mm.some(r=>r.d24!=null))S.push({name:"d24 (24-h mean at issuance)",yAxis:1,color:css("--gold"),lineWidth:1.6,marker:{radius:2,enabled:true},data:mm.filter(r=>r.d24!=null).map(r=>({x:Date.parse(r.issued.replace("Z",":00Z")),y:conv(r.d24)})),tooltip:{valueDecimals:2,valueSuffix:" "+state.units},zIndex:1});
+  if(mm.some(r=>r.m30!=null))S.push({name:"m30 (30-day mean at issuance)",yAxis:1,color:css("--tw"),dashStyle:"ShortDash",lineWidth:1.6,marker:{enabled:false},data:mm.filter(r=>r.m30!=null).map(r=>({x:Date.parse(r.issued.replace("Z",":00Z")),y:conv(r.m30)})),tooltip:{valueDecimals:2,valueSuffix:" "+state.units},zIndex:1});
+  Highcharts.chart("skillChart",{series:S,xAxis:{type:"datetime"},
+    yAxis:[{title:{text:"Skill"},max:1,plotBands:[{from:0,to:0.45,color:"rgba(128,128,128,.08)",label:{text:"no skill ≈ 0.45",align:"left",style:{color:css("--muted"),fontSize:"11px"}}}]},
+      {title:{text:`Mean water level (${unitLabel()})`},opposite:true,gridLineWidth:0}],
+    tooltip:{xDateFormat:"%b %e %H:%M UTC",valueDecimals:3},plotOptions:{series:{animation:false,cursor:"pointer",point:{events:{click(){if(this.options.id){state.sel=this.options.id;setView("runs");drawList()}}}}}}});
   const o=state.data.obs,mo=state.month,ms0=Date.parse(mo+"-01T00:00:00Z");const ms1=Date.UTC(+mo.slice(0,4),+mo.slice(5,7),1);
   const ob=[];for(let i=0;i<o.v.length;i++){const t=o.t0+i*o.dt;if(t>=ms0&&t<ms1)ob.push([t,conv(o.v[i])])}
   const st=[{name:"Observed",data:ob,color:css("--obs"),lineWidth:1.2,marker:{enabled:false}}];
@@ -354,8 +384,14 @@ function drawReport(){
   }else{$("covGrid").innerHTML='<p class="note">No coverage table for this month.</p>';$("covKey").textContent=""}
   const rs=d.runs.filter(r=>r.model===main);
   const bk=Object.keys(s.bands);
-  $("repTableTitle").textContent=`Every ${MODELS[main].name} forecast`;
-  $("repTable").innerHTML=`<table class="runs"><thead><tr><th>Issued (UTC)</th><th></th><th>Cycle</th><th>Skill</th><th class="num">R&sup2;</th><th class="num">Bias</th><th class="num">MAE</th><th class="num">RMSE</th>${bk.map(b=>`<th class="num">RMSE ${b} h</th>`).join("")}<th class="num" title="Highest forecast minus highest observed in the window">Peak err</th><th class="num" title="Time of highest forecast minus time of highest observed">Peak time</th></tr></thead><tbody>${rs.map(r=>{const v=r.stats;return `<tr data-id="${r.id}" tabindex="0" class="${r.stale?"stale":""}"><td class="num">${isoShort(r.issued)}${r.stale?" stale":""}</td><td>${dlIcon(r)}</td><td class="num">${r.slot.slice(8,13).replace("T"," ")}</td><td>${pill(v.Skill)}</td><td class="num">${fmt(v.R2,3)}</td><td class="num">${sgn(err(v.Bias),D)}</td><td class="num">${fmt(err(v.MAE),D)}</td><td class="num">${fmt(err(v.RMSE),D)}</td>${bk.map(b=>`<td class="num">${fmt(err((v.bands[b]||{}).RMSE),D)}</td>`).join("")}<td class="num">${sgn(err(v.PeakError),D)}</td><td class="num">${sgn(v.PeakTimeError_h,1)} h</td></tr>`}).join("")}</tbody></table>`;
+  $("repTableTitle").textContent=`Every ${MODELS[main].name} Forecast`;
+  const xtr=v=>v.PeakError==null||v.PeakTimeError_h==null||!v.SDobs?null:Math.abs(v.PeakError)/v.SDobs+Math.abs(v.PeakTimeError_h)/12;
+  const TIP={Skill:"Skill = \u00bc[R\u00b2 + e^\u2212|Bias|/\u03c3 + e^\u2212MAE/\u03c3 + e^\u2212RMSE/\u03c3]; 1 is perfect, \u22480.45 is no skill.",
+    R2:"Squared correlation between forecast and observed; 1 means they rise and fall together.",
+    Bias:"Mean of forecast minus observed over the window; positive = forecast runs high.",
+    MAE:"Mean absolute error: the average size of the miss, all hours weighted equally.",
+    RMSE:"Root-mean-square error: like MAE but penalizing the largest misses more."};
+  $("repTable").innerHTML=`<table class="runs"><thead><tr><th>Issued (UTC)</th><th></th><th>Cycle</th><th title="${TIP.Skill}">Skill</th><th class="num" title="${TIP.R2}">R&sup2;</th><th class="num" title="${TIP.Bias}">Bias</th><th class="num" title="${TIP.MAE}">MAE</th><th class="num" title="${TIP.RMSE}">RMSE</th>${bk.map(b=>`<th class="num" title="Root-mean-square error over forecast hours ${b} only.">RMSE ${b} h</th>`).join("")}<th class="num" title="Highest forecast minus highest observed in the window">Peak err</th><th class="num" title="Time of highest forecast minus time of highest observed">Peak time</th><th class="num" title="Extremeness of the peak miss: |peak height error|/\u03c3 + |peak timing error|/12 h. 0 is a perfect peak; larger means the forecast missed the event peak by more.">Extreme</th></tr></thead><tbody>${rs.map(r=>{const v=r.stats;return `<tr data-id="${r.id}" tabindex="0" class="${r.stale?"stale":""}"><td class="num">${isoShort(r.issued)}${r.stale?" stale":""}</td><td>${dlIcon(r)}</td><td class="num">${r.slot.slice(8,13).replace("T"," ")}</td><td>${pill(v.Skill)}</td><td class="num">${fmt(v.R2,3)}</td><td class="num">${sgn(err(v.Bias),D)}</td><td class="num">${fmt(err(v.MAE),D)}</td><td class="num">${fmt(err(v.RMSE),D)}</td>${bk.map(b=>`<td class="num">${fmt(err((v.bands[b]||{}).RMSE),D)}</td>`).join("")}<td class="num">${sgn(err(v.PeakError),D)}</td><td class="num">${sgn(v.PeakTimeError_h,1)} h</td><td class="num">${fmt(xtr(v),2)}</td></tr>`}).join("")}</tbody></table>`;
   $("repTable").querySelectorAll("tr[data-id]").forEach(tr=>{const go=()=>{state.sel=tr.dataset.id;setView("runs");drawList()};tr.onclick=go;tr.onkeydown=e=>{if(e.key==="Enter")go()}});
 }
 const mq=window.matchMedia("(prefers-color-scheme: dark)");

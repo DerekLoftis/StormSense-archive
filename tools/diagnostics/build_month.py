@@ -79,9 +79,11 @@ def load_obs(st, a, start, end):
         parts.append(pd.Series(d.iloc[:, 1].values, index=pd.to_datetime(d.iloc[:, 0], utc=True)))
     ss = pd.concat(parts) if parts else pd.Series(dtype=float)
     tw = pd.Series(dtype=float)
-    for f in glob.glob(os.path.join(a.tw30 or "", f"{st}_2018_30d_MLLW.csv")):
-        d = pd.read_csv(f)
-        tw = pd.Series(d["feet"].values, index=pd.to_datetime(d["time"], utc=True))
+    for dir_ in a.tw30:
+        for f in glob.glob(os.path.join(dir_, f"{st}_2018_30d_MLLW.csv")):
+            d = pd.read_csv(f)
+            t2 = pd.Series(d["feet"].values, index=pd.to_datetime(d["time"], utc=True))
+            tw = pd.concat([tw, t2[~t2.index.isin(tw.index)]])
     s = pd.concat([ss, tw[~tw.index.isin(ss.index)]]).sort_index()
     s = s[~s.index.duplicated()]
     s = s[(s.index >= start) & (s.index < end)]
@@ -252,6 +254,15 @@ def score(run, obs):
     return st
 
 
+def back_mean(obs, t, hours):
+    """Mean of the observations over the `hours` before t (d24/m30 at issuance);
+    None when less than half of the 6-minute record is there."""
+    w = obs[(obs.index > t - timedelta(hours=hours)) & (obs.index <= t)]
+    if len(w) < hours * 10 * 0.5:
+        return None
+    return round(float(w.mean()), 3)
+
+
 def rnd(v, n=3):
     if v is None:
         return None
@@ -337,7 +348,7 @@ def main():
     ap.add_argument("--nwps", default="")
     ap.add_argument("--nwps-index", nargs="*", default=[], help="nwps index folders, for download links")
     ap.add_argument("--obs", default="")
-    ap.add_argument("--tw30", default="")
+    ap.add_argument("--tw30", nargs="*", default=[])
     ap.add_argument("--fore72", nargs="*", default=[])
     ap.add_argument("--levels", default="")
     ap.add_argument("--coverage", default="", help="coverage JSON to carry into the index")
@@ -355,7 +366,8 @@ def main():
     index = {"month": a.month, "built_utc": datetime.now(UTC).strftime("%Y-%m-%d %H:%MZ"), "datum": "MLLW", "units": "ft",
              "stations": []}
     for st in a.stations.split(","):
-        obs = load_obs(st, a, start - timedelta(days=1), end + timedelta(days=4))
+        # 31-day lookback so m30 at each issuance has a full month of observations
+        obs = load_obs(st, a, start - timedelta(days=31), end + timedelta(days=4))
         runs = []
         if a.tw and "TW" in models:
             runs += tidewatch_runs(st, a, start, end)
@@ -379,6 +391,8 @@ def main():
             if r["model"] == "NWS":
                 fetches = sorted(nwsf.get(r["issued"].strftime("%Y-%m-%dT%H:%M:%SZ"), []))
             r["download"] = next((u for u in (asset_for(assets, f) for f in fetches) if u), None)
+            r["d24"] = back_mean(obs, r["issued"], 24)
+            r["m30"] = back_mean(obs, r["issued"], 24 * 30)
         # observations on a regular 6-minute grid over the month (+ margins)
         grid = pd.date_range(start - timedelta(hours=12), end + timedelta(days=3), freq="6min", inclusive="left")
         og = obs.reindex(grid)
@@ -389,7 +403,8 @@ def main():
             "runs": [{
                 "id": r["id"], "model": r["model"], "slot": r["slot"].strftime("%Y-%m-%dT%HZ"),
                 "issued": r["issued"].strftime("%Y-%m-%dT%H:%MZ"), "stale": r["stale"], "source": r.get("cycle"),
-                "download": r.get("download"), "fc": pack_series(r["t"], r["v"]), "stats": rnd(r["stats"]),
+                "download": r.get("download"), "d24": r.get("d24"), "m30": r.get("m30"),
+                "fc": pack_series(r["t"], r["v"]), "stats": rnd(r["stats"]),
             } for r in sorted(runs, key=lambda r: (r["model"], r["issued"]))],
         }
         for r, rr in zip(sorted(runs, key=lambda r: (r["model"], r["issued"])), doc["runs"]):

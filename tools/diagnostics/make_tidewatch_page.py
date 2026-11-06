@@ -44,7 +44,7 @@ def main():
     data = json.dumps({"station": a.station, "months": months}, separators=(",", ":"))
 
     body = open(os.path.join(HERE, "tidewatch_page_body.html")).read()
-    body = (body.replace("__TITLE__", f"TideWatch Diagnostics {a.station}")
+    body = (body.replace("__TITLE__", f"TWiST {a.station} Diagnostics")
                 .replace("__TW_LOGO__", data_uri(a.tw_logo))
                 .replace("__VIMS_LOGO__", data_uri(a.vims_logo))
                 .replace("__HIGHCHARTS__", open(a.highcharts).read())
