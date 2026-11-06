@@ -5,13 +5,20 @@ All series are on one 6-minute grid in ft above the station's MLLW. For each mem
 (already lined up with the gauge by the ensemble):
 
     surge_m(t)    = member(t) - tide(t)
-    anchored_m(t) = surge_m(t) + (r0 - surge_m(t0)) * exp(-(t - t0) / TAU_H)
+    b_m           = median(observed - tide - surge_m) over the last 24 h (0 without 30 values)
+    anchored_m(t) = surge_m(t) + b_m + (r0 - surge_m(t0) - b_m) * exp(-(t - t0) / TAU_H)
 
 r0 is the observed residual (observed - tide) over the last hour, so each member starts from
 the water the gauge has now and relaxes to its own forecast surge, as Tidewatch offsets its
-surge to the latest residual. The blend is the weighted mean of the anchored surges, with
-weights 1/RMSE^2 per lead band (0-12, 12-36, 36-72 h) from the skill scoring's recent
-summary, eased across the band edges. The forecast is tide + blend.
+surge to the latest residual. b_m keeps the member lined up with the gauge on our tide for the
+whole forecast: a member whose surge is measured from another tide or mean level (P-ETSS and
+ETSS surges put on our m30-locked tide, which sat 0.2-0.7 ft above the water in the calm weeks
+after October's storms) would otherwise relax to the wrong level once the hand-over has faded.
+station.primary hands over the published guidance the same way.
+
+The blend is the weighted mean of the anchored surges, with weights 1/RMSE^2 per lead band
+(0-12, 12-36, 36-72 h) from the skill scoring's recent summary, eased across the band edges.
+The forecast is tide + blend.
 
 Since tide(t0) cancels in r0 - surge_m(t0), the blend depends on our tide only through the
 tide's shape after t0; without any member the forecast falls back to tide plus decaying
@@ -23,6 +30,8 @@ import warnings
 import numpy as np
 
 TAU_H = 12.0          # e-folding time (h) of the hand-over from the observed residual to each member
+ALIGN_H = 24.0        # each member's surge is lined up with the observed residual over these hours (0: off)
+ALIGN_MIN = 30        # six-minute values needed to line a member up
 PERSIST_TAU_H = 24.0  # without members: persistence fading over a day, as the ensemble baseline
 BANDS = [("0-12", 0, 12), ("12-36", 12, 36), ("36-72", 36, 72)]
 EASE_H = 3.0          # weights move from one band's to the next over +/- this many hours
@@ -53,15 +62,22 @@ def band_weights(lead, rmse):
     return np.interp(lead, [e1 - EASE_H, e1 + EASE_H, e2 - EASE_H, e2 + EASE_H], [w0, w1, w1, w2])
 
 
-def anchor(lead, surge, r0, tau=TAU_H):
-    """A member's surge shifted to start from r0 at t0, the shift decaying with lead."""
+def offset(lead, surge, resid, hours=ALIGN_H):
+    """Median (observed residual - member surge) over the last `hours` before t0, 0 if too few."""
+    sel = (lead > -hours) & (lead <= 0) & ~np.isnan(surge) & ~np.isnan(resid)
+    return float(np.median(resid[sel] - surge[sel])) if hours and sel.sum() >= ALIGN_MIN else 0.0
+
+
+def anchor(lead, surge, r0, tau=TAU_H, b=0.0):
+    """A member's surge lined up with the gauge (+ b) and shifted to start from r0 at t0, the
+    shift decaying with lead."""
     ok = ~np.isnan(surge) & (lead >= 0)
     if not ok.any() or np.isnan(r0):
-        return surge
+        return surge + b
     s0 = surge[ok][0] if lead[ok][0] <= 3 else np.nan  # its value at t0 (or within 3 h)
     if np.isnan(s0):
-        return surge
-    return surge + (r0 - s0) * np.exp(-np.clip(lead, 0, None) / tau)
+        return surge + b
+    return surge + b + (r0 - s0 - b) * np.exp(-np.clip(lead, 0, None) / tau)
 
 
 def forecast(grid, t0, cols, tide, skill=None, tau=TAU_H):
@@ -74,11 +90,13 @@ def forecast(grid, t0, cols, tide, skill=None, tau=TAU_H):
     lead = lead_hours(grid, t0)
     fut = lead > 0
     r0 = residual_now(grid, t0, cols["observed"], tide)
-    used, num, den, anchored = [], np.zeros(len(grid)), np.zeros(len(grid)), []
+    resid = cols["observed"] - tide
+    used, num, den, anchored, offsets = [], np.zeros(len(grid)), np.zeros(len(grid)), [], {}
     for key in MEMBERS:
         if key not in cols:
             continue
-        a = anchor(lead, cols[key] - tide, r0, tau)
+        b = offset(lead, cols[key] - tide, resid)
+        a = anchor(lead, cols[key] - tide, r0, tau, b)
         ok = fut & ~np.isnan(a)
         if not ok.any():
             continue
@@ -87,6 +105,7 @@ def forecast(grid, t0, cols, tide, skill=None, tau=TAU_H):
         den[ok] += w[ok]
         anchored.append(np.where(ok, a, np.nan))
         used.append(key)
+        offsets[key] = round(b, 3)
     persist = (r0 if not np.isnan(r0) else 0.0) * np.exp(-np.clip(lead, 0, None) / PERSIST_TAU_H)
     blend = np.where(den > 0, num / np.where(den > 0, den, 1), persist)
     mean = np.where(fut, tide + blend, np.nan)
@@ -105,6 +124,6 @@ def forecast(grid, t0, cols, tide, skill=None, tau=TAU_H):
         above = np.nan_to_num(cols["petss_p90"] - cols["petss"])
         lo, hi = np.minimum(lo, mean - below), np.maximum(hi, mean + above)
     notes = {"version": "v1-blend", "residual_now_ft": None if np.isnan(r0) else round(r0, 3), "members": used,
-             "tau_h": tau, "weights": "1/RMSE^2 per lead band" if skill else "equal (no skill scores yet)"}
+             "member_offsets_ft": offsets, "tau_h": tau, "weights": "1/RMSE^2 per lead band" if skill else "equal (no skill scores yet)"}
     return {"stormsense": mean, "stormsense_p10": np.where(fut, lo, np.nan),
             "stormsense_p90": np.where(fut, hi, np.nan)}, notes
