@@ -351,6 +351,7 @@ def main():
     ap.add_argument("--tw30", nargs="*", default=[])
     ap.add_argument("--fore72", nargs="*", default=[])
     ap.add_argument("--levels", default="")
+    ap.add_argument("--meta", default="", help="JSON {ST: {name, navd}} overriding NAMES/NAVD_ABOVE_MLLW")
     ap.add_argument("--coverage", default="", help="coverage JSON to carry into the index")
     ap.add_argument("--assets", default="", help="release asset list: '<tag> <name>' per line (tidewatch_archive)")
     ap.add_argument("--models", default="TW,NWS,SS", help="which models to include")
@@ -360,6 +361,7 @@ def main():
     start = datetime(y, m, 1, tzinfo=UTC)
     end = datetime(y + (m == 12), m % 12 + 1, 1, tzinfo=UTC)
     levels = json.load(open(a.levels)) if a.levels else {}
+    meta = json.load(open(a.meta)) if a.meta else {}
     assets = load_assets(a.assets)
     models = set(a.models.split(","))
     os.makedirs(os.path.join(a.out, "data"), exist_ok=True)
@@ -397,8 +399,10 @@ def main():
         grid = pd.date_range(start - timedelta(hours=12), end + timedelta(days=3), freq="6min", inclusive="left")
         og = obs.reindex(grid)
         doc = {
-            "station": st, "name": NAMES.get(st, st), "month": a.month, "datum": "MLLW", "units": "ft",
-            "levels": levels.get(st), "navd_offset_ft": NAVD_ABOVE_MLLW.get(st),
+            "station": st, "name": NAMES.get(st) or meta.get(st, {}).get("name") or st,
+            "month": a.month, "datum": "MLLW", "units": "ft",
+            "levels": levels.get(st),
+            "navd_offset_ft": NAVD_ABOVE_MLLW.get(st, meta.get(st, {}).get("navd")),
             "obs": pack_series(grid, og.to_numpy(float)),
             "runs": [{
                 "id": r["id"], "model": r["model"], "slot": r["slot"].strftime("%Y-%m-%dT%HZ"),
@@ -419,6 +423,24 @@ def main():
         print(st, n, {k: (v or {}).get("Skill") for k, v in doc["summary"].items()})
     if a.coverage:
         index["coverage"] = json.load(open(a.coverage))
+    # synthesize a Tidewatch coverage table from the runs for stations the file lacks
+    cov = index.setdefault("coverage", {})
+    for st in a.stations.split(","):
+        if st in cov:
+            continue
+        doc = json.load(open(os.path.join(a.out, "data", f"{st}.json")))
+        by_slot = {r["slot"]: r for r in doc["runs"] if r["model"] == "TW"}
+        rows, t = [], start
+        while t < end:
+            r = by_slot.get(t.strftime("%Y-%m-%dT%HZ"))
+            tw = {"state": "missing"}
+            if r:
+                iss = T(r["issued"].replace("Z", ":00Z"))
+                tw = {"state": "stale"} if r["stale"] else \
+                     {"state": "ok", "ontime": iss == t, "run": iss.strftime("%H")}
+            rows.append({"slot": t.isoformat(), "tw": tw})
+            t += timedelta(hours=6)
+        cov[st] = rows
     json.dump(index, open(os.path.join(a.out, "data", "index.json"), "w"), separators=(",", ":"))
 
 

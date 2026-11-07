@@ -60,13 +60,16 @@ button:focus-visible,select:focus-visible,a:focus-visible,tr:focus-visible{outli
 .list .inner{position:absolute;inset:0;overflow:auto}
 th[title]{cursor:help}
 th.sort{cursor:pointer;user-select:none}
-th.sort .arr{font-size:9px;opacity:.4;margin-left:1px}
+th.sort .arr{display:inline-flex;flex-direction:column;vertical-align:-2px;margin-left:2px;line-height:.5;font-size:7px;opacity:.4}
+th.sort .arr span.off{opacity:.35}
 th.sort.on .arr{opacity:1;color:var(--accent)}
 .filters{display:flex;flex-wrap:wrap;gap:6px;padding:10px 12px;border-bottom:1px solid var(--line);position:sticky;top:0;background:var(--panel);z-index:2}
 .chip{font-size:13px;padding:3px 10px;border-radius:999px;display:flex;align-items:center;gap:6px;border:1px solid var(--line);background:var(--panel);cursor:pointer}
 .chip[aria-pressed="false"]{opacity:.5}
 table{border-collapse:collapse;width:100%;font-size:13.5px}
 th{font-weight:600;color:var(--muted);text-align:right;padding:6px 8px;border-bottom:1px solid var(--line);font-size:12px;text-transform:uppercase;letter-spacing:.04em;white-space:nowrap}
+.runs th,.runs td{padding-left:5px;padding-right:5px}
+#runTable th{letter-spacing:0}
 td{text-align:right;padding:5px 8px;border-bottom:1px solid var(--soft);white-space:nowrap}
 th:first-child,td:first-child{text-align:left}
 td.num,th.num{font-family:var(--mono);font-variant-numeric:tabular-nums}
@@ -272,7 +275,7 @@ function drawList(){
   const KEYS={issued:r=>r.issued,skill:r=>r.stats.Skill,rmse:r=>r.stats.RMSE,bias:r=>r.stats.Bias,peak:r=>r.stats.PeakError};
   const k=state.sort.key,dir=state.sort.dir,get=KEYS[k];
   document.querySelectorAll("#runTable th.sort").forEach(th=>{const on=th.dataset.key===k;
-    th.classList.toggle("on",on);th.querySelector(".arr").textContent=on?(dir>0?" \u25b2":" \u25bc"):" \u25b4\u25be"});
+    th.classList.toggle("on",on);th.querySelector(".arr").innerHTML=`<span class="${on&&dir>0?"":"off"}">\u25b2</span><span class="${on&&dir<0?"":"off"}">\u25bc</span>`});
   const rows=state.data.runs.filter(r=>state.show[r.model]).sort((a,b)=>{
     const va=get(a),vb=get(b);
     if(va==null&&vb==null)return a.issued<b.issued?-1:1;
@@ -354,8 +357,8 @@ function drawReport(){
   $("repLead").textContent=`${s.runs} ${MODELS[main].name} forecasts scored: mean skill ${fmt(s.Skill,3)}, RMSE ${fmt(err(s.RMSE),D)} ${u}, bias ${sgn(err(s.Bias),D)} ${u}. Best ${isoShort(best.issued)} (${fmt(best.stats.Skill,3)}), worst ${isoShort(worst.issued)} (${fmt(worst.stats.Skill,3)}).${others?" Other guidance over its own window: "+others+".":""} Stale runs are listed but left out of the means.`;
   const S=Object.keys(MODELS).filter(k=>d.runs.some(r=>r.model===k)).map(k=>({name:MODELS[k].name,color:css(MODELS[k].v),data:d.runs.filter(r=>r.model===k&&r.stats.Skill!=null&&!r.stale).map(r=>({x:Date.parse(r.issued.replace("Z",":00Z")),y:r.stats.Skill,id:r.id})),lineWidth:1.2,marker:{radius:3,enabled:true}}));
   const mm=d.runs.filter(r=>r.model==="TW"&&!r.stale).sort((a,b)=>a.issued<b.issued?-1:1);
-  if(mm.some(r=>r.d24!=null))S.push({name:"d24 (24-h mean at issuance)",yAxis:1,color:css("--gold"),lineWidth:1.6,marker:{radius:2,enabled:true},data:mm.filter(r=>r.d24!=null).map(r=>({x:Date.parse(r.issued.replace("Z",":00Z")),y:conv(r.d24)})),tooltip:{valueDecimals:2,valueSuffix:" "+state.units},zIndex:1});
-  if(mm.some(r=>r.m30!=null))S.push({name:"m30 (30-day mean at issuance)",yAxis:1,color:css("--tw"),dashStyle:"ShortDash",lineWidth:1.6,marker:{enabled:false},data:mm.filter(r=>r.m30!=null).map(r=>({x:Date.parse(r.issued.replace("Z",":00Z")),y:conv(r.m30)})),tooltip:{valueDecimals:2,valueSuffix:" "+state.units},zIndex:1});
+  if(mm.some(r=>r.d24!=null))S.push({name:"d24 (24-h mean at issuance)",yAxis:1,visible:false,color:css("--gold"),lineWidth:1.6,marker:{radius:2,enabled:true},data:mm.filter(r=>r.d24!=null).map(r=>({x:Date.parse(r.issued.replace("Z",":00Z")),y:conv(r.d24)})),tooltip:{valueDecimals:2,valueSuffix:" "+state.units},zIndex:1});
+  if(mm.some(r=>r.m30!=null))S.push({name:"m30 (30-day mean at issuance)",yAxis:1,visible:false,color:css("--tw"),dashStyle:"ShortDash",lineWidth:1.6,marker:{enabled:false},data:mm.filter(r=>r.m30!=null).map(r=>({x:Date.parse(r.issued.replace("Z",":00Z")),y:conv(r.m30)})),tooltip:{valueDecimals:2,valueSuffix:" "+state.units},zIndex:1});
   Highcharts.chart("skillChart",{series:S,xAxis:{type:"datetime"},
     yAxis:[{title:{text:"Skill"},max:1,plotBands:[{from:0,to:0.45,color:"rgba(128,128,128,.08)",label:{text:"no skill ≈ 0.45",align:"left",style:{color:css("--muted"),fontSize:"11px"}}}]},
       {title:{text:`Mean water level (${unitLabel()})`},opposite:true,gridLineWidth:0}],
