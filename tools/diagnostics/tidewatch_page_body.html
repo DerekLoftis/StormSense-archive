@@ -361,7 +361,7 @@ function drawReport(){
   if(mm.some(r=>r.m30!=null))S.push({name:"m30 (30-day mean at issuance)",yAxis:1,visible:false,color:css("--tw"),dashStyle:"ShortDash",lineWidth:1.6,marker:{enabled:false},data:mm.filter(r=>r.m30!=null).map(r=>({x:Date.parse(r.issued.replace("Z",":00Z")),y:conv(r.m30)})),tooltip:{valueDecimals:2,valueSuffix:" "+state.units},zIndex:1});
   Highcharts.chart("skillChart",{series:S,xAxis:{type:"datetime"},
     yAxis:[{title:{text:"Skill"},max:1,plotBands:[{from:0,to:0.45,color:"rgba(128,128,128,.08)",label:{text:"no skill ≈ 0.45",align:"left",style:{color:css("--muted"),fontSize:"11px"}}}]},
-      {title:{text:`Mean water level (${unitLabel()})`},opposite:true,gridLineWidth:0}],
+      {title:{text:`Mean water level (${unitLabel()})`},opposite:true,gridLineWidth:0,showEmpty:false}],
     tooltip:{xDateFormat:"%b %e %H:%M UTC",valueDecimals:3},plotOptions:{series:{animation:false,cursor:"pointer",point:{events:{click(){if(this.options.id){state.sel=this.options.id;setView("runs");drawList()}}}}}}});
   const o=state.data.obs,mo=state.month,ms0=Date.parse(mo+"-01T00:00:00Z");const ms1=Date.UTC(+mo.slice(0,4),+mo.slice(5,7),1);
   const ob=[];for(let i=0;i<o.v.length;i++){const t=o.t0+i*o.dt;if(t>=ms0&&t<ms1)ob.push([t,conv(o.v[i])])}
