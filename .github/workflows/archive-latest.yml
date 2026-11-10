@@ -3,7 +3,8 @@
 # (stormsense-YYYY-MM, about 120 a month, under the 1000-asset limit), with the run and station
 # index committed under data/index/stormsense-latest/. GitHub starts the publish runs up to
 # several hours late, so this checks every 3 hours (reduced from hourly 2026-11-06 to save Actions
-# compute) and skips a build that is already in the index.
+# compute) and skips a build that is already in the index. It first runs the watchdog
+# (archiver/watchdog.py), which re-dispatches stormsense.yml when the cycle's run never started.
 name: Archive StormSense Latest
 
 on:
@@ -17,6 +18,7 @@ concurrency:
 
 permissions:
   contents: write
+  actions: write  # the watchdog's re-dispatch of stormsense.yml
 
 jobs:
   archive:
@@ -28,6 +30,12 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
+
+      - name: Re-dispatch a StormSense run that never started
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python archiver/watchdog.py
 
       - name: Download the published run
         id: fetch
