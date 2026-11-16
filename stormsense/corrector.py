@@ -33,6 +33,10 @@ CAP_A, CAP_B, CAP_FT = 0.25, 0.3, 0.3
 TAPER_H = 3.0
 EASE_H = 3.0
 BANDS = [("0-12", 0, 12), ("12-36", 12, 36), ("36-72", 36, 72)]
+# Bands the correction is applied to. Beyond 12 h it chased the previous week's errors and made the
+# member worse (runs 7-15 Nov 2026: 12-36 h RMSE 0.341 vs 0.313 ft uncorrected, 36-72 h 0.433 vs 0.354),
+# so it is fitted and reported there but not applied.
+APPLY_BANDS = ("0-12",)
 LEADS = np.arange(1, 73)  # hourly lead bins (h-1, h]
 
 
@@ -97,8 +101,9 @@ def fit(errors, now):
             sel = (LEADS > lo) & (LEADS <= hi) & ~np.isnan(err)
             rows += [(w, i, e, s) for e, s in zip(err[sel], surge[sel])]
         a, b, band = fit_band(rows) if rows else (0.0, 0.0, None)
-        coefs[name] = (a, b)
+        coefs[name] = (a, b) if name in APPLY_BANDS else (0.0, 0.0)
         if band:
+            band["applied"] = name in APPLY_BANDS
             info["bands"][name] = band
     info["applied"] = any(a or b for a, b in coefs.values())
     return coefs, info
