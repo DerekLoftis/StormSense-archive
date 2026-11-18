@@ -38,7 +38,7 @@ import metrics
 UTC = timezone.utc
 STEP = 6  # minutes
 NWS_LID = {"SWPT": "SWPV2", "USJT": "JSFV2", "JLMV": "JLMV2"}
-NWS_TO_MLLW = {"SWPV2": 0.0, "JSFV2": 0.0}  # NWPS stage datum MLLW
+NWS_TO_MLLW = {"SWPV2": 0.0, "JSFV2": 0.0}  # NWPS stage datum MLLW; --meta nws_off extends this
 # JLMV2 stage was MLLW until 2026-10-15T13:48Z, NAVD88 (MLLW - 1.69 ft) after.
 JLMV_CHANGE, JLMV_NAVD = datetime(2026, 10, 15, 13, 48, tzinfo=UTC), 1.69
 TW_REPO = "https://github.com/DerekLoftis/tidewatch_archive/releases/download"
@@ -168,7 +168,8 @@ def nws_fetches(lid, dirs):
 
 def nws_captures(lid, a):
     caps = []
-    for p in sorted(glob.glob(os.path.join(a.nwps, "*", f"{lid}_stageflow.json.gz"))):
+    found = sorted(glob.glob(os.path.join(a.nwps, "*", f"{lid}_stageflow.json.gz"))) or         sorted(glob.glob(os.path.join(a.nwps, "**", f"{lid}_stageflow.json.gz"), recursive=True))
+    for p in found:
         try:
             caps.append((os.path.basename(os.path.dirname(p)), json.load(gzip.open(p))))
         except Exception:
@@ -373,7 +374,10 @@ def main():
         runs = []
         if a.tw and "TW" in models:
             runs += tidewatch_runs(st, a, start, end)
-        lid = NWS_LID.get(st)
+        lid = NWS_LID.get(st) or meta.get(st, {}).get("lid")
+        off = meta.get(st, {}).get("nws_off")
+        if lid and off is not None and lid not in NWS_TO_MLLW:
+            NWS_TO_MLLW[lid] = float(off)
         if lid and a.nwps and ("NWS" in models or st == "JLMV"):
             caps = nws_captures(lid, a)
             if "NWS" in models:
