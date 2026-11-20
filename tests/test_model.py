@@ -167,8 +167,13 @@ def _predict(grid, t0, cols):
     return cols["pred"], cols["tide"]
 
 
-def test_corrector_learns_a_surge_scaling():
+def test_corrector_learns_a_surge_scaling(monkeypatch):
     runs, truth, now = _past_runs(scale=1.5, noise=0.02)
+    coefs, info = corrector.correction_for("TEST", runs, truth, now, _predict)
+    for band in ("12-36", "36-72"):  # fitted and reported, not applied beyond 12 h
+        assert coefs[band] == (0.0, 0.0) and not info["bands"][band]["applied"]
+        assert abs(info["bands"][band]["fit_b"] + 1 / 3) < 0.02
+    monkeypatch.setattr(corrector, "APPLY_BANDS", ("0-12", "12-36", "36-72"))
     coefs, info = corrector.correction_for("TEST", runs, truth, now, _predict)
     assert info["applied"]
     for band in ("12-36", "36-72"):
