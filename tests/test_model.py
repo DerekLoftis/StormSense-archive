@@ -203,3 +203,20 @@ if __name__ == "__main__":
         if name.startswith("test_"):
             fn()
             print("ok", name)
+
+
+def test_plain_scores_fit_under_the_limit(tmp_path):
+    """scores.csv keeps the newest whole cycles under the size limit (GitHub refuses files over 100 MiB)."""
+    import pandas as pd
+    from stormsense import skill
+    cycles = [f"2026-11-{d:02d}T00Z" for d in range(1, 11)]
+    pub = pd.DataFrame({"cycle": [c for c in cycles for _ in range(50)], "station": "SWPT", "rmse": 0.1234})
+    full = len(pub.to_csv(index=False, float_format="%.4f").encode())
+    path = tmp_path / "scores.csv"
+    first = skill.write_plain_scores(str(path), pub, limit=full // 2)
+    kept = pd.read_csv(path)
+    assert path.stat().st_size <= full // 2
+    assert first == kept["cycle"].min() and kept["cycle"].max() == cycles[-1]
+    assert kept.groupby("cycle").size().eq(50).all()           # whole cycles only
+    assert skill.write_plain_scores(str(path), pub, limit=full + 10) == cycles[0]
+    assert len(pd.read_csv(path)) == len(pub)

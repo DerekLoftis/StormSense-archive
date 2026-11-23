@@ -64,7 +64,10 @@ MIN_RUNS = 12           # scores a member needs in the window to be picked
 MARGIN = 0.01           # skill a challenger must lead by ...
 CONFIRM = 2             # ... for this many updates running
 REPLAY_DAYS = 30        # the pick is replayed from P-ETSS through this many days of updates
-PUBLISH_DAYS = 31       # runs in the published scores.csv (the release keeps them all)
+PUBLISH_DAYS = 31       # runs in the published scores.csv.gz (the release keeps them all)
+# GitHub refuses a push holding a file over 100 MiB; 31 days of scores passed that on 10 Nov 2026 and the
+# Ensemble site stopped updating. scores.csv keeps the newest whole cycles that fit under this size.
+PLAIN_MAX_BYTES = 80 * 1024 * 1024
 DEFAULT = "petss"
 NOT_MEMBERS = {"observed", "astro_tide", "petss_surge", "etss_surge"}
 # Members that can drive the primary forecast. Tidewatch is the other brand and the baseline and
@@ -507,12 +510,41 @@ def write_tables(folder, name, t):
     json.dump(doc, open(os.path.join(folder, f"{name}_skill.json"), "w"), separators=(",", ":"))
 
 
+def write_plain_scores(path, pub, limit=None):
+    """scores.csv: the newest whole cycles of pub that fit under PLAIN_MAX_BYTES. Returns the first cycle kept."""
+    limit = PLAIN_MAX_BYTES if limit is None else limit
+    text = pub.to_csv(index=False, float_format="%.4f")
+    if len(text.encode()) > limit and not pub.empty:
+        lines = text.splitlines(keepends=True)
+        sizes = np.array([len(x.encode()) for x in lines[1:]])
+        cyc = pub["cycle"].to_numpy()
+        order = np.argsort(cyc, kind="stable")[::-1]          # newest rows first
+        room = limit - len(lines[0].encode())
+        used, keep, first = 0, [], None
+        for c in sorted(set(cyc), reverse=True):               # add whole cycles, newest first
+            idx = order[cyc[order] == c]
+            n = int(sizes[idx].sum())
+            if used + n > room:
+                break
+            used += n
+            keep.extend(idx.tolist())
+            first = c
+        text = lines[0] + "".join(lines[i + 1] for i in sorted(keep))
+    else:
+        first = pub["cycle"].min() if not pub.empty else None
+    with open(path, "w") as fh:
+        fh.write(text)
+    return first
+
+
 # --- outputs -----------------------------------------------------------------------------------------
 def write(out, scores, floods, runs, now):
     """The skill/ folder. Returns (pick document, recent skill, recent flood scores)."""
     os.makedirs(out, exist_ok=True)
     cut = f"{now - pd.Timedelta(days=PUBLISH_DAYS):%Y-%m-%dT%HZ}"
-    scores[scores["cycle"] >= cut].to_csv(os.path.join(out, "scores.csv"), index=False, float_format="%.4f")
+    pub = scores[scores["cycle"] >= cut]
+    pub.to_csv(os.path.join(out, "scores.csv.gz"), index=False, float_format="%.4f", compression="gzip")
+    write_plain_scores(os.path.join(out, "scores.csv"), pub)
     floods[floods["cycle"] >= cut].to_csv(os.path.join(out, "flood_scores.csv"), index=False, float_format="%.4f")
     state, hist = replay(scores, runs)
     hist.to_csv(os.path.join(out, "picks_history.csv"), index=False)
@@ -584,7 +616,8 @@ its ensemble chart: {links}.</p>
 <p class="disc">{TABLES_NOTE}</p>
 <p class="disc">{H.escape(doc['rule'])}</p>
 <p class="disc">Stations whose primary guidance is not P-ETSS in some lead band:</p><ul class="disc">{''.join(moved) or '<li>none yet</li>'}</ul>
-<p class="disc">Downloads: <a href="scores.csv">every score (last {PUBLISH_DAYS} days)</a>, <a href="flood_scores.csv">high-water
+<p class="disc">Downloads: <a href="scores.csv.gz">every score (last {PUBLISH_DAYS} days, gzip)</a>, <a href="scores.csv">the newest scores (csv, up
+to {PLAIN_MAX_BYTES // 2**20} MB)</a>, <a href="flood_scores.csv">high-water
 scores</a>, <a href="summary.csv">recent skill</a>, <a href="flood_summary.csv">recent high-water skill</a>,
 <a href="summary.json">(json)</a>, <a href="pick.json">guidance pick</a>, <a href="picks_history.csv">pick history</a>,
 <a href="tables/">tables (csv, json)</a>.</p>

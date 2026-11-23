@@ -88,20 +88,37 @@ jobs:
             echo "::warning title=not published::STORMSENSE_PUBLISH_TOKEN is not set; the run was built and archived but the public sites were not updated."
             exit 0
           fi
-          publish() {  # site folder, repository
+          failed=0
+          publish() {  # site folder, repository; returns 1 (and says why) when the site was not pushed
+            # GitHub refuses a push holding a file over 100 MiB, which kept the Ensemble site on its
+            # 10 Nov 2026 build for 12 days without failing the run; say so instead of trying.
+            big=$(find "$1" -type f -size +95M -printf '%P (%s bytes) ')
+            if [ -n "$big" ]; then
+              echo "::error title=$2 not published::files over GitHub's 100 MiB limit: $big"
+              return 1
+            fi
             cd "$1"
             git init -q -b site
             git config user.name "stormsense-archive"
             git config user.email "actions@users.noreply.github.com"
             git add -A
             git commit -q -m "StormSense run $(date -u +%Y-%m-%dT%H:%MZ)"
-            for i in 1 2 3 4; do git push -q -f "https://x-access-token:${TOKEN}@github.com/$2.git" site && break; sleep $((2**i)); done
+            pushed=0
+            for i in 1 2 3 4; do
+              if git push -q -f "https://x-access-token:${TOKEN}@github.com/$2.git" site; then pushed=1; break; fi
+              sleep $((2**i))
+            done
             cd - >/dev/null
+            if [ "$pushed" != 1 ]; then
+              echo "::error title=$2 not published::git push of the site branch failed 4 times; the site still shows an older run."
+              return 1
+            fi
             curl -sSf -X POST -H "Authorization: Bearer ${TOKEN}" -H "Accept: application/vnd.github+json" \
               "https://api.github.com/repos/$2/dispatches" -d '{"event_type":"publish"}'
           }
-          publish site/latest "$LATEST_REPO"
-          publish site/ensemble "$ENSEMBLE_REPO"
+          publish site/latest "$LATEST_REPO" || failed=1
+          publish site/ensemble "$ENSEMBLE_REPO" || failed=1
+          exit $failed
 
       - name: Keep the dry-run sites
         if: github.event_name == 'pull_request'
