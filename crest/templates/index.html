@@ -1,0 +1,124 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>StormSense CREST</title>
+<style>__CSS__
+__LEAFLET_CSS__</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="mast">
+    <img class="ss" src="__SS_LOGO__" alt="StormSense">
+    <div class="mid">
+      <h1>StormSense CREST</h1>
+      <p class="sub">Chart Review and Evaluation Statistics Tool · every archived storm tide forecast scored against the gauges · click a station to open its review</p>
+    </div>
+    <img src="__VIMS_LOGO__" alt="Virginia Institute of Marine Science">
+  </div>
+
+  <div class="controls">
+    <span><span class="lbl">Period</span><select id="period" aria-label="Period"></select></span>
+    <span><span class="lbl">Guidance</span><select id="member" aria-label="Guidance"></select></span>
+    <span><span class="lbl">Color by</span><select id="metric" aria-label="Color by">
+      <option value="S">Skill S, 0-72 h</option><option value="bias">Bias, 0-72 h</option><option value="best">Best guidance</option>
+      <option value="cone">Published 10-90% hit rate</option><option value="cov">Gauge coverage</option></select></span>
+    <span class="note" id="built"></span>
+  </div>
+
+  <div class="grid2" style="grid-template-columns:minmax(0,1.5fr) minmax(0,1fr)">
+    <div class="card"><div id="map" role="region" aria-label="Station map"></div><div class="chips" id="legend"></div></div>
+    <div style="display:flex;flex-direction:column;gap:12px;min-width:0">
+      <div class="card"><h2>Network leaderboard</h2>
+        <p class="note">Mean S over 0-72 h across stations (suspect gauges left out), and at how many stations each guidance scored best.</p>
+        <div class="scroll"><table id="netTable"></table></div></div>
+      <div class="card"><h2>Skill by lead time, all stations</h2><div id="decayChart" class="chart sm"></div></div>
+    </div>
+  </div>
+
+  <div class="card"><h2>Stations</h2><p class="note">Click a row to open the station's CREST page.</p>
+    <div class="scroll list"><table id="stTable"></table></div>
+    <p class="disc">__DISCLAIMER__</p></div>
+
+  <div class="footer">StormSense CREST · Virginia Institute of Marine Science · <a href="feeds/stations.geojson">stations.geojson</a> · <a href="feeds/leaderboard.csv">leaderboard.csv</a> · <a href="feeds/daily_skill.csv">daily_skill.csv</a> · <a href="feeds/flood_events.csv">flood_events.csv</a> · built <span id="builtFoot"></span></div>
+</div>
+<script>__HIGHCHARTS__</script>
+<script>__LEAFLET__</script>
+<script>__COMMON__</script>
+<script>
+var MANIFEST = __MANIFEST__;
+var NET = __NET__;
+var COAST = __COAST__;
+var CACHE = {}; CACHE[NET.period.id] = NET;
+var state = {member: Q.get("guidance") || "primary", metric: "S"};
+hcTheme();
+var map = L.map("map", {scrollWheelZoom: false}).setView([37.6, -76.5], 8);
+L.geoJSON(COAST, {style: {color: css("--muted"), weight: 1, opacity: .7}, interactive: false}).addTo(map);
+L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/Ocean/World_Ocean_Base/MapServer/tile/{z}/{y}/{x}",
+  {maxZoom: 13, attribution: "Esri, GEBCO, NOAA, National Geographic, DeLorme, HERE, Geonames.org, and other contributors"}).addTo(map);
+var layer = L.layerGroup().addTo(map), fitted = false;
+function colorS(v){ return v == null ? "#9aa5ae" : v >= 0.85 ? "#0b6e4f" : v >= 0.75 ? "#36a36b" : v >= 0.67 ? "#e0a100" : v >= 0.45 ? "#e8590c" : "#b3261e"; }
+function colorOf(s){
+  var m = state.member;
+  if (state.metric === "S") return colorS(s.S[m]);
+  if (state.metric === "bias"){ var b = (s.bias || {})[m]; if (b == null) return "#9aa5ae"; var a = Math.min(1, Math.abs(b) / 0.6); return b > 0 ? "rgba(179,38,30," + (0.25 + 0.75 * a) + ")" : "rgba(31,79,191," + (0.25 + 0.75 * a) + ")"; }
+  if (state.metric === "best") return s.best ? col(s.best) : "#9aa5ae";
+  if (state.metric === "cone"){ var c = s.cone; if (c == null) return "#9aa5ae"; var e = Math.abs(c - 0.8); return e < 0.05 ? "#0b6e4f" : e < 0.15 ? "#e0a100" : "#b3261e"; }
+  var v = s.cov; return v == null ? "#9aa5ae" : v >= 95 ? "#0b6e4f" : v >= 85 ? "#e0a100" : "#b3261e";
+}
+function legend(){
+  var items = state.metric === "S" ? [["#0b6e4f","0.85 and up"],["#36a36b","0.75-0.85"],["#e0a100","0.67-0.75"],["#e8590c","0.45-0.67"],["#b3261e","under 0.45"]]
+    : state.metric === "bias" ? [["rgba(179,38,30,.9)","forecast too high"],["rgba(31,79,191,.9)","forecast too low"]]
+    : state.metric === "best" ? NET.members.filter(function(m){ return NET.stations.some(function(s){ return s.best === m; }); }).map(function(m){ return [col(m), NET.names[m]]; })
+    : state.metric === "cone" ? [["#0b6e4f","within 5 points of 80%"],["#e0a100","within 15"],["#b3261e","further off"]]
+    : [["#0b6e4f","95% or more"],["#e0a100","85-95%"],["#b3261e","under 85%"]];
+  $("legend").innerHTML = items.map(function(x){ return '<span class="chip" style="cursor:default"><span class="sw" style="background:' + x[0] + ';height:10px;width:10px;border-radius:50%"></span>' + esc(x[1]) + "</span>"; }).join("") +
+    '<span class="chip" style="cursor:default"><span class="sw" style="border:2px solid #666;height:8px;width:8px;border-radius:50%;background:none"></span>suspect gauge</span>';
+}
+function popup(s){
+  var m = state.member, rows = ["primary","stormsense","petss","nws","tidewatch"].filter(function(x){ return s.S[x] != null; }).map(function(x){ return "<tr><td class='t'>" + sw(x) + esc(NET.names[x] || x) + "</td><td>" + pill(s.S[x]) + "</td></tr>"; }).join("");
+  return "<strong>" + esc(s.id) + "</strong> · " + esc(s.name) + "<table style='margin-top:6px'>" + rows + "</table>" +
+    "<div class='note' style='margin-top:4px'>Best: " + esc(s.best ? NET.names[s.best] : "–") + " · gauge " + (s.cov != null ? s.cov.toFixed(0) + "%" : "–") + (s.events ? " · " + s.events + " flood(s), last " + s.last_event : "") + "</div>" +
+    (s.suspect ? "<div class='note' style='color:#b3261e'>Suspect gauge: scores not trusted.</div>" : "") +
+    "<a class='btn' href='crest_" + s.id.toLowerCase() + ".html?period=" + NET.period.id + "'>Open the " + esc(s.id) + " review</a>";
+}
+function drawMap(){
+  layer.clearLayers(); var b = [];
+  NET.stations.forEach(function(s){ if (s.lat == null) return; var c = colorOf(s);
+    var mk = L.circleMarker([s.lat, s.lon], {radius: 8, color: s.suspect ? "#555" : "#fff", weight: s.suspect ? 2.5 : 1.2, fillColor: c, fillOpacity: s.suspect ? 0.25 : 0.95});
+    mk.bindPopup(popup(s)); mk.bindTooltip(s.id); mk.addTo(layer); b.push([s.lat, s.lon]); });
+  if (b.length && !fitted){ map.fitBounds(b, {padding: [20, 20]}); fitted = true; }
+  legend();
+}
+function drawTables(){
+  var rows = Object.keys(NET.leaderboard).map(function(m){ var x = NET.leaderboard[m]; return {m: m, name: NET.names[m] || m, S: x.S, stations: x.stations, wins: x.wins}; });
+  table($("netTable"), [{k: "name", label: "Guidance", t: 1, fmt: function(x){ return sw(x.m) + esc(x.name); }}, {k: "S", label: "Mean S", fmt: function(x){ return pill(x.S); }},
+    {k: "wins", label: "Best at"}, {k: "stations", label: "Stations"}], rows, {sortKey: "S"});
+  var cats = ["0-6","6-12","12-18","18-24","24-30","30-36","36-42","42-48","48-54","54-60","60-66","66-72"];
+  Highcharts.chart("decayChart", {xAxis: {categories: cats, title: {text: "Forecast lead (hours)"}}, yAxis: {title: {text: "Mean S"}, max: 1, min: 0.4, endOnTick: false},
+    tooltip: {shared: true, valueDecimals: 3}, legend: {itemStyle: {fontSize: "11px"}, itemDistance: 10, maxHeight: 70},
+    series: NET.members.filter(function(m){ return NET.decay[m]; }).map(function(m){ return {name: NET.names[m], color: col(m), data: NET.decay[m], marker: {enabled: false},
+      lineWidth: m === "primary" || m === "stormsense" ? 3 : 1.5, visible: ["primary","stormsense","petss","nws","tidewatch"].indexOf(m) >= 0}; })});
+  var m = state.member, srows = NET.stations.map(function(s){ return {s: s, id: s.id, name: s.name, S: s.S[m], best: s.best ? NET.names[s.best] : "", bm: s.best, cone: s.cone, cov: s.cov, runs: s.runs, events: s.events}; });
+  table($("stTable"), [{k: "id", label: "Station", t: 1, fmt: function(x){ return '<a href="crest_' + x.id.toLowerCase() + '.html?period=' + NET.period.id + '">' + esc(x.id) + "</a>"; }},
+    {k: "name", label: "Name", t: 1}, {k: "S", label: "S " + esc(NET.names[m] || m), fmt: function(x){ return pill(x.S); }},
+    {k: "best", label: "Best guidance", t: 1, fmt: function(x){ return x.bm ? sw(x.bm) + esc(x.best) : "–"; }},
+    {k: "cone", label: "Cone hit", fmt: function(x){ return x.cone == null ? "–" : Math.round(x.cone * 100) + "%"; }},
+    {k: "cov", label: "Gauge %", fmt: function(x){ return fx(x.cov, 0) + (x.s.suspect ? " ⚠" : ""); }}, {k: "runs", label: "Runs"}, {k: "events", label: "Floods"}],
+    srows, {sortKey: "S", rowAttr: function(){ return ' class="click" tabindex="0"'; }, onRow: function(x){ location.href = "crest_" + x.id.toLowerCase() + ".html?period=" + NET.period.id; }});
+}
+function render(){
+  $("built").textContent = "Built " + MANIFEST.built + " · " + NET.period.label; $("builtFoot").textContent = MANIFEST.built;
+  $("member").innerHTML = NET.members.map(function(m){ return '<option value="' + m + '"' + (m === state.member ? " selected" : "") + ">" + esc(NET.names[m]) + "</option>"; }).join("");
+  drawMap(); drawTables();
+}
+$("member").onchange = function(){ state.member = this.value; drawMap(); drawTables(); };
+$("metric").onchange = function(){ state.metric = this.value; drawMap(); };
+(function(){ var sel = $("period"); sel.innerHTML = MANIFEST.periods.map(function(p){ return '<option value="' + p.id + '"' + (p.id === NET.period.id ? " selected" : "") + ">" + esc(p.label) + "</option>"; }).join("");
+  sel.onchange = function(){ var id = sel.value; if (CACHE[id]){ NET = CACHE[id]; render(); return; }
+    getJSON("data/network_" + id + ".json", function(d){ if (!d){ sel.value = NET.period.id; return; } CACHE[id] = d; NET = d; render(); }); }; })();
+render();
+</script>
+</body>
+</html>

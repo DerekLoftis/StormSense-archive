@@ -1,0 +1,336 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>__TITLE__</title>
+<style>__CSS__</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="mast">
+    <img class="ss" src="__SS_LOGO__" alt="StormSense">
+    <div class="mid">
+      <h1 id="title">StormSense CREST</h1>
+      <p class="sub" id="subtitle"></p>
+    </div>
+    <img src="__VIMS_LOGO__" alt="Virginia Institute of Marine Science">
+  </div>
+
+  <div class="controls">
+    <span><span class="lbl">Period</span><select id="period" aria-label="Period"></select></span>
+    <span><span class="lbl">Datum</span><span class="seg" id="datum" role="group" aria-label="Datum"></span></span>
+    <span><span class="lbl">Units</span><span class="seg" id="units" role="group" aria-label="Units"></span></span>
+    <span class="note" id="built"></span>
+  </div>
+
+  <div class="strip" id="strip"></div>
+  <p class="verdict" id="verdict"></p>
+
+  <nav class="tabs" id="tabs" aria-label="Sections">
+    <a href="#leaderboard">Leaderboard</a><a href="#lead-time">Skill by lead time</a><a href="#over-time">Skill over time</a><a href="#forecasts">Individual forecasts</a><a href="#ensemble">Ensemble checks</a><a href="#floods">Floods and high waters</a><a href="#gauge">Gauge health</a><a href="#downloads">Downloads</a>
+  </nav>
+
+  <section id="leaderboard" class="card">
+    <h2>Guidance leaderboard</h2>
+    <p class="note">Mean skill S = 0.25[R² + e<sup>−|Bias|/σ</sup> + e<sup>−MAE/σ</sup> + e<sup>−RMSE/σ</sup>] over the forecasts issued in the period (σ = SD of the observations in each window). Bands are hours after the gauge's last observation at issue. Pills: under 0.45 no skill, 0.75 and up good. Click a column to sort.</p>
+    <div><span class="lbl">Conditions</span><span class="seg" id="regime" role="group" aria-label="Conditions"></span></div>
+    <div class="scroll"><table id="lbTable"></table></div>
+    <p class="note" id="lbNote"></p>
+    <p class="disc">__DISCLAIMER__</p>
+  </section>
+
+  <section id="lead-time" class="card" hidden>
+    <h2>Skill by lead time</h2>
+    <p class="note">Mean S in 6-hour segments of each forecast. Click a legend entry to hide or show it. Shorter guidance stops where its forecast ends.</p>
+    <div id="decayChart" class="chart"></div>
+    <h3>RMSE by lead time</h3>
+    <div id="rmseChart" class="chart sm"></div>
+  </section>
+
+  <section id="over-time" class="card" hidden>
+    <h2>Skill over time</h2>
+    <p class="note">Daily mean S of the 0-36 hour window of the forecasts issued each day. Dashed lines mark model and pipeline changes.</p>
+    <div id="dailyChart" class="chart"></div>
+  </section>
+
+  <section id="forecasts" hidden>
+    <div class="bench">
+      <div class="card"><h2>Forecasts issued</h2>
+        <p class="note">S over each forecast's own period. Click a run to chart it.</p>
+        <div class="list"><table id="runTable"></table></div></div>
+      <div style="display:flex;flex-direction:column;gap:12px;min-width:0">
+        <div class="card">
+          <h2 id="runTitle">Select a forecast</h2>
+          <div class="chips" id="runChips"></div>
+          <div id="runChart" class="chart"></div>
+          <p class="disc">__DISCLAIMER__<br><span id="runGuide"></span></p>
+        </div>
+        <div class="grid2">
+          <div class="card"><h3>Regression</h3><div id="regChart" class="chart sm"></div></div>
+          <div class="card"><h3>Statistics for this forecast</h3><div class="scroll"><table id="runStats"></table></div></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="ensemble" hidden>
+    <div class="grid2">
+      <div class="card"><h2>Does the cone hold the water?</h2>
+        <p class="note">Share of observations inside each forecast's 10-90% band by lead time. A calibrated band holds 80%.</p>
+        <div id="coneChart" class="chart sm"></div></div>
+      <div class="card"><h2>The adaptive pick against hindsight</h2>
+        <p class="note">How often the pick chose each guidance per lead band, the skill it achieved, and the best skill any pickable guidance reached on the same runs.</p>
+        <div class="scroll"><table id="pickTable"></table></div></div>
+    </div>
+  </section>
+
+  <section id="floods" hidden>
+    <div class="card"><h2>Observed floods</h2>
+      <p class="note" id="evNote"></p>
+      <div class="scroll"><table id="evTable"></table></div>
+      <div id="evChart" class="chart sm" hidden></div></div>
+    <div class="card" style="margin-top:12px"><h2>High waters by guidance</h2>
+      <p class="note">Every observed high water in each forecast's period, matched to the forecast's highest water within 3 hours: peak-height error (forecast minus observed), timing error, and hits, misses and false alarms at each NWS flood category.</p>
+      <div class="scroll"><table id="hwTable"></table></div></div>
+  </section>
+
+  <section id="gauge" class="card" hidden>
+    <h2>Gauge health</h2>
+    <p class="note" id="gaugeNote"></p>
+    <div id="gaugeChart" class="chart sm"></div>
+    <div class="scroll list"><table id="gaugeTable"></table></div>
+  </section>
+
+  <section id="downloads" class="card" hidden>
+    <h2>Downloads</h2>
+    <p class="note">Each table on this page as CSV, and the period's full data as JSON.</p>
+    <div class="chips" id="dlButtons"></div>
+  </section>
+
+  <div class="footer">StormSense CREST · Chart Review and Evaluation Statistics Tool · Virginia Institute of Marine Science · <a href="index.html">All stations</a> · built <span id="builtFoot"></span></div>
+</div>
+<script>__HIGHCHARTS__</script>
+<script>__HIGHCHARTS_MORE__</script>
+<script>__COMMON__</script>
+<script>
+var MANIFEST = __MANIFEST__;
+var DOC = __DOC__;
+var CACHE = {}; CACHE[DOC.period.id] = DOC;
+var ST = DOC.station;
+var state = {regime: "all", run: null, shown: {primary:1, stormsense:1, petss:1, nws:1, tidewatch:1}};
+hcTheme();
+
+function render(){
+  var d = DOC;
+  document.title = "StormSense CREST: " + d.name;
+  $("title").textContent = "CREST: " + d.name;
+  $("subtitle").textContent = d.station + " · " + d.source.split(";")[0] + " · " + d.period.label + " · every archived forecast scored against the gauge";
+  $("built").textContent = "Built " + MANIFEST.built + (d.added ? " · in StormSense since " + d.added : "");
+  $("builtFoot").textContent = MANIFEST.built;
+  drawCard(); drawLB(); route();
+}
+function drawCard(){
+  var c = DOC.card, n = DOC.names;
+  var tiles = [
+    ["Best guidance, 0-72 h", c.best ? n[c.best] : "–", c.best ? "S " + fx(c.best_S) + " over " + c.best_n + " runs" : "not enough runs"],
+    ["Published · P-ETSS · NWS", [c.primary, c.petss, c.nws].map(function(v){return fx(v)}).join(" · "), "mean S over 0-72 h"],
+    ["Published stays good", c.horizon_h ? c.horizon_h + " h" : "–", "S 0.75 or better from issue"],
+    ["Published 10-90% band", c.cone != null ? Math.round(c.cone * 100) + "%" : "–", "of observations inside (80% calibrated)"],
+    ["Gauge record", c.coverage != null ? c.coverage.toFixed(0) + "%" : "–", "6-minute coverage" + (DOC.suspect ? " · suspect gauge" : "")],
+    ["Floods observed", String(c.events), "reached NWS Action or above"]
+  ];
+  $("strip").innerHTML = tiles.map(function(t){return '<div class="tile"><span class="k">' + t[0] + '</span><span class="v">' + esc(t[1]) + '</span><span class="d">' + t[2] + "</span></div>"}).join("");
+  $("verdict").textContent = (DOC.suspect ? "This gauge's archived observations were another gauge's record, so its scores are not trusted. " : "") + (c.verdict || "Not enough verified forecasts yet.");
+}
+function drawLB(){
+  var lb = DOC.lb[state.regime] || {}, n = DOC.names;
+  seg("regime", [["all", "All (" + DOC.regime_runs.all + ")"], ["high", "High water (" + DOC.regime_runs.high + ")"], ["calm", "Calm (" + DOC.regime_runs.calm + ")"]], state.regime, function(v){ state.regime = v; drawLB(); });
+  var rows = Object.keys(lb).map(function(m){ var b = lb[m], f = b.full || {}; return {m: m, name: n[m] || m, b: b, span: DOC.span[m], n: (b.full || b["0-72"] || {}).n,
+    bias: f.Bias, mae: f.MAE, rmse: f.RMSE, r2: f.R2}; });
+  function S(bk){ return {k: bk, label: bk === "full" ? "Own period" : bk + " h", val: function(r){ return (r.b[bk] || {}).S; }, fmt: function(r){ return pill((r.b[bk] || {}).S); }}; }
+  table($("lbTable"), [
+    {k: "name", label: "Guidance", t: 1, fmt: function(r){ return sw(r.m) + esc(r.name); }},
+    S("0-12"), S("12-36"), S("36-72"), S("0-72"), S("full"),
+    {k: "span", label: "Hours"}, {k: "n", label: "Runs"},
+    {k: "bias", label: "Bias " + ul(), fmt: function(r){ return sgn(len(r.bias)); }, title: "forecast minus observed, own period"},
+    {k: "mae", label: "MAE " + ul(), fmt: function(r){ return fx(len(r.mae), 2); }},
+    {k: "rmse", label: "RMSE " + ul(), fmt: function(r){ return fx(len(r.rmse), 2); }},
+    {k: "r2", label: "R²", fmt: function(r){ return fx(r.r2, 2); }}
+  ], rows, {sortKey: "0-72", rowAttr: function(r){ return r.m === "primary" ? ' class="sel"' : ""; }});
+  $("lbNote").textContent = "High water: runs whose 72 hours reached NWS Action at the gauge (or the period's top 10% of water levels where the gauge has no NWS categories). The ensemble mean is a what-if computed by CREST, not a published forecast.";
+}
+function lineSeries(obj, mems){
+  return mems.filter(function(m){ return obj[m] && obj[m].some(function(v){return v != null}); }).map(function(m){
+    return {name: DOC.names[m] || m, data: obj[m], color: col(m), lineWidth: (m === "primary" || m === "stormsense") ? 3 : 1.6,
+      visible: !!state.shown[m] || m === "ens_mean" || m === "stofs2d" || m === "etss", marker: {enabled: false}};
+  });
+}
+function goodBands(){ return [{from: 0, to: 0.45, color: "rgba(179,38,30,.06)"}, {from: 0.75, to: 1, color: "rgba(31,122,77,.06)"}]; }
+function drawDecay(){
+  var cats = ["0-6","6-12","12-18","18-24","24-30","30-36","36-42","42-48","48-54","54-60","60-66","66-72"];
+  Highcharts.chart("decayChart", {xAxis: {categories: cats, title: {text: "Forecast lead (hours)"}}, yAxis: {title: {text: "Skill S"}, max: 1, plotBands: goodBands()},
+    tooltip: {shared: true, valueDecimals: 3}, series: lineSeries(DOC.decay, DOC.members)});
+  var rm = {}; Object.keys(DOC.decay_rmse).forEach(function(m){ rm[m] = DOC.decay_rmse[m].map(len); });
+  Highcharts.chart("rmseChart", {xAxis: {categories: cats}, yAxis: {title: {text: "RMSE (" + ul() + ")"}, min: 0},
+    tooltip: {shared: true, valueDecimals: 2}, series: lineSeries(rm, DOC.members)});
+}
+function changeLines(){
+  return (DOC.changes || []).map(function(c){ return {value: Date.parse(c.date + "T00:00:00Z"), color: css("--muted"), dashStyle: "Dash", width: 1, zIndex: 3,
+    label: {text: c.label, rotation: 0, y: 12, x: 4, style: {color: css("--muted"), fontSize: "11px"}}}; });
+}
+function drawDaily(){
+  var dl = DOC.daily, days = (dl.days || []).map(function(d){ return Date.parse(d + "T12:00:00Z"); });
+  var ser = DOC.members.filter(function(m){ return dl[m]; }).map(function(m){ return {name: DOC.names[m], color: col(m), visible: !!state.shown[m],
+    lineWidth: (m === "primary" || m === "stormsense") ? 3 : 1.6, data: days.map(function(t, i){ return [t, dl[m][i]]; }), marker: {radius: 2}}; });
+  Highcharts.chart("dailyChart", {xAxis: {type: "datetime", plotLines: changeLines()}, yAxis: {title: {text: "Skill S (0-36 h)"}, max: 1, plotBands: goodBands()},
+    tooltip: {shared: true, valueDecimals: 3, xDateFormat: "%e %b %Y"}, series: ser});
+}
+/* individual forecasts */
+function obsSeries(t0, t1){
+  var o = DOC.obs, out = [];
+  for (var i = 0; i < o.v.length; i++){ var t = o.t0 + i * o.dt; if (t < t0 || t > t1) continue; out.push([t, lvl(o.v[i], DOC.navd)]); }
+  return out;
+}
+function obsAt(t){ var o = DOC.obs, i = Math.round((t - o.t0) / o.dt); return (i >= 0 && i < o.v.length && Math.abs(o.t0 + i * o.dt - t) < 1) ? o.v[i] : null; }
+function drawRuns(){
+  var rows = DOC.runs.map(function(r){ function s(m){ return ((r.stats[m] || {}).full || [])[0]; } return {r: r, cycle: r.cycle, p: s("primary"), ss: s("stormsense"), pe: s("petss"), nw: s("nws")}; });
+  table($("runTable"), [
+    {k: "cycle", label: "Issued (UTC)", t: 1, fmt: function(x){ return esc(x.cycle.replace("T", " ")) + (x.r.series && Object.keys(x.r.series).length ? "" : " ·"); }},
+    {k: "p", label: "Published", fmt: function(x){ return pill(x.p); }}, {k: "ss", label: "StormSense", fmt: function(x){ return pill(x.ss); }},
+    {k: "pe", label: "P-ETSS", fmt: function(x){ return pill(x.pe); }}, {k: "nw", label: "NWS", fmt: function(x){ return pill(x.nw); }}
+  ], rows, {sortKey: "cycle", dir: -1, rowAttr: function(x){ return ' class="click' + (state.run === x.cycle ? " sel" : "") + '" tabindex="0"'; },
+    onRow: function(x){ state.run = x.cycle; drawRun(); drawRuns(); }});
+  if (!state.run && rows.length){
+    var has = function(r){ return r.series && Object.keys(r.series).length; };
+    var pick = DOC.runs.filter(function(r){ return has(r) && r.stats.primary; });
+    if (!pick.length) pick = DOC.runs.filter(has);
+    if (!pick.length) pick = DOC.runs;
+    state.run = pick[pick.length - 1].cycle; drawRun(); drawRuns(); }
+}
+function levelLines(){
+  var L = DOC.levels || {}, out = [];
+  ["action","minor","moderate","major"].forEach(function(c){ if (L[c] != null) out.push({value: lvl(L[c], DOC.navd), color: c === "action" ? "#e8a33d" : c === "minor" ? "#f08c00" : c === "moderate" ? "#d9480f" : "#c2255c", dashStyle: "ShortDash", width: 1.2, zIndex: 2,
+    label: {text: c[0].toUpperCase() + c.slice(1) + " " + fx(lvl(L[c], DOC.navd), 2), align: "right", x: -4, style: {color: css("--muted"), fontSize: "11px"}}}); });
+  if (U.datum === "NAVD") out.push({value: lvl(0, DOC.navd), color: css("--muted"), width: 1, label: {text: "MLLW", align: "left", style: {color: css("--muted"), fontSize: "11px"}}});
+  else if (DOC.navd != null) out.push({value: lvl(DOC.navd, null), color: css("--muted"), width: 1, dashStyle: "Dot", label: {text: "NAVD88", align: "left", style: {color: css("--muted"), fontSize: "11px"}}});
+  return out;
+}
+function drawRun(){
+  var r = DOC.runs.find(function(x){ return x.cycle === state.run; }); if (!r) return;
+  var mems = Object.keys(r.series || {}).filter(function(m){ return !/_p10$|_p90$/.test(m) && m !== "tide"; });
+  mems.sort(function(a, b){ return DOC.members.indexOf(a) - DOC.members.indexOf(b); });
+  $("runTitle").textContent = "Forecast issued " + r.cycle.replace("T", " ") + (r.basis && r.basis !== "stormsense" ? " (scored on Tidewatch's observations)" : "");
+  $("runChips").innerHTML = mems.map(function(m){ return '<button class="chip" data-m="' + m + '" aria-pressed="' + (!!state.shown[m]) + '">' + sw(m) + esc(DOC.names[m] || m) + "</button>"; }).join("") +
+    (r.series.tide ? '<button class="chip" data-m="tide" aria-pressed="' + (!!state.shown.tide) + '">' + sw("tide") + "Tide</button>" : "");
+  $("runChips").querySelectorAll(".chip").forEach(function(b){ b.onclick = function(){ var m = b.dataset.m; state.shown[m] = !state.shown[m]; drawRun(); }; });
+  var t0 = r.t0, ser = [];
+  if (!mems.length){
+    $("runChart").innerHTML = '<p class="empty">This run\'s series are not in the archive this page was built from; its scores are listed.</p>';
+  } else {
+    var t1 = t0 + 72 * 3600e3;
+    ser.push({name: "Observed", color: col("obs"), data: obsSeries(t0 - 24 * 3600e3, t1), lineWidth: 2, zIndex: 5});
+    if (r.series.primary_p10 && r.series.primary_p90 && state.shown.primary){
+      ser.push({type: "arearange", name: "Published 10-90%", color: col("primary"), fillOpacity: 0.12, lineWidth: 0, enableMouseTracking: false, zIndex: 0,
+        data: r.series.primary_p10.map(function(v, i){ var w = r.series.primary_p90[i]; return [t0 + i * r.dt, v == null ? null : lvl(v, DOC.navd), w == null ? null : lvl(w, DOC.navd)]; })});
+    }
+    mems.concat(r.series.tide ? ["tide"] : []).forEach(function(m){ if (!state.shown[m]) return;
+      ser.push({name: DOC.names[m] || (m === "tide" ? "Tide" : m), color: col(m), lineWidth: m === "primary" ? 3 : 1.6, dashStyle: m === "tide" ? "Dot" : "Solid", zIndex: m === "primary" ? 4 : 2,
+        data: r.series[m].map(function(v, i){ return [t0 + i * r.dt, lvl(v, DOC.navd)]; })}); });
+    Highcharts.chart("runChart", {chart: {zoomType: "x"}, xAxis: {type: "datetime", plotLines: [{value: t0, color: css("--muted"), width: 1, label: {text: "issued", rotation: 0, y: 12, x: 4, style: {color: css("--muted"), fontSize: "11px"}}}]},
+      yAxis: {title: {text: "Water level (" + ul() + " " + (U.datum === "NAVD" ? "NAVD88" : "MLLW") + ")"}, plotLines: levelLines()},
+      tooltip: {shared: true, valueDecimals: 2, xDateFormat: "%a %e %b %H:%M UTC"}, series: ser});
+  }
+  $("runGuide").textContent = "Guidance shown: " + mems.filter(function(m){ return state.shown[m]; }).map(function(m){ return DOC.names[m] || m; }).join(", ");
+  // regression for the shown members
+  var reg = [], mn = 1e9, mx = -1e9;
+  mems.forEach(function(m){ if (!state.shown[m]) return; var pts = [];
+    r.series[m].forEach(function(v, i){ var o = obsAt(t0 + i * r.dt); if (v != null && o != null){ var x = lvl(o, DOC.navd), y = lvl(v, DOC.navd); pts.push([x, y]); mn = Math.min(mn, x, y); mx = Math.max(mx, x, y); } });
+    if (pts.length) reg.push({type: "scatter", name: DOC.names[m] || m, color: col(m), data: pts, marker: {radius: 2.5}}); });
+  if (reg.length){ reg.push({type: "line", name: "1:1", data: [[mn, mn], [mx, mx]], color: css("--muted"), dashStyle: "Dash", enableMouseTracking: false, marker: {enabled: false}});
+    Highcharts.chart("regChart", {xAxis: {min: mn, max: mx, title: {text: "Observed (" + ul() + ")"}, gridLineWidth: 1}, yAxis: {min: mn, max: mx, title: {text: "Forecast (" + ul() + ")"}}, legend: {enabled: false}, series: reg}); }
+  else $("regChart").innerHTML = '<p class="empty">No verified points yet.</p>';
+  var srows = Object.keys(r.stats).map(function(m){ var f = r.stats[m].full || r.stats[m]["0-72"] || []; return {m: m, name: DOC.names[m] || m, S: f[0], bias: f[1], mae: f[2], rmse: f[3], r2: f[4]}; });
+  if (!srows.length){ $("runStats").innerHTML = '<tr><td class="t">Not verified yet: scores appear once the gauge has observed this forecast\'s period.</td></tr>'; return; }
+  table($("runStats"), [{k: "name", label: "Guidance", t: 1, fmt: function(x){ return sw(x.m) + esc(x.name); }}, {k: "S", label: "S", fmt: function(x){ return pill(x.S); }},
+    {k: "bias", label: "Bias " + ul(), fmt: function(x){ return sgn(len(x.bias)); }}, {k: "mae", label: "MAE", fmt: function(x){ return fx(len(x.mae), 2); }},
+    {k: "rmse", label: "RMSE", fmt: function(x){ return fx(len(x.rmse), 2); }}, {k: "r2", label: "R²", fmt: function(x){ return fx(x.r2, 2); }}], srows, {sortKey: "S"});
+}
+function drawEnsemble(){
+  var cats = ["0-6","6-12","12-18","18-24","24-30","30-36","36-42","42-48","48-54","54-60","60-66","66-72"];
+  var ser = Object.keys(DOC.cone).map(function(m){ return {name: DOC.names[m] || m, color: col(m), data: DOC.cone[m].segments.map(function(v){ return v == null ? null : v * 100; }), marker: {enabled: false}, lineWidth: m === "primary" ? 3 : 1.8}; });
+  if (ser.length) Highcharts.chart("coneChart", {xAxis: {categories: cats, title: {text: "Forecast lead (hours)"}}, yAxis: {min: 0, max: 100, title: {text: "% of obs inside 10-90%"},
+    plotLines: [{value: 80, color: css("--ink"), width: 1.5, label: {text: "calibrated 80%", align: "right", x: -4, style: {color: css("--muted")}}}]}, tooltip: {shared: true, valueDecimals: 0, valueSuffix: "%"}, series: ser});
+  else $("coneChart").innerHTML = '<p class="empty">No cone scores in this period.</p>';
+  var P = DOC.picks, bands = ["0-12", "12-36", "36-72"], ids = {};
+  bands.forEach(function(b){ Object.keys((P.counts || {})[b] || {}).forEach(function(m){ ids[m] = 1; }); });
+  var rows = Object.keys(ids).map(function(m){ var o = {m: m, name: DOC.names[m] || m}; bands.forEach(function(b){ o[b] = ((P.counts[b] || {})[m]) || 0; }); return o; });
+  if (!rows.length){ $("pickTable").innerHTML = '<tr><td class="t">No pick history in this period.</td></tr>'; return; }
+  rows.push({m: "_a", name: "Skill the pick achieved", a: 1}); rows.push({m: "_b", name: "Best pickable guidance, in hindsight", b: 1});
+  $("pickTable").innerHTML = "<thead><tr><th>Guidance</th>" + bands.map(function(b){ return "<th>" + b + " h</th>"; }).join("") + "</tr></thead><tbody>" + rows.map(function(r){
+    return '<tr' + (r.a || r.b ? ' class="sel"' : "") + '><td class="t">' + (r.a || r.b ? "" : sw(r.m)) + esc(r.name) + "</td>" + bands.map(function(b){
+      if (r.a) return "<td>" + pill(P.achieved[b]) + "</td>"; if (r.b) return "<td>" + pill(P.best[b]) + "</td>"; return "<td>" + r[b] + "</td>"; }).join("") + "</tr>"; }).join("") + "</tbody>";
+}
+function drawFloods(){
+  var ev = DOC.events || [], L = DOC.levels || {};
+  if (L.action == null) $("evNote").textContent = "This gauge has no NWS flood categories, so floods are not detected here; high waters are still scored below.";
+  else $("evNote").textContent = ev.length ? "Each time the observed water reached NWS Action (" + fx(lvl(L.action, DOC.navd), 2) + " " + ul() + "), and how each guidance forecast the peak in the runs issued up to 72 hours before it: mean peak-height error, mean absolute timing error, and the share of runs that forecast Action or above." : "The gauge did not reach NWS Action (" + fx(lvl(L.action, DOC.navd), 2) + " " + ul() + ") in this period.";
+  var rows = [];
+  ev.forEach(function(e, i){ Object.keys(e.by).forEach(function(m){ var b = e.by[m]; rows.push({i: i, peak_t: e.peak_t, peak: e.peak, cat: e.category, m: m, name: DOC.names[m] || m, n: b.n, pe: b.pe, ape: b.ape, te: b.te, hit: b.hit}); }); });
+  if (rows.length) table($("evTable"), [{k: "peak_t", label: "Peak (UTC)", t: 1, fmt: function(x){ return esc(x.peak_t.slice(0, 16).replace("T", " ")); }},
+    {k: "peak", label: "Peak " + ul(), fmt: function(x){ return fx(lvl(x.peak, DOC.navd), 2); }}, {k: "cat", label: "Category", t: 1},
+    {k: "name", label: "Guidance", t: 1, fmt: function(x){ return sw(x.m) + esc(x.name); }}, {k: "n", label: "Runs"},
+    {k: "pe", label: "Peak error " + ul(), fmt: function(x){ return sgn(len(x.pe)); }}, {k: "ape", label: "|Peak error|", fmt: function(x){ return fx(len(x.ape), 2); }},
+    {k: "te", label: "|Timing| min", fmt: function(x){ return fx(x.te, 0); }}, {k: "hit", label: "Forecast Action", fmt: function(x){ return x.hit == null ? "–" : Math.round(x.hit * 100) + "%"; }}],
+    rows, {sortKey: "ape", dir: 1});
+  else $("evTable").innerHTML = "";
+  var lastBy = ev.length ? ev[ev.length - 1].by : {};
+  if (Object.keys(lastBy).length){ $("evChart").hidden = false; var ser = [];
+    Object.keys(ev[ev.length - 1].by).forEach(function(m){ ser.push({type: "scatter", name: DOC.names[m] || m, color: col(m), data: ev[ev.length - 1].by[m].runs.map(function(x){ return [x[0], len(x[1])]; })}); });
+    Highcharts.chart("evChart", {xAxis: {reversed: true, title: {text: "Hours before the peak the run was issued"}}, yAxis: {title: {text: "Peak error (" + ul() + ", forecast minus observed)"}, plotLines: [{value: 0, color: css("--muted"), width: 1}]},
+      title: {text: "Latest flood: peak error by lead", style: {fontSize: "13px", color: css("--ink")}}, series: ser}); } else $("evChart").hidden = true;
+  var hw = (DOC.floods || []).map(function(f){ var o = {m: f.member, name: DOC.names[f.member] || f.member, runs: f.runs, hw: f.hw, pe: f.pe, ape: f.ape, te: f.te};
+    ["action","minor","moderate","major"].forEach(function(c){ o[c] = f.cats[c]; }); return o; });
+  function cat(c){ return {k: c, label: c[0].toUpperCase() + c.slice(1) + " hit/miss/FA", val: function(x){ return x[c] ? x[c][0] : null; }, fmt: function(x){ var v = x[c]; return v ? v[0] + " / " + v[1] + " / " + v[2] : "–"; }}; }
+  table($("hwTable"), [{k: "name", label: "Guidance", t: 1, fmt: function(x){ return sw(x.m) + esc(x.name); }}, {k: "runs", label: "Runs"}, {k: "hw", label: "High waters"},
+    {k: "pe", label: "Peak error " + ul(), fmt: function(x){ return sgn(len(x.pe)); }}, {k: "ape", label: "|Peak error|", fmt: function(x){ return fx(len(x.ape), 2); }},
+    {k: "te", label: "|Timing| min", fmt: function(x){ return fx(x.te, 0); }}, cat("action"), cat("minor"), cat("moderate"), cat("major")], hw, {sortKey: "ape", dir: 1});
+}
+function drawGauge(){
+  var h = DOC.health;
+  if (!h.days || !h.days.length){ $("gaugeNote").textContent = "No observation archive index for this gauge in this period."; return; }
+  var cov = h.cov.filter(function(v){ return v != null; }), mean = cov.reduce(function(a, b){ return a + b; }, 0) / Math.max(1, cov.length);
+  $("gaugeNote").textContent = "Daily share of the 6-minute record the archive holds, and readings removed by quality control (out of range, spikes, stuck values). Mean coverage " + mean.toFixed(1) + "%. Thin days make that day's scores less reliable.";
+  var t = h.days.map(function(d){ return Date.parse(d + "T12:00:00Z"); });
+  Highcharts.chart("gaugeChart", {xAxis: {type: "datetime"}, yAxis: [{title: {text: "Coverage %"}, max: 100, min: 0, endOnTick: false}, {title: {text: "QC flags"}, opposite: true, min: 0, gridLineWidth: 0}],
+    tooltip: {shared: true, xDateFormat: "%e %b %Y"}, series: [{type: "column", name: "Coverage %", color: css("--accent"), data: t.map(function(x, i){ return [x, h.cov[i]]; })},
+      {type: "line", yAxis: 1, name: "QC flags", color: css("--poor"), data: t.map(function(x, i){ return [x, h.flags[i]]; }), marker: {radius: 2}}]});
+  var rows = h.days.map(function(d, i){ return {day: d, cov: h.cov[i], flags: h.flags[i], source: h.source[i], error: h.error[i]}; });
+  table($("gaugeTable"), [{k: "day", label: "Day", t: 1}, {k: "cov", label: "Coverage %", fmt: function(x){ return fx(x.cov, 1); }}, {k: "flags", label: "QC flags"}, {k: "source", label: "Source", t: 1}, {k: "error", label: "Note", t: 1}], rows, {sortKey: "day", dir: -1});
+}
+function drawDownloads(){
+  var b = [["lbTable", "leaderboard"], ["runTable", "forecasts"], ["runStats", "forecast_stats"], ["pickTable", "pick"], ["evTable", "floods"], ["hwTable", "high_waters"], ["gaugeTable", "gauge"]];
+  $("dlButtons").innerHTML = b.map(function(x){ return '<button class="chip" data-t="' + x[0] + '" data-n="' + x[1] + '">' + x[1].replace("_", " ") + " (CSV)</button>"; }).join("") +
+    '<a class="chip" href="data/' + ST + "_" + DOC.period.id + '.json">this period (JSON)</a><a class="chip" href="feeds/leaderboard.csv">all stations, leaderboard (CSV)</a>';
+  $("dlButtons").querySelectorAll("button").forEach(function(x){ x.onclick = function(){ if (!$(x.dataset.t)._csv){ ["leaderboard","forecasts","floods","gauge","ensemble"].forEach(function(id){ draw(id); }); }
+    downloadCSV($(x.dataset.t), "crest_" + ST + "_" + DOC.period.id + "_" + x.dataset.n + ".csv"); }; });
+}
+var IDS = ["leaderboard","lead-time","over-time","forecasts","ensemble","floods","gauge","downloads"];
+function draw(h){ if (h === "lead-time") drawDecay(); else if (h === "over-time") drawDaily(); else if (h === "forecasts") drawRuns(); else if (h === "ensemble") drawEnsemble();
+  else if (h === "floods") drawFloods(); else if (h === "gauge") drawGauge(); else if (h === "downloads") drawDownloads(); else drawLB(); }
+function route(){ var h = location.hash.slice(1) || Q.get("tab") || "leaderboard"; if (IDS.indexOf(h) < 0) h = "leaderboard";
+  IDS.forEach(function(i){ $(i).hidden = i !== h; }); document.querySelectorAll("#tabs a").forEach(function(a){ a.setAttribute("aria-current", a.getAttribute("href") === "#" + h ? "page" : "false"); }); draw(h); }
+window.addEventListener("hashchange", route);
+seg("datum", [["MLLW", "MLLW"], ["NAVD", "NAVD88"]], U.datum, function(v){ U.datum = v; route(); });
+seg("units", [["ft", "Feet"], ["m", "Meters"]], U.units, function(v){ U.units = v; drawLB(); route(); });
+(function(){ var sel = $("period"); var ps = MANIFEST.periods.filter(function(p){ return p.stations.indexOf(ST) >= 0; });
+  sel.innerHTML = ps.map(function(p){ return '<option value="' + p.id + '"' + (p.id === DOC.period.id ? " selected" : "") + ">" + esc(p.label) + "</option>"; }).join("");
+  sel.onchange = function(){ var id = sel.value; if (CACHE[id]){ DOC = CACHE[id]; state.run = null; render(); return; }
+    getJSON("data/" + ST + "_" + id + ".json", function(d, err){ if (!d){ $("built").textContent = "That period loads when the page is served from the CREST site."; sel.value = DOC.period.id; return; }
+      CACHE[id] = d; DOC = d; state.run = null; render(); }); };
+  var want = Q.get("period"); if (want && want !== DOC.period.id && ps.some(function(p){ return p.id === want; })){ sel.value = want; sel.onchange(); return; }
+})();
+render();
+</script>
+</body>
+</html>

@@ -1,0 +1,6 @@
+date,label,detail
+2026-10-16,Ensemble scoring starts,"Every ensemble member archived and scored per run (on Tidewatch's observations until 27 Oct)"
+2026-10-21,StormSense member,"StormSense's own surge model joins the ensemble"
+2026-10-27,One StormSense pipeline,"Own gauge observations and m30 tide, calibrated cone, 37 stations added; published fore72 built from the pick"
+2026-11-06,Gauge alignment fix,"Each guidance aligned to the gauge (PR #11), ending the 0.6-0.9 ft high bias since 27 Oct"
+2026-11-20,Corrector 0-12 h only,"The site predictor-corrector applies over 0-12 h only (PR #13)"

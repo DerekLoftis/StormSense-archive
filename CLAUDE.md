@@ -26,6 +26,7 @@ project's shared folder (skill code, baselines, notes, station sheet, disclosure
 | Archive of the Latest site as published | `archive-latest.yml` here, `stormsense_<build time>.tar.xz` on `stormsense-YYYY-MM` | :50 hourly |
 | Gauge observations, one tarball per day | `archive-obs.yml` here, `obs_YYYY-MM-DD.tar.xz` on `obs-YYYY-MM` | 04:10 daily |
 | Harmonic tide refit | `harmonics.yml` here, commits `harmonics/<ST>.json` | 2nd of month |
+| CREST review pages (`python -m crest.build`) | `crest.yml` here; releases `crest-data` (finished months), `crest-pages` (site zip); Pages at /StormSense-archive/crest/ once var `CREST_PAGES=true` | daily 13:40 via cron-job.org (GitHub cron 14:40 fallback) |
 
 - Publishing: the run force-pushes each site as one commit to the public repo's `site` branch and sends a
   `publish` repository_dispatch; the public repo's `deploy.yml` (on main) deploys that branch to Pages
@@ -95,6 +96,20 @@ project's shared folder (skill code, baselines, notes, station sheet, disclosure
 - Testing locally: `PYTHONPATH=. STORMSENSE_OBS_DIR=<dir> python -m stormsense.build --now
   2026-10-27T00:20 --stations SWPT,USJT --latest /tmp/l --ensemble /tmp/e --work /tmp/w [--no-skill]`.
   A pull request runs a dry build of 9 stations (plus VIMS's YRCG) on Actions and keeps the sites as an artifact.
+
+## CREST (`crest/`, design: https://claude.ai/artifact/3nm4xQmmyPP1BMSgBUNWob)
+
+- Chart Review and Evaluation Statistics Tool, StormSense's counterpart of Tidewatch's TWiST (tidewatch_archive
+  `twist/`). One self-contained `crest_<st>.html` per station (Highcharts + Leaflet inlined, `?embed=1`, `?datum=NAVD`,
+  `?units=m`, `?period=`, `#tab`), `index.html` map (Esri Ocean basemap, coastline fallback inlined), `feeds/` CSV +
+  GeoJSON for the ArcGIS Experience Builder dashboard (`crest/arcgis_push.py`, secrets `ARCGIS_URL` + `ARCGIS_API_KEY`
+  or `ARCGIS_USERNAME`/`ARCGIS_PASSWORD`, VIMS org, folder "StormSense CREST").
+- Reads skill_scores/flood_scores.csv.gz (newest ensemble release), run tarballs (reduced to work/runs/<cycle>.json.gz,
+  cached by actions/cache), obs-YYYY-MM day tarballs, data/index/obs, NWPS levels. Periods 30d, 7d, each month;
+  stations start on their `added` day. Default guidance = published fore72 (`primary`). Change markers:
+  `crest/changes.csv` (add a row for each model or pipeline change). Derek's decisions 2026-11-25 are in the design doc.
+- Local test: `python -m crest.build --out /tmp/c --work /tmp/cw --scores scores.csv.gz --floods flood_scores.csv
+  --picks picks_history.csv --runs ensemble_*.tar.gz --obs-dir <dir of ST.csv> --offline --stations SWPT`.
 
 ## Station sources that are not Tidewatch
 
