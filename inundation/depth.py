@@ -90,7 +90,7 @@ def tidal_seed(dem_ft, level=LEVELS_FT[0]):
     return (int(r), int(c)), int(sizes[k])
 
 
-def connect_index(dem_ft, levels=LEVELS_FT, seed=None, log=None, links=None, blocked=None):
+def connect_index(dem_ft, levels=LEVELS_FT, seed=None, log=None, links=None, blocked=None, method=None):
     """For every cell, the index of the lowest level at which it is under water joined to the seed
     (NEVER where it stays dry or cut off through the top level).
 
@@ -98,7 +98,15 @@ def connect_index(dem_ft, levels=LEVELS_FT, seed=None, log=None, links=None, blo
     are joined below ground, so once water covers one of them, every other one at or below the level floods the
     ground around it. With links the result is a pair: (index over the surface only, index with the pipes).
     blocked=(rows, cols) are cells water never enters or crosses: a floodwall (barriers.cells).
+    method: "label" labels the wet cells once per level (scipy, whole grid in memory); "spread" visits each cell
+    once (spread.py, needs numba, takes a memory-mapped DEM of any size). Default: spread when numba is installed.
     """
+    if method != "label":
+        from . import spread
+        if spread.njit is not None:
+            return spread.connect_index(dem_ft, levels, seed, log, links, blocked)
+        if method == "spread":
+            raise ImportError("numba is not installed")
     from scipy import ndimage
     if seed is None:
         seed, _ = tidal_seed(dem_ft, levels[0])

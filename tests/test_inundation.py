@@ -232,3 +232,22 @@ def test_assessed_values_go_from_the_parcel_to_its_buildings():
     assert c["value_total"][0] == 450000 and c["year_built"][0] == 1921 and c["curve"][0] == "two_story"
     assert list(c["residential"]) == [1, 1, 0, 0, 0] and c["zhvi"][0] == 410000 and np.isnan(c["zhvi"][2])
     assert np.isnan(c["value_bldg"][3]) and np.isnan(c["year_built"][4])
+
+
+def test_one_pass_spread_matches_labelling_level_by_level():
+    pytest.importorskip("scipy")
+    pytest.importorskip("numba")
+    rng = np.random.default_rng(7)
+    for trial in range(6):
+        dem = rng.uniform(-3, 12, (70, 90)).astype(np.float32)
+        dem = (dem + np.roll(dem, 1, 0) + np.roll(dem, 1, 1) + np.roll(dem, (1, 1), (0, 1))) / 4      # some structure
+        dem[:, :3] = -6.0                                   # the sea
+        dem[rng.random(dem.shape) < 0.02] = np.nan          # holes in the data
+        n = 60
+        links = (rng.integers(0, 70, n), rng.integers(3, 90, n), rng.integers(0, 9, n))
+        wall = (np.arange(10, 60), np.full(50, 40)) if trial % 2 else None
+        a = depth.connect_index(dem, links=links, blocked=wall, method="label")
+        b = depth.connect_index(dem, links=links, blocked=wall, method="spread")
+        assert (a[0] == b[0]).all() and (a[1] == b[1]).all()
+        assert (depth.connect_index(dem, blocked=wall, method="label") == depth.connect_index(dem, blocked=wall, method="spread")).all()
+        assert (b[1] <= b[0]).all() and (b[1] < b[0]).any()  # pipes only bring the water sooner

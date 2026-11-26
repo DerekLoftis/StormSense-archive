@@ -94,6 +94,7 @@ bridge layer (VDOT structures) would be better.
 | `vgin.py` | roads, buildings and the locality boundary from VGIN's REST services |
 | `segments.py` | cuts centerlines into 5 m pieces |
 | `depth.py` | DEM tiles, water connectivity by level (surface, pipes, walls), depth-stack adapter |
+| `spread.py` | the same connectivity in one pass that reads the grid in row order (numba): 6 bytes per cell in memory, DEM on disk; Norfolk in 2 minutes, identical cell for cell |
 | `drainage.py`, `drainage_sources.json` | stormwater pipes, ditches and structures as networks of openings |
 | `barriers.py` | floodwalls and leveed areas from the National Levee Database |
 | `value.py`, `value_sources.json` | parcels and assessment roll onto the buildings; Zillow ZIP values |
@@ -134,9 +135,10 @@ buildings. Not yet checked against observed flooding (Norfolk publishes flooded-
 - Low spots with no pipe to tidal water stay dry; rain is not in it.
 - Other buildings than homes get no damage estimate; contents are not estimated; first floor heights are assumed.
 - The water picture on the page is drawn at 5 m (roads and buildings use the 1 m DEM); 1 m needs tiles.
-- Hampton Roads: Virginia Beach is about 1.3 billion 1 m cells, too many for one in-memory pass, so the connectivity
-  step needs tiles; each city needs its entry in `drainage_sources.json` and `value_sources.json` (HRPDC's regional
-  parcels on geo.hrsd.com carry values and year built for the whole region).
+- Hampton Roads: each city needs its entry in `drainage_sources.json` and `value_sources.json`. HRPDC's regional
+  parcels (geo.hrsd.com `regionalgis/HRGeo_Parcels_Public`) carry assessed values for Chesapeake, Newport News,
+  Norfolk, Portsmouth, Virginia Beach, Williamsburg, Gloucester, Isle of Wight, James City, York and Franklin (not
+  Hampton, Poquoson or Suffolk), year built for seven of them, and no use codes.
 - `chance` uses the 10-90% band at the forecast's peak; the run's own error trajectories would be better.
 - "Now" is the last observation at the forecast run; a lighter, more frequent job could refresh it.
 - Statewide, 5 m pieces are tens of millions of features: decide the packaging (per locality or HUC-12) first.
