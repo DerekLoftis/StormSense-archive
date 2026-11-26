@@ -141,13 +141,21 @@ project's shared folder (skill code, baselines, notes, station sheet, disclosure
   hold it back and cut the pipes (`barriers.py`), red buildings are labelled "Flooded Building", and buildings get
   year built, assessed value (`value.py`, `value_sources.json`: Norfolk parcels + FY27 assessment roll), the ZIP's
   Zillow typical home value, and "Est. Damage at Max Forecast Depth" from the USACE generic depth-damage curves
-  (EGM 01-03 / 04-01; `damage.py`), homes only. No first floor elevations in Virginia: floors are assumed at the
-  Hazus crawlspace default (3 ft, 4 ft after the first FIRM) until Derek's Newport News survey or HRPDC's elevation
-  certificates are in. `check_titan.py` scores the extent against TITAN's depth tiles (0.72 overlap downtown at 5.5 ft).
+  (EGM 01-03 / 04-01; `damage.py`), homes only. No statewide first floor elevations in Virginia: floors are assumed at the
+  Hazus crawlspace default (3 ft, 4 ft after the first FIRM) except where HRPDC has an elevation certificate
+  (`ffe.py`); Derek's Newport News survey is still to come. `check_titan.py` scores the extent against TITAN's depth tiles (0.72 overlap downtown at 5.5 ft).
 - Bridges have no deck in the bare-earth DEM: pieces with `bridge` > 0 and buildings `over_water` are never flagged.
   The Mobjack Norfolk SLR services are RGB extent pictures (no depth). Needs `inundation/requirements.txt`.
-- Not wired yet: a workflow, Pages hosting and the push to the AGOL folder "StormSense CREST". Norfolk's prepared
-  tables and file geodatabase are in the project's shared folder under `inundation/norfolk/`.
+- Hampton Roads (since 2026-11-26): one `prep` per locality FIPS. `drainage_sources.json` has Norfolk, Newport
+  News (`snap_m` 1: pipes stop 0.85 m short of the structures), Virginia Beach, Chesapeake and Hampton (lines only:
+  `pipe_ends_open`); Portsmouth publishes inlets and manholes but no pipes, Suffolk nothing found. Values outside
+  Norfolk come from HRPDC's regional parcels (`_hrpdc` template in `value_sources.json`; none for Hampton, Poquoson,
+  Suffolk); homes are picked by zoning patterns (an assumption per city, not the cities' code tables). `ffe.py` uses
+  HRPDC's elevation certificates (5,268 buildings, finished first floor NAVD88) instead of the assumed floor where a
+  building has one. Cities over 1.2 billion cells (Virginia Beach) keep the DEM and results on disk (`spread.py`
+  `store`). maps.nnva.gov goes down for minutes at a time around 3 AM ET: just run again.
+- Not wired yet: a workflow, Pages hosting and the push to the AGOL folder "StormSense CREST". Each area's prepared
+  tables and file geodatabase are in the project's shared folder under `inundation/<area>/`.
 
 ## Station sources that are not Tidewatch
 
@@ -211,8 +219,9 @@ project's shared folder (skill code, baselines, notes, station sheet, disclosure
 - Use Derek's default cloud environment (the one that reaches web4, api.water.noaa.gov, api.weather.gov,
   NOMADS; since 2026-11-25 also mobjack.vims.edu, vginmaps.vdem.virginia.gov, vgin.vdem.virginia.gov and
   services.arcgis.com; since 2026-11-26 gisshare.norfolk.gov, orfmaps.norfolk.gov, data.norfolk.gov,
-  services2/services3.arcgis.com, tiles.arcgis.com, geo.vbgov.com, maps.nnva.gov, files.zillowstatic.com and the
-  USACE/HRPDC document hosts). No Claude session reaches tidesandcurrents.noaa.gov or *.github.io; NOAA AWS buckets work.
+  services2/services3/services5/services6/services7.arcgis.com, tiles.arcgis.com, geo.vbgov.com, maps.nnva.gov,
+  geo.hrsd.com, gis.hrpdcva.gov, property.jamescitycountyva.gov, files.zillowstatic.com and the USACE/HRPDC document
+  hosts). No Claude session reaches tidesandcurrents.noaa.gov or *.github.io; NOAA AWS buckets work.
 - GitHub Actions has full internet (except NOMADS ETSS paths, 403), so put blocked downloads in a
   workflow. Read live pages from a workflow, not the sandbox; job logs and artifacts aren't readable
   from the sandbox, but check-run annotations are.

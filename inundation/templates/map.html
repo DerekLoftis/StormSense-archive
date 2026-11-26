@@ -229,7 +229,7 @@ function setup(img){
     R.bbox.set([x0,y0,x1,y1], 4*i); }
   R.bstart[B.n] = k;
   R.pvia = P.via ? bytes(P.via) : null; R.bvia = B.via ? bytes(B.via) : null;
-  R.val = S.values && B.vbldg ? {year:arr(B.year, Uint16Array), vt:arr(B.vtotal, Uint32Array), vb:arr(B.vbldg, Uint32Array), res:bytes(B.res), curve:bytes(B.curve), ffh:bytes(B.ffh), zip:bytes(B.zip), use:bytes(B.use)} : null;
+  R.val = S.values && B.vbldg ? {year:arr(B.year, Uint16Array), vt:arr(B.vtotal, Uint32Array), vb:arr(B.vbldg, Uint32Array), res:bytes(B.res), curve:bytes(B.curve), ffh:bytes(B.ffh), ec:B.ec ? bytes(B.ec) : null, zip:bytes(B.zip), use:bytes(B.use)} : null;
 
   // gauges and their series
   LV.t0ms = Date.parse(LV.t0); R.ns = S.stations.length; R.series = [];
@@ -268,7 +268,7 @@ function setup(img){
   $("disc").textContent = S.disclaimer;
   if (S.sources.drainage){ var dn = $("drainNote"); dn.hidden = false; dn.textContent = "Storm drains are in it: where a pipe or ditch network has one opening in the water, the water also comes up at its other inlets and outfalls that lie at or below the level, as in Norfolk's TITAN. Pipes carry the level without loss. Source: " + S.sources.drainage + "." + (S.sources.barriers ? " Floodwalls and levees hold the water back, and no pipe carries it under them, up to the 10 ft level: " + S.sources.barriers + "." : ""); }
   if (R.val){ var V0 = S.values, mn = $("dmgNote"); mn.hidden = false; $("tDmg").hidden = false;
-    mn.textContent = "Damage is estimated for homes only, from the deepest water the selected forecast line puts at the building: " + V0.damage.citation + ". The percent is applied to the building's share of the parcel's " + V0.tax_year + " assessed improvement value (" + S.sources.values + "). Depth is counted from the first floor, and with no surveyed first floor elevations each home's floor is assumed at FEMA Hazus's default for a crawlspace: 3 ft above the ground if built before the first flood map (" + V0.firm_year + "), 4 ft after. The Zillow figure is the typical home value in the building's ZIP code (" + S.sources.zillow + "), not a value for that address."; }
+    mn.textContent = "Damage is estimated for homes only" + (V0.home_rule ? " (" + V0.home_rule + ")" : "") + ", from the deepest water the selected forecast line puts at the building: " + V0.damage.citation + ". The percent is applied to the building's share of the parcel's " + V0.tax_year + " assessed improvement value (" + S.sources.values + "). Depth is counted from the first floor. " + (V0.certificates ? V0.certificates.toLocaleString("en-US") + " buildings here have a surveyed first floor from an elevation certificate (HRPDC); every other" : "With no surveyed first floor elevations each") + " home's floor is assumed at FEMA Hazus's default for a crawlspace: " + (V0.firm_year ? "3 ft above the ground if built before the first flood map (" + V0.firm_year + "), 4 ft after." : "3 ft above the ground.") + " The Zillow figure is the typical home value in the building's ZIP code (" + S.sources.zillow + "), not a value for that address."; }
   bind(); resize(true); charts(); update();
 }
 
@@ -287,7 +287,7 @@ function dmgFrac(above, curve){ // share of the structure's value lost with the 
 function bDamage(i){ // at the highest water of the selected forecast line: null where there is no estimate
   var v = R.val; if (!v || !v.res[i] || !v.vb[i] || R.bc[i] === S.no_level) return null;
   var pk = R.pk[R.bst[i]]; if (pk == null) return null;
-  var d = pk >= R.bc[i] ? Math.max(0, (pk - R.bg[i]) / 100) : 0, above = d - v.ffh[i], fr = d > 0 ? dmgFrac(above, v.curve[i]) : 0;
+  var d = pk >= R.bc[i] ? Math.max(0, (pk - R.bg[i]) / 100) : 0, above = d - v.ffh[i] / 10, fr = d > 0 ? dmgFrac(above, v.curve[i]) : 0;
   return {depth:d, above:above, frac:fr, usd:fr * v.vb[i]}; }
 function fmtUSD(v){ return "$" + Math.round(v).toLocaleString("en-US"); }
 function fmtBig(v){ return v >= 1e9 ? "$" + (v / 1e9).toFixed(2) + " billion" : v >= 1e6 ? "$" + (v / 1e6).toFixed(v >= 1e7 ? 0 : 1) + " million" : v >= 1e4 ? "$" + Math.round(v / 1e3) + " thousand" : fmtUSD(v); }
@@ -461,7 +461,7 @@ function popup(px, py){ var hit = pick(px, py), p = $("pop"); if (!hit){ p.hidde
       "<span class='f'><i>" + V0.tax_year + " Tax Assessed Value:</i> " + (v.vt[i] ? fmtUSD(v.vt[i]) + (v.vb[i] ? " (parcel; this building " + fmtUSD(v.vb[i]) + ")" : "") : "no assessment record matched") + "</span>" +
       "<span class='f'><i>" + String(V0.zillow_month || "").slice(0, 4) + " Zillow Est. Avg. Value:</i> " + (!v.res[i] ? "not applicable (not a home)" : zh ? fmtUSD(zh) + " (typical home in ZIP " + V0.zips[zi] + ")" : "none for this ZIP code") + "</span>" +
       "<span class='f'><i>Est. Damage at Max Forecast Depth:</i> " + (!v.res[i] ? "not estimated (the curve is for homes)" : !e ? "not estimated (no assessed building value)" :
-        e.depth <= 0 ? "$0 (stays dry in this forecast)" : fmtUSD(e.usd) + " (" + (e.frac > 0 ? (e.frac * 100).toFixed(1) + "% of the building; " : "") + e.depth.toFixed(2) + " ft of water" + (pkI >= 0 ? " " + fShort.format(tAt(pkI)) : "") + ", " + (e.above >= 0 ? e.above.toFixed(1) + " ft over" : (-e.above).toFixed(1) + " ft under") + " a first floor assumed " + v.ffh[i] + " ft above the ground)") + "</span>"; }
+        e.depth <= 0 ? "$0 (stays dry in this forecast)" : fmtUSD(e.usd) + " (" + (e.frac > 0 ? (e.frac * 100).toFixed(1) + "% of the building; " : "") + e.depth.toFixed(2) + " ft of water" + (pkI >= 0 ? " " + fShort.format(tAt(pkI)) : "") + ", " + (e.above >= 0 ? e.above.toFixed(1) + " ft over" : (-e.above).toFixed(1) + " ft under") + (v.ec && v.ec[i] ? " the first floor of its elevation certificate, " + (v.ffh[i] / 10).toFixed(1) + " ft above the ground)" : " a first floor assumed " + (v.ffh[i] / 10).toFixed(0) + " ft above the ground)")) + "</span>"; }
   p.innerHTML = h;
   p.hidden = false; var left = Math.min(px + 12, R.w - p.offsetWidth - 8), topp = py + 14; if (topp + p.offsetHeight > R.h - 8) topp = py - p.offsetHeight - 10;
   p.style.left = Math.max(8, left) + "px"; p.style.top = Math.max(8, topp) + "px"; }

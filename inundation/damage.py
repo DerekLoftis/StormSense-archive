@@ -45,6 +45,8 @@ DEFAULT_FOUNDATION = "crawlspace"               # the usual foundation of older 
 def first_floor_ft(year_built, firm_year, foundation=None):
     """Assumed height of the first floor above the ground, ft, from the Hazus defaults."""
     pre, post = FIRST_FLOOR_FT[foundation or DEFAULT_FOUNDATION]
+    if firm_year is None:                            # the community's first flood map year is not known: one height
+        firm_year = np.inf
     y = np.asarray(year_built, float)
     return np.where(np.isfinite(y) & (y > firm_year), post, pre).astype(np.float32)
 
@@ -62,13 +64,17 @@ def structure_fraction(depth_above_floor_ft, curve="one_story"):
     return np.where(np.isfinite(d), out / 100.0, 0.0)
 
 
-def estimate(depth_ft, value_usd, year_built, curve, firm_year, foundation=None):
+def estimate(depth_ft, value_usd, year_built, curve, firm_year, foundation=None, first_floor=None):
     """Damage in dollars for water `depth_ft` deep over the ground at the building.
 
-    Returns (damage, fraction, depth above the assumed first floor, assumed first floor height). Buildings without a
-    value, or dry ones, give 0.
+    Returns (damage, fraction, depth above the first floor, first floor height). Buildings without a value, or dry
+    ones, give 0. `first_floor` (ft above the ground) is used where it is finite, e.g. from an elevation
+    certificate; elsewhere the height is assumed from the year built and the foundation.
     """
     ffh = first_floor_ft(year_built, firm_year, foundation)
+    if first_floor is not None:
+        known = np.asarray(first_floor, float)
+        ffh = np.where(np.isfinite(known), known, ffh).astype(np.float32)
     d = np.asarray(depth_ft, float)
     above = np.where(d > 0, d - ffh, np.nan)
     frac = structure_fraction(above, curve)

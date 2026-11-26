@@ -44,6 +44,8 @@ def fetch(src, log=None):
                 raise RuntimeError(f"{kind}: got {len(feats)} of {n} from {lyr['url']}")
             for f in feats:
                 f["properties"]["_layer"] = lyr.get("name", kind)
+                if lyr.get("closed"):                    # a whole layer that is never an opening: manholes
+                    f["properties"]["_closed"] = 1
             out[kind] += feats
             if log:
                 log(f"  drainage {kind}: {len(feats):,} from {lyr['url'].split('/rest/services/')[-1]}")
@@ -84,6 +86,7 @@ def network(layers, transform, src=None, snap=SNAP_M, protected=None):
     from scipy.sparse.csgraph import connected_components
     from scipy.spatial import cKDTree
     src = src or {}
+    snap = src.get("snap_m", snap)                           # some cities draw the pipe to the edge of the box, not its middle
     closed_types = [w.lower() for w in src.get("closed_types", [])]
     type_field = src.get("structure_type_field")
     valve_field, valve_words = src.get("valve_field"), [w.lower() for w in src.get("valve_words", [])]
@@ -98,7 +101,7 @@ def network(layers, transform, src=None, snap=SNAP_M, protected=None):
     for f, c in _points(layers.get("structures", [])):
         p = f["properties"]
         opening = True
-        if type_field and _is(p.get(type_field), closed_types):
+        if p.get("_closed") or (type_field and _is(p.get(type_field), closed_types)):
             opening = False
         if valve_field and _is(p.get(valve_field), valve_words):
             opening = False
@@ -129,6 +132,8 @@ def network(layers, transform, src=None, snap=SNAP_M, protected=None):
     # a structure that is closed wins over nothing, an opening wins over a closed lid at the same spot
     degree = np.bincount(junction[np.asarray(edges, int).ravel()], minlength=nj) if edges else np.zeros(nj, int)
     free_end = (state == -1) & (degree == 1)                 # a pipe that just stops: an outlet or an inlet without a record
+    if src.get("pipe_ends_open"):                            # a city that publishes no structures: every pipe end is one
+        free_end = state == -1
     opening = (state == 1) | free_end
     # 2 junctions joined by pipes and ditches form networks
     nn, net = connected_components(coo_matrix((np.ones(len(e)), (junction[e[:, 0]], junction[e[:, 1]])), shape=(nj, nj)), directed=False)
@@ -143,9 +148,12 @@ def network(layers, transform, src=None, snap=SNAP_M, protected=None):
         _, net = np.unique(np.column_stack([net, zone]), axis=0, return_inverse=True)
         net = np.asarray(net).ravel()
     size = np.bincount(net)
+    ends = np.asarray(edges[:n_pipe], int).ravel() if n_pipe else np.zeros(0, int)       # how many pipe ends met a structure
+    met = float((state[junction[ends]] >= 0).mean()) if len(ends) and n_struct else None
     return {"x": jx, "y": jy, "net": net, "open": opening, "zone": zone,
             "counts": {"structures": n_struct, "pipes": n_pipe, "ditches": n_ditch, "junctions": int(nj), "openings": int(opening.sum()),
-                       "networks": int((size > 1).sum()), "cut_at_barriers": cut}}
+                       "networks": int((size > 1).sum()), "cut_at_barriers": cut,
+                       "pipe_ends_on_structures": None if met is None else round(met, 3), "snap_m": snap}}
 
 
 def links(net, dem_ft, origin, window=1):

@@ -41,14 +41,16 @@ def _with_oid(fields):
     return fields if "OBJECTID" in fields.split(",") or fields == "*" else "OBJECTID," + fields
 
 
-def query(layer, where, fields, log=None):
+def query(layer, where, fields, log=None, geometry=True):
     """Every feature matching `where`, paged by OBJECTID so nothing is skipped or repeated. Pages until a request
-    comes back empty, because servers cap a page at their own size (1000 or 2000) and do not always say so."""
+    comes back empty, because servers cap a page at their own size (1000 or 2000) and do not always say so.
+    geometry=False asks for the attributes only."""
     out, last = [], -1
     while True:
         d = _get(f"{layer}/query", {
             "where": f"({where}) AND OBJECTID > {last}", "outFields": _with_oid(fields), "orderByFields": "OBJECTID",
-            "resultRecordCount": PAGE, "outSR": 4326, "geometryPrecision": 7, "f": "geojson"})
+            "resultRecordCount": PAGE, "outSR": 4326, "geometryPrecision": 7, "f": "geojson",
+            "returnGeometry": "true" if geometry else "false"})
         feats = d.get("features", [])
         if not feats:
             break

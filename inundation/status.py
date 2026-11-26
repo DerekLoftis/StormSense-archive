@@ -243,15 +243,18 @@ def main(argv=None):
         home = (bldgs["residential"] > 0) & ~bskip
         val = np.where(home, bldgs["value_bldg"], np.nan)
         dmg = {}
+        surveyed = bldgs["floor_source"] == "certificate" if "floor_source" in bldgs else np.zeros(len(val), bool)
+        floor = np.where(surveyed, bldgs["first_floor_ft"], np.nan)      # from an elevation certificate; the rest is assumed
         for when in ("peak", "p90"):
-            usd, frac, above, ffh = damage.estimate(bres[f"depth_{when}_ft"], val, bldgs["year_built"], bldgs["curve"], firm)
+            usd, frac, above, ffh = damage.estimate(bres[f"depth_{when}_ft"], val, bldgs["year_built"], bldgs["curve"], firm, first_floor=floor)
             dmg[when] = {"usd": usd, "frac": frac, "above": above, "ffh": ffh}
-        slab = damage.estimate(bres["depth_peak_ft"], val, bldgs["year_built"], bldgs["curve"], firm, "slab")[0]
+        slab = damage.estimate(bres["depth_peak_ft"], val, bldgs["year_built"], bldgs["curve"], firm, "slab", first_floor=floor)[0]
         year = prep["values"]["tax_year"]
         bmore.update({
             "use": bldgs["use"], "year_built": whole(bldgs["year_built"]), "tax_year": np.full(len(val), year, object),
             "assessed_total_usd": whole(bldgs["value_total"]), "assessed_building_usd": whole(bldgs["value_bldg"]),
-            "zillow_zip_typical_usd": whole(bldgs["zhvi"]), "first_floor_assumed_ft": whole(np.where(home, dmg["peak"]["ffh"], np.nan)),
+            "zillow_zip_typical_usd": whole(bldgs["zhvi"]), "first_floor_height_ft": whole(np.where(home, dmg["peak"]["ffh"], np.nan), "%.1f"),
+            "first_floor_source": np.where(home, np.where(surveyed, "elevation certificate", "assumed"), ""),
             "depth_above_floor_peak_ft": whole(np.where(home, dmg["peak"]["above"], np.nan), "%.2f"),
             "damage_peak_pct": whole(np.where(home, 100 * dmg["peak"]["frac"], np.nan), "%.1f"),
             "damage_peak_usd": whole(np.where(home, dmg["peak"]["usd"], np.nan)),
@@ -289,9 +292,13 @@ def main(argv=None):
     if dmg:
         from . import damage
         summary["damage"] = {"curves": damage.CITATION, "value": f"{prep['values'].get('assessment', 'assessed')} building (improvement) value",
-                             "first_floor": "Hazus default heights above ground: crawlspace 3 ft for homes built up to the first flood "
-                                            f"insurance rate map ({prep['values'].get('firm_year')}), 4 ft after; 'if_slab' assumes 1 ft",
-                             "scope": "single-family homes, duplexes to fourplexes; other buildings are not estimated"}
+                             "first_floor": "Hazus default heights above ground for a crawlspace: 3 ft" + (
+                                 f" for homes built up to the first flood insurance rate map ({prep['values']['firm_year']}), 4 ft after"
+                                 if prep["values"].get("firm_year") else "") + "; 'if_slab' assumes 1 ft"
+                             + (f"; {int((surveyed & home).sum()):,} homes use the surveyed first floor of their elevation certificate (HRPDC)"
+                                if surveyed.any() else ""),
+                             "homes_with_elevation_certificate": int((surveyed & home).sum()),
+                             "scope": prep["values"].get("home_rule") or "single-family homes, duplexes to fourplexes; other buildings are not estimated"}
     for st, lv in levels.items():
         summary["stations"][st] = {
             "forecast_updated": lv["updated"], "guidance": lv["guidance"],

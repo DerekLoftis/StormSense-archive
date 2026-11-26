@@ -51,13 +51,19 @@ def coned_tiles(bounds):
     return out
 
 
-def read_dem(paths, bounds):
+def read_dem(paths, bounds, into=None):
     """Mosaic the tiles over bounds (whole metres). Returns ground in ft NAVD88 (NaN where no data) and
-    (x of the west edge, y of the north edge); cells are 1 m."""
+    (x of the west edge, y of the north edge); cells are 1 m. `into` is the path of a .npy file to build the grid
+    in, for areas whose grid should not sit in memory; the result is then a memory map of it."""
     import rasterio
     from rasterio.windows import Window
     x0, y0, x1, y1 = [int(round(v)) for v in bounds]
-    out = np.full((y1 - y0, x1 - x0), np.nan, np.float32)
+    if into is None:
+        out = np.full((y1 - y0, x1 - x0), np.nan, np.float32)
+    else:
+        out = np.lib.format.open_memmap(into, "w+", np.float32, (y1 - y0, x1 - x0))
+        for r in range(0, out.shape[0], 2048):
+            out[r:r + 2048] = np.nan
     for p in paths:
         with rasterio.open(p) as r:
             if abs(r.res[0] - 1) > 1e-9 or abs(r.res[1] - 1) > 1e-9:
@@ -67,13 +73,15 @@ def read_dem(paths, bounds):
             r0, r1 = max(top - y1, 0), min(top - y0, r.height)      # rows count down from the top
             if c0 >= c1 or r0 >= r1:
                 continue
-            a = r.read(1, window=Window(c0 - left, r0, c1 - c0, r1 - r0))
-            bad = (a == r.nodata) | (a < -1000) if r.nodata is not None else (a < -1000)
-            a = a * np.float32(M_TO_FT)
-            a[bad] = np.nan
-            rows = slice(y1 - (top - r0), y1 - (top - r1))
-            block = out[rows, c0 - x0:c1 - x0]
-            block[~bad] = a[~bad]
+            for q0 in range(r0, r1, 4096):                           # in strips: a whole tile is several GB
+                q1 = min(q0 + 4096, r1)
+                a = r.read(1, window=Window(c0 - left, q0, c1 - c0, q1 - q0))
+                bad = (a == r.nodata) | (a < -1000) if r.nodata is not None else (a < -1000)
+                a = a * np.float32(M_TO_FT)
+                a[bad] = np.nan
+                rows = slice(y1 - (top - q0), y1 - (top - q1))
+                block = out[rows, c0 - x0:c1 - x0]
+                block[~bad] = a[~bad]
     return out, (x0, y1)
 
 
@@ -90,7 +98,7 @@ def tidal_seed(dem_ft, level=LEVELS_FT[0]):
     return (int(r), int(c)), int(sizes[k])
 
 
-def connect_index(dem_ft, levels=LEVELS_FT, seed=None, log=None, links=None, blocked=None, method=None):
+def connect_index(dem_ft, levels=LEVELS_FT, seed=None, log=None, links=None, blocked=None, method=None, store=None):
     """For every cell, the index of the lowest level at which it is under water joined to the seed
     (NEVER where it stays dry or cut off through the top level).
 
@@ -100,11 +108,12 @@ def connect_index(dem_ft, levels=LEVELS_FT, seed=None, log=None, links=None, blo
     blocked=(rows, cols) are cells water never enters or crosses: a floodwall (barriers.cells).
     method: "label" labels the wet cells once per level (scipy, whole grid in memory); "spread" visits each cell
     once (spread.py, needs numba, takes a memory-mapped DEM of any size). Default: spread when numba is installed.
+    store: where spread writes its results as it goes (see spread.connect_index); the label method ignores it.
     """
     if method != "label":
         from . import spread
         if spread.njit is not None:
-            return spread.connect_index(dem_ft, levels, seed, log, links, blocked)
+            return spread.connect_index(dem_ft, levels, seed, log, links, blocked, store)
         if method == "spread":
             raise ImportError("numba is not installed")
     from scipy import ndimage

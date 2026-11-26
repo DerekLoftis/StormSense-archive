@@ -251,3 +251,41 @@ def test_one_pass_spread_matches_labelling_level_by_level():
         assert (a[0] == b[0]).all() and (a[1] == b[1]).all()
         assert (depth.connect_index(dem, blocked=wall, method="label") == depth.connect_index(dem, blocked=wall, method="spread")).all()
         assert (b[1] <= b[0]).all() and (b[1] < b[0]).any()  # pipes only bring the water sooner
+
+
+def test_one_pass_spread_can_keep_its_grids_on_disk(tmp_path, monkeypatch):
+    pytest.importorskip("numba")
+    from inundation import spread
+    rng = np.random.default_rng(3)
+    dem = rng.uniform(-3, 12, (60, 80)).astype(np.float32)
+    dem[:, :3] = -6.0
+    links = (rng.integers(0, 60, 40), rng.integers(3, 80, 40), rng.integers(0, 6, 40))
+    want = depth.connect_index(dem, links=links, method="spread")
+    monkeypatch.setattr(spread, "BIG", 0)                    # as for a city too large for memory
+    np.save(tmp_path / "dem.npy", dem)
+    paths = (str(tmp_path / "surface.npy"), str(tmp_path / "piped.npy"))
+    got = depth.connect_index(np.load(tmp_path / "dem.npy", mmap_mode="r"), links=links, method="spread", store=paths)
+    assert (got[0] == want[0]).all() and (got[1] == want[1]).all()
+    assert (np.load(paths[0]) == want[0]).all() and (np.load(paths[1]) == want[1]).all()
+    assert sorted(f.name for f in tmp_path.iterdir()) == ["dem.npy", "piped.npy", "surface.npy"]
+    one = depth.connect_index(dem, method="spread", store=str(tmp_path / "only.npy"))
+    assert (one == want[0]).all()
+
+
+def test_elevation_certificate_floor_replaces_the_assumed_height():
+    shapely = pytest.importorskip("shapely")
+    from shapely.geometry import box, mapping
+    from inundation import damage, ffe
+    same = lambda x, y: (x, y)
+    bgeoms = [box(0, 0, 10, 10), box(30, 0, 40, 10), None, box(60, 0, 70, 10)]
+    cert = lambda g, v, when, unit="Feet": {"geometry": mapping(g), "properties": {"FFE": v, "ISSUE_DATE": when, "LENGTH_UNIT": unit}}
+    certs = [cert(box(1, 1, 9, 9), 9.0, 1), cert(box(2, 2, 8, 8), 11.5, 5),          # two on the first: the later one wins
+             cert(box(41, 0, 45, 10), 8.0, 1),                                       # 3 m off the second: still its certificate
+             cert(box(100, 0, 110, 10), 7.0, 1), cert(box(61, 1, 69, 9), None, 1)]   # nothing near; no elevation
+    floor = ffe.attach(certs, bgeoms, same)
+    assert floor[0] == 11.5 and floor[1] == 8.0 and np.isnan(floor[2]) and np.isnan(floor[3])
+    # 4 ft of water over ground at 4 ft: the surveyed floor at 11.5 ft is far above it, the assumed 3 ft floor is not
+    ground = 4.0
+    usd, frac, above, ffh = damage.estimate([4.0, 4.0], [200000, 200000], [1950, 1950], "one_story", 1979,
+                                            first_floor=[floor[0] - ground, np.nan])
+    assert ffh[0] == 7.5 and ffh[1] == 3 and above[0] == -3.5 and usd[0] == 0 and above[1] == 1 and usd[1] > 0

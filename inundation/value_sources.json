@@ -5,18 +5,121 @@
     "tax_year_note": "City of Norfolk Real Estate Assessor, values effective 1 July 2026 (fiscal year 2027)",
     "firm_year": 1979,
     "firm_note": "Norfolk's first flood insurance rate map: 1 August 1979 (FEMA community 510104)",
-    "parcels": {"url": "https://gisshare.norfolk.gov/pubserver/rest/services/OpenData/Parcels/FeatureServer/1", "key": "GPIN"},
+    "parcels": {
+      "url": "https://gisshare.norfolk.gov/pubserver/rest/services/OpenData/Parcels/FeatureServer/1",
+      "key": "GPIN"
+    },
     "assessment": {
       "type": "socrata",
       "url": "https://data.norfolk.gov/resource/qva7-tzrf.csv",
       "name": "Property Assessment and Sales - FY27 (data.norfolk.gov)",
-      "columns": {"key": "gpin", "use": "property_use", "class": "property_class_description", "year_built": "improvement_year_built",
-                  "living_area": "residential_finished_living", "improvement_value": "current_improvement_value",
-                  "total_value": "current_total_value", "zip": "property_zip"}
+      "columns": {
+        "key": "gpin",
+        "use": "property_use",
+        "class": "property_class_description",
+        "year_built": "improvement_year_built",
+        "living_area": "residential_finished_living",
+        "improvement_value": "current_improvement_value",
+        "total_value": "current_total_value",
+        "zip": "property_zip"
+      }
     },
-    "residential_uses": ["single family", "duplex", "triplex", "fourplex", "residential"],
-    "one_story_classes": ["^510 ", "^512 "],
-    "two_story_classes": ["^513 ", "^514 "],
-    "split_level_classes": ["^515 "]
+    "residential_uses": [
+      "single family",
+      "duplex",
+      "triplex",
+      "fourplex",
+      "residential"
+    ],
+    "one_story_classes": [
+      "^510 ",
+      "^512 "
+    ],
+    "two_story_classes": [
+      "^513 ",
+      "^514 "
+    ],
+    "split_level_classes": [
+      "^515 "
+    ]
+  },
+  "_hrpdc": {
+    "tax_year": "2026",
+    "tax_year_note": "HRPDC regional parcels (HRGEO), assessed values as the localities supplied them in early 2026",
+    "firm_year": null,
+    "parcels": {
+      "url": "https://geo.hrsd.com/hrgeo/rest/services/regionalgis/HRGeo_Parcels_Public/MapServer/0",
+      "key": "PARCELID",
+      "fields": "PARCELID,IMPVALUE,TOTVALUE,RESYRBLT,ZONING,PSTLZIP5"
+    },
+    "assessment": {
+      "type": "parcels",
+      "name": "Hampton Roads Regional Parcels (HRPDC, geo.hrsd.com)",
+      "columns": {
+        "key": "PARCELID",
+        "use": "ZONING",
+        "year_built": "RESYRBLT",
+        "improvement_value": "IMPVALUE",
+        "total_value": "TOTVALUE",
+        "zip": "PSTLZIP5"
+      }
+    },
+    "home_max_footprint_m2": 500
+  },
+  "51700": {
+    "like": "_hrpdc",
+    "name": "Newport News",
+    "parcels": {
+      "where": "FIPS='700'"
+    },
+    "residential_note": "no use codes in the regional parcels: a home is a building of at most 500 m2 on a parcel zoned R1 to R5",
+    "residential_patterns": [
+      "^R[1-5]$"
+    ]
+  },
+  "51810": {
+    "like": "_hrpdc",
+    "name": "Virginia Beach",
+    "parcels": {
+      "where": "FIPS='810'"
+    },
+    "residential_note": "no use codes in the regional parcels: a home is a building of at most 500 m2 on a parcel zoned residential (R...), planned housing (PDH...) or agricultural (AG...); apartment districts (A...) are left out",
+    "residential_patterns": [
+      "^R\\d",
+      "^PDH",
+      "^AG"
+    ]
+  },
+  "51740": {
+    "like": "_hrpdc",
+    "name": "Portsmouth",
+    "parcels": {
+      "where": "FIPS='740'"
+    },
+    "residential_note": "no use codes in the regional parcels: a home is a building of at most 500 m2 on a parcel zoned urban, general or historic residential (UR, UR-M, GR, HR)",
+    "residential_patterns": [
+      "^UR",
+      "^GR$",
+      "^HR$"
+    ]
+  },
+  "51550": {
+    "like": "_hrpdc",
+    "name": "Chesapeake",
+    "parcels": {
+      "where": "FIPS='550'"
+    },
+    "firm_year": null,
+    "firm_note": "HRPDC's elevation certificates put Chesapeake's first flood map in 1977 (homes built through 1976 are pre-FIRM), but the regional parcels give no year built for Chesapeake, so every home uses the 3 ft height",
+    "use_from": {
+      "url": "https://services1.arcgis.com/OAphVRUvJVpBRovs/arcgis/rest/services/Parcel_2020/FeatureServer/0",
+      "key": "MAP_PARCEL",
+      "use": "PROPCLASS",
+      "note": "City of Chesapeake Parcel_2020 (ArcGIS Online): property class by map parcel number"
+    },
+    "residential_note": "a home is a building of at most 500 m2 on a parcel whose 2020 property class is 20xx (residential; 2010 is the single-family class on two thirds of all parcels); the class table itself was not found, so this is read from the counts",
+    "residential_patterns": [
+      "^20[1-9]\\d$"
+    ]
   }
 }

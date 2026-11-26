@@ -2,12 +2,175 @@
   "51710": {
     "name": "Norfolk",
     "source": "City of Norfolk open GIS data (gisshare.norfolk.gov, OpenData/Environmental_Group_OpenData)",
-    "pipes": [{"url": "https://gisshare.norfolk.gov/pubserver/rest/services/OpenData/Environmental_Group_OpenData/MapServer/8", "fields": "PIPE_ID,PIPE_SIZE,OWNER"}],
-    "ditches": [{"url": "https://gisshare.norfolk.gov/pubserver/rest/services/OpenData/Environmental_Group_OpenData/MapServer/7", "fields": "DITCH_TYPE"}],
-    "structures": [{"url": "https://gisshare.norfolk.gov/pubserver/rest/services/OpenData/Environmental_Group_OpenData/MapServer/9", "fields": "GENERAL_TYPE,STRUCTURE_TYPE,ACCESSORY,OUTFALL,RIM_ELEVATION_FT"}],
+    "pipes": [
+      {
+        "url": "https://gisshare.norfolk.gov/pubserver/rest/services/OpenData/Environmental_Group_OpenData/MapServer/8",
+        "fields": "PIPE_ID,PIPE_SIZE,OWNER"
+      }
+    ],
+    "ditches": [
+      {
+        "url": "https://gisshare.norfolk.gov/pubserver/rest/services/OpenData/Environmental_Group_OpenData/MapServer/7",
+        "fields": "DITCH_TYPE"
+      }
+    ],
+    "structures": [
+      {
+        "url": "https://gisshare.norfolk.gov/pubserver/rest/services/OpenData/Environmental_Group_OpenData/MapServer/9",
+        "fields": "GENERAL_TYPE,STRUCTURE_TYPE,ACCESSORY,OUTFALL,RIM_ELEVATION_FT"
+      }
+    ],
     "structure_type_field": "GENERAL_TYPE",
-    "closed_types": ["manhole", "junction box", "pipe connection", "abandoned", "plugged", "stub", "roof drain", "pipe to building", "underground control", "utility conflict", "unknown"],
+    "closed_types": [
+      "manhole",
+      "junction box",
+      "pipe connection",
+      "abandoned",
+      "plugged",
+      "stub",
+      "roof drain",
+      "pipe to building",
+      "underground control",
+      "utility conflict",
+      "unknown"
+    ],
     "valve_field": "ACCESSORY",
-    "valve_words": ["fv", "flap", "gate", "check"]
+    "valve_words": [
+      "fv",
+      "flap",
+      "gate",
+      "check"
+    ]
+  },
+  "51700": {
+    "name": "Newport News",
+    "source": "City of Newport News GIS (maps.nnva.gov, Operational/Stormwater*)",
+    "pipes": [
+      {
+        "url": "https://maps.nnva.gov/gis/rest/services/Operational/StormwaterGravityMain/MapServer/0",
+        "fields": "FACILITYID,DIAMETER,PIPETYPE"
+      }
+    ],
+    "ditches": [
+      {
+        "url": "https://maps.nnva.gov/gis/rest/services/Operational/StormwaterDitch/MapServer/0",
+        "fields": "FACILITYID"
+      }
+    ],
+    "structures": [
+      {
+        "url": "https://maps.nnva.gov/gis/rest/services/Operational/StormwaterInlet/MapServer/0",
+        "fields": "FACILITYID,INLETTYPE,RIMELEVATION",
+        "name": "inlet"
+      },
+      {
+        "url": "https://maps.nnva.gov/gis/rest/services/Operational/StormwaterEndSection/MapServer/0",
+        "fields": "FACILITYID,ESTYPE,TIDEGATE",
+        "name": "end section"
+      },
+      {
+        "url": "https://maps.nnva.gov/gis/rest/services/Operational/StormwaterManhole/MapServer/0",
+        "fields": "FACILITYID,MANHOLETYPE",
+        "name": "manhole",
+        "closed": true
+      }
+    ],
+    "valve_field": "TIDEGATE",
+    "valve_words": [
+      "1"
+    ],
+    "snap_m": 1.0,
+    "snap_note": "the pipes stop about 0.85 m short of the structure points (60% of pipe ends), so ends and structures within 1 m are joined"
+  },
+  "51810": {
+    "name": "Virginia Beach",
+    "source": "City of Virginia Beach GIS (geo.vbgov.com, Public_Works/Stormwater)",
+    "pipes": [
+      {
+        "url": "https://geo.vbgov.com/mapservices/rest/services/Public_Works/Stormwater/MapServer/12",
+        "fields": "Cartegraph_ID,Cartegraph_Type,Pipe_Diameter",
+        "where": "Cartegraph_Type NOT IN ('STORMWATER FORCE MAIN','PUMP STATION PIPE')"
+      }
+    ],
+    "ditches": [
+      {
+        "url": "https://geo.vbgov.com/mapservices/rest/services/Public_Works/Stormwater/MapServer/14",
+        "fields": "Cartegraph_ID,Category,Tidal"
+      }
+    ],
+    "structures": [
+      {
+        "url": "https://geo.vbgov.com/mapservices/rest/services/Public_Works/Stormwater/MapServer/1",
+        "fields": "Cartegraph_ID,Cartegraph_Type,Rim_Elevation",
+        "name": "inlet"
+      },
+      {
+        "url": "https://geo.vbgov.com/mapservices/rest/services/Public_Works/Stormwater/MapServer/7",
+        "fields": "Cartegraph_ID,Cartegraph_Type",
+        "name": "node"
+      },
+      {
+        "url": "https://geo.vbgov.com/mapservices/rest/services/Public_Works/Stormwater/MapServer/4",
+        "fields": "Cartegraph_ID,Cartegraph_Type",
+        "name": "manhole",
+        "closed": true
+      }
+    ],
+    "structure_type_field": "Cartegraph_Type",
+    "closed_types": [
+      "valve",
+      "tee intersection",
+      "tap",
+      "plug in pipe",
+      "bend connection",
+      "wye fitting",
+      "water quality",
+      "roof drain",
+      "dry well",
+      "french drain",
+      "infiltration"
+    ]
+  },
+  "51550": {
+    "name": "Chesapeake",
+    "source": "City of Chesapeake Public Works (ArcGIS Online, Stormwater_Lines; no structure layer is published)",
+    "pipes": [
+      {
+        "url": "https://services1.arcgis.com/OAphVRUvJVpBRovs/arcgis/rest/services/Stormwater_Lines/FeatureServer/0",
+        "fields": "ASSETID,LDETTYPE",
+        "where": "LDETTYPE IN ('PSW','PPV','CVT')"
+      }
+    ],
+    "ditches": [
+      {
+        "url": "https://services1.arcgis.com/OAphVRUvJVpBRovs/arcgis/rest/services/Stormwater_Lines/FeatureServer/0",
+        "fields": "ASSETID,LDETTYPE",
+        "where": "LDETTYPE IN ('DRS','DPV','DNR','SWL','NWW','OLF','OTH')"
+      }
+    ],
+    "structures": [],
+    "pipe_ends_open": true,
+    "pipe_ends_note": "the city publishes the lines only, so every pipe end is taken as an inlet or outlet"
+  },
+  "51650": {
+    "name": "Hampton",
+    "source": "City of Hampton (ArcGIS Online, Drainage_Capacity: the city's drainage lines as of 2023; no structure layer is published)",
+    "pipes": [
+      {
+        "url": "https://services5.arcgis.com/cA4ofagPaJJ7qhEz/arcgis/rest/services/Drainage_Capacity/FeatureServer/0",
+        "fields": "LineNumber,LineType,LineDiamet",
+        "where": "LineType IN ('Rd Pipe','Ellip Pipe','BC','1/2 PI','Trench/Grate','Trench')"
+      }
+    ],
+    "ditches": [
+      {
+        "url": "https://services5.arcgis.com/cA4ofagPaJJ7qhEz/arcgis/rest/services/Drainage_Capacity/FeatureServer/0",
+        "fields": "LineNumber,LineType",
+        "where": "LineType IN ('Ditch','PD','Swale')"
+      }
+    ],
+    "structures": [],
+    "pipe_ends_open": true,
+    "pipe_ends_note": "the city publishes the lines only, so every pipe end is taken as an inlet or outlet"
   }
 }

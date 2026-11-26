@@ -176,7 +176,8 @@ def write_static(out, name, title, bounds, epsg, pieces, road_cols, roads_raw, f
         b.update(year=b64(np.where(np.isfinite(yr), yr, 0), "<u2"), vtotal=money("value_total"), vbldg=money("value_bldg"),
                  res=b64(np.asarray(bc["residential"])[bkeep], "u1"),
                  curve=b64([names.index(c) if c in names else 0 for c in np.asarray(bc["curve"])[bkeep]], "u1"),
-                 ffh=b64(np.nan_to_num(np.asarray(bc["first_floor_ft"], float)[bkeep], nan=3), "u1"),
+                 ffh=b64(np.clip(np.round(10 * np.nan_to_num(np.asarray(bc["first_floor_ft"], float)[bkeep], nan=3)), 0, 255), "u1"),   # tenths of a foot
+                 ec=b64(np.asarray([v == "certificate" for v in np.asarray(bc.get("floor_source", np.full(len(bc["first_floor_ft"]), "")), object)[bkeep]], int), "u1"),
                  zip=b64([zi.get(z, 255) for z in np.asarray(bc["zip"])[bkeep]], "u1"),
                  use=b64([ui.get(u, 255) for u in use], "u1"))
         vdoc = {**values, "zips": zips, "zhvi": [zh.get(z) for z in zips], "uses": uses,
