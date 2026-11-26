@@ -101,9 +101,19 @@ project's shared folder (skill code, baselines, notes, station sheet, disclosure
 
 - Chart Review and Evaluation Statistics Tool, StormSense's counterpart of Tidewatch's TWiST (tidewatch_archive
   `twist/`). One self-contained `crest_<st>.html` per station (Highcharts + Leaflet inlined, `?embed=1`, `?datum=NAVD`,
-  `?units=m`, `?period=`, `#tab`), `index.html` map (Esri Ocean basemap, coastline fallback inlined), `feeds/` CSV +
-  GeoJSON for the ArcGIS Experience Builder dashboard (`crest/arcgis_push.py`, secrets `ARCGIS_URL` + `ARCGIS_API_KEY`
-  or `ARCGIS_USERNAME`/`ARCGIS_PASSWORD`, VIMS org, folder "StormSense CREST").
+  `?units=m`, `?period=`, `?theme=light|dark`, `#tab`), `index.html` map (Esri Ocean basemap, coastline fallback
+  inlined), `feeds/` CSV + GeoJSON. `?embed=1&view=forecast#run=<cycle>&show=<member>` is the compact one-forecast
+  chart the ArcGIS dashboard embeds (hash arguments re-point it without a reload); `&name=1` keeps the station name.
+- ArcGIS Online (VIMS org vims-wm.maps.arcgis.com, folder "StormSense CREST", secrets `ARCGIS_URL` + `ARCGIS_USERNAME`/
+  `ARCGIS_PASSWORD` or `ARCGIS_API_KEY`): `crest/schema.py` is the one list of feed columns, types, labels and guidance
+  colors (the pages' colors too); `crest/arcgis_push.py` overwrites seven hosted layers in place on every run, typed
+  from the schema (Stations, Daily Skill, Flood Events, Leaderboard, Lead Decay, Forecasts, Changes; read-only);
+  `crest/arcgis_dashboard.py` builds the web map and the ArcGIS Dashboards item "StormSense CREST Forecast Archive" and
+  creates them once (edits made in ArcGIS are kept; the workflow's `dashboard` input, `CREST_DASHBOARD=rebuild`,
+  writes them again). Sharing is Derek's: never change it from code. Check dashboard edits before a PR with
+  `python tools/dashboard_preview.py --site <built site>` + `node tools/dashboard_preview.js` (the real Dashboards
+  app against a local stand-in for the layers; nothing is published). What that taught is in arcgis_dashboard.py's
+  docstring (Arcade number patterns need `#,##0`, dates print in local time unless Arcade formats them, ...).
 - Reads skill_scores/flood_scores.csv.gz (newest ensemble release), run tarballs (reduced to work/runs/<cycle>.json.gz,
   cached by actions/cache), obs-YYYY-MM day tarballs (`obs_<day>/6min/<ST>.csv`; the newest hours come from the run
   tarballs' own `observed_ft`, since the obs archive is daily), data/index/obs, NWPS levels. Periods 30d, 7d, each month;

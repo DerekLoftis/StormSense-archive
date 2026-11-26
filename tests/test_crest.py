@@ -1,4 +1,5 @@
 """Offline tests of CREST's statistics, feeds and pages on a small synthetic archive."""
+import csv
 import json
 import os
 import sys
@@ -7,7 +8,7 @@ import numpy as np
 import pandas as pd
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from crest import feeds, inputs, page, stats  # noqa: E402
+from crest import feeds, inputs, page, schema, stats  # noqa: E402
 
 T0 = pd.Timestamp("2026-11-10T00:00Z")
 
@@ -94,10 +95,27 @@ def test_station_doc_feeds_and_page(tmp_path):
     json.dump(net, open(out / "data" / "network_30d.json", "w"))
     feeds.write(str(out / "feeds"), net, [d], sc, {"TEST": o}, {"TEST": lv}, [], period)
     assert (out / "feeds" / "stations.geojson").exists() and (out / "feeds" / "daily_skill.csv").exists()
+    # every feed has exactly the columns of schema.py (the ArcGIS layers are typed from it)
+    for key, (_, name, _, _) in schema.FEEDS.items():
+        with open(out / "feeds" / name, newline="") as f:
+            assert next(csv.reader(f)) == schema.columns(key), name
+    # the forecast archive: one row per forecast and guidance, with its own peak, its flood category and its chart
+    fc = list(csv.DictReader(open(out / "feeds" / "forecasts.csv", newline="")))
+    row = next(r for r in fc if r["member"] == "primary")
+    assert len(fc) == 2 and row["status"] == "Verified" and row["rating"] == "Good" and float(row["S"]) == 0.85
+    assert float(row["fc_peak_ft_mllw"]) > 4.0 and row["fc_category"] == "Minor" and float(row["fc_over_action_ft"]) > 0.5
+    assert row["issued"] == "2026-11-10T00:00:00Z" and row["issued_day"] == "2026-11-10T12:00:00Z"
+    assert row["summary"].startswith("Peak ") and "(Minor)" in row["summary"] and "S 0.850" in row["summary"]
+    assert row["chart_url"].endswith("crest_test.html?embed=1&view=forecast&theme=light#run=2026-11-10T00Z&show=primary")
+    flood = next(csv.DictReader(open(out / "feeds" / "flood_events.csv", newline="")))
+    assert flood["category"] in ("Action", "Minor") and flood["peak_time"].endswith("Z") and flood["name"] == "Test gauge"
     manifest = {"built": "x", "default": "30d", "stations": ["TEST"], "periods": [{"id": "30d", "label": "Last 30 days", "stations": ["TEST"]}]}
     page.write_site(str(out), manifest, {"TEST": info})
     html = (out / "crest_test.html").read_text()
     assert "StormSense(TM) Predictive Plots" in html and "__DOC__" not in html and "</script>" in html
+    # the pages take their colors from schema.py, and have the compact one-forecast view the ArcGIS dashboard embeds
+    assert "__COLORS__" not in html and json.dumps(schema.COLORS, separators=(",", ":")) in html and 'Q.get("view") === "forecast"' in html
+    assert (out / "img" / "stormsense_logo.png").exists() and (out / "img" / "ccrm_logo.png").exists()
     assert "Test gauge" in (out / "index.html").read_text()
 
 

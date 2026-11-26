@@ -9,7 +9,9 @@
 # repo is public and Pages uses GitHub Actions), to GitHub Pages at
 # https://derekloftis.github.io/StormSense-archive/crest/.
 # ArcGIS: with the secrets ARCGIS_URL and ARCGIS_API_KEY (or ARCGIS_USERNAME and ARCGIS_PASSWORD) the
-# feeds are loaded into hosted feature layers (crest/arcgis_push.py).
+# feeds are loaded into hosted feature layers (crest/arcgis_push.py), and the web map and the ArcGIS
+# dashboard on them are created if they are not there (crest/arcgis_dashboard.py). They are then left
+# alone so edits made in ArcGIS are kept; run with "dashboard" ticked to write them again from the code.
 #
 # Scheduling: dispatch from cron-job.org at 13:40 UTC daily (after the 12Z run has verified 0-12 h);
 # the GitHub cron below is a late fallback, and a second run the same day just rebuilds.
@@ -25,6 +27,11 @@ on:
         description: "Periods to build (e.g. 30d,7d,month or months for every month); empty = automatic"
         required: false
         default: ""
+      dashboard:
+        description: "Write the ArcGIS web map and dashboard again from the code (replaces edits made in ArcGIS)"
+        type: boolean
+        required: false
+        default: false
   pull_request:
     paths: [crest/**, .github/workflows/crest.yml]
 
@@ -149,6 +156,7 @@ jobs:
           ARCGIS_API_KEY: ${{ secrets.ARCGIS_API_KEY }}
           ARCGIS_USERNAME: ${{ secrets.ARCGIS_USERNAME }}
           ARCGIS_PASSWORD: ${{ secrets.ARCGIS_PASSWORD }}
+          CREST_DASHBOARD: ${{ github.event.inputs.dashboard == 'true' && 'rebuild' || '' }}
         run: |
           if [ -z "$ARCGIS_URL" ]; then echo "ArcGIS secrets not set; skipped"; exit 0; fi
           pip install -q requests

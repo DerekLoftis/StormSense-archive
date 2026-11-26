@@ -32,6 +32,22 @@ a{color:var(--accent)}
 .mast .mid{flex:1;min-width:220px;text-align:center}
 .sub{color:var(--muted);font-size:13px;margin:3px 0 0}
 body.embed .mast{display:none}
+/* ?embed=1&name=1: keep the station's name over an embedded page (the ArcGIS dashboard's station report) */
+body.embed.named .mast{display:flex;border:0;padding:0 2px}
+body.embed.named .mast .logo{display:none}
+body.embed.named .mast .mid{text-align:left}
+body.embed.named.fview .mast{display:none}
+/* ?view=forecast: one forecast's chart filling the frame, its statistics below */
+.full{display:none;font-size:12.5px}
+body.fview{background:var(--panel)}
+body.fview .mast,body.fview .controls,body.fview .strip,body.fview .verdict,body.fview .tabs,body.fview .footer,body.fview .bench>.card:first-child{display:none}
+body.fview .wrap{max-width:none;padding-block:8px 14px;gap:8px}
+body.fview .bench{grid-template-columns:minmax(0,1fr)}
+body.fview .card{border:0;padding:0}
+body.fview .grid2 .card{border:1px solid var(--line);padding:10px 12px}
+body.fview h2{font-size:15px}
+body.fview .full{display:inline}
+body.fview #runChart{height:max(260px,calc(100vh - 230px))}
 .controls{display:flex;flex-wrap:wrap;gap:10px 16px;align-items:center}
 .lbl{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-right:6px}
 .seg{display:inline-flex;border:1px solid var(--line);border-radius:7px;overflow:hidden;vertical-align:middle}

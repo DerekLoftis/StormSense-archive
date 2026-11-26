@@ -62,6 +62,7 @@
       <div style="display:flex;flex-direction:column;gap:12px;min-width:0">
         <div class="card">
           <h2 id="runTitle">Select a forecast</h2>
+          <a class="full" id="fullLink" target="_blank" rel="noopener">Open the full station report</a>
           <div class="chips" id="runChips"></div>
           <div id="runChart" class="chart"></div>
           <p class="disc">__DISCLAIMER__<br><span id="runGuide"></span></p>
@@ -119,6 +120,17 @@ var DOC = __DOC__;
 var CACHE = {}; CACHE[DOC.period.id] = DOC;
 var ST = DOC.station;
 var state = {regime: "all", run: null, shown: {primary:1, stormsense:1, petss:1, nws:1, tidewatch:1}};
+/* ?view=forecast: only one forecast's chart and statistics (what the ArcGIS dashboard embeds); run= and show= pick the
+   forecast and the guidance to draw, in the query or in the hash */
+var FV = Q.get("view") === "forecast";
+if (FV) document.body.classList.add("fview");
+function pickRun(){
+  var run = arg("run"), show = arg("show");
+  state.asked = null;
+  if (run){ if (DOC.runs.some(function(r){ return r.cycle === run; })) state.run = run; else { state.run = null; state.asked = run; } }
+  if (show){ state.lead = show; if (FV){ state.shown = {primary: 1}; } state.shown[show] = 1; }
+}
+pickRun();
 hcTheme();
 
 function render(){
@@ -128,6 +140,7 @@ function render(){
   $("subtitle").textContent = d.station + " · " + d.source.split(";")[0] + " · " + d.period.label + " · every archived forecast scored against the gauge";
   $("built").textContent = "Built " + MANIFEST.built + (d.added ? " · in StormSense since " + d.added : "");
   $("builtFoot").textContent = MANIFEST.built;
+  $("fullLink").href = location.pathname.split("/").pop() + "#forecasts";
   drawCard(); drawLB(); route();
 }
 function drawCard(){
@@ -221,7 +234,8 @@ function drawRun(){
   var r = DOC.runs.find(function(x){ return x.cycle === state.run; }); if (!r) return;
   var mems = Object.keys(r.series || {}).filter(function(m){ return !/_p10$|_p90$/.test(m) && m !== "tide"; });
   mems.sort(function(a, b){ return DOC.members.indexOf(a) - DOC.members.indexOf(b); });
-  $("runTitle").textContent = "Forecast issued " + r.cycle.replace("T", " ") + (r.basis && r.basis !== "stormsense" ? " (scored on Tidewatch's observations)" : "");
+  $("runTitle").textContent = (FV ? DOC.name + " · forecast issued " : "Forecast issued ") + r.cycle.replace("T", " ") + (r.basis && r.basis !== "stormsense" ? " (scored on Tidewatch's observations)" : "") +
+    (state.asked ? " (the " + state.asked.replace("T", " ") + " forecast is not in " + DOC.period.label.toLowerCase() + "; this is the newest one scored)" : "");
   $("runChips").innerHTML = mems.map(function(m){ return '<button class="chip" data-m="' + m + '" aria-pressed="' + (!!state.shown[m]) + '">' + sw(m) + esc(DOC.names[m] || m) + "</button>"; }).join("") +
     (r.series.tide ? '<button class="chip" data-m="tide" aria-pressed="' + (!!state.shown.tide) + '">' + sw("tide") + "Tide</button>" : "");
   $("runChips").querySelectorAll(".chip").forEach(function(b){ b.onclick = function(){ var m = b.dataset.m; state.shown[m] = !state.shown[m]; drawRun(); }; });
@@ -236,7 +250,8 @@ function drawRun(){
         data: r.series.primary_p10.map(function(v, i){ var w = r.series.primary_p90[i]; return [t0 + i * r.dt, v == null ? null : lvl(v, DOC.navd), w == null ? null : lvl(w, DOC.navd)]; })});
     }
     mems.concat(r.series.tide ? ["tide"] : []).forEach(function(m){ if (!state.shown[m]) return;
-      ser.push({name: DOC.names[m] || (m === "tide" ? "Tide" : m), color: col(m), lineWidth: m === "primary" ? 3 : 1.6, dashStyle: m === "tide" ? "Dot" : "Solid", zIndex: m === "primary" ? 4 : 2,
+      var lead = m === (state.lead || "primary");
+      ser.push({name: DOC.names[m] || (m === "tide" ? "Tide" : m), color: col(m), lineWidth: lead ? 3 : 1.6, dashStyle: m === "tide" ? "Dot" : "Solid", zIndex: lead ? 4 : 2,
         data: r.series[m].map(function(v, i){ return [t0 + i * r.dt, lvl(v, DOC.navd)]; })}); });
     Highcharts.chart("runChart", {chart: {zoomType: "x"}, xAxis: {type: "datetime", plotLines: [{value: t0, color: css("--muted"), width: 1, label: {text: "issued", rotation: 0, y: 12, x: 4, style: {color: css("--muted"), fontSize: "11px"}}}]},
       yAxis: {title: {text: "Water level (" + ul() + " " + (U.datum === "NAVD" ? "NAVD88" : "MLLW") + ")"}, plotLines: levelLines()},
@@ -319,9 +334,11 @@ function drawDownloads(){
 var IDS = ["leaderboard","lead-time","over-time","forecasts","ensemble","floods","gauge","downloads"];
 function draw(h){ if (h === "lead-time") drawDecay(); else if (h === "over-time") drawDaily(); else if (h === "forecasts") drawRuns(); else if (h === "ensemble") drawEnsemble();
   else if (h === "floods") drawFloods(); else if (h === "gauge") drawGauge(); else if (h === "downloads") drawDownloads(); else drawLB(); }
-function route(){ var h = location.hash.slice(1) || Q.get("tab") || "leaderboard"; if (IDS.indexOf(h) < 0) h = "leaderboard";
+function route(){ var tab = hashArgs().get("tab") || (location.hash.indexOf("=") < 0 && location.hash.slice(1));
+  var h = FV ? "forecasts" : (tab || (arg("run") ? "forecasts" : Q.get("tab")) || "leaderboard");   /* a tab in the hash wins; a forecast asked for opens its tab */
+  if (IDS.indexOf(h) < 0) h = "leaderboard";
   IDS.forEach(function(i){ $(i).hidden = i !== h; }); document.querySelectorAll("#tabs a").forEach(function(a){ a.setAttribute("aria-current", a.getAttribute("href") === "#" + h ? "page" : "false"); }); draw(h); }
-window.addEventListener("hashchange", route);
+window.addEventListener("hashchange", function(){ pickRun(); route(); });
 seg("datum", [["MLLW", "MLLW"], ["NAVD", "NAVD88"]], U.datum, function(v){ U.datum = v; route(); });
 seg("units", [["ft", "Feet"], ["m", "Meters"]], U.units, function(v){ U.units = v; drawLB(); route(); });
 (function(){ var sel = $("period"); var ps = MANIFEST.periods.filter(function(p){ return p.stations.indexOf(ST) >= 0; });
