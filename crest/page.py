@@ -31,7 +31,7 @@ def _common():
     return {
         "__CSS__": _read(T, "crest.css"),
         "__SS_LOGO__": _uri(os.path.join(HERE, "branding", "stormsense_logo.png")),
-        "__VIMS_LOGO__": _uri(os.path.join(HERE, "branding", "vims_logo.png")),
+        "__CCRM_LOGO__": _uri(os.path.join(HERE, "branding", "ccrm_logo.png")),
         "__HIGHCHARTS__": _read(JSLIB, "highcharts.js"),
         "__COMMON__": _read(T, "common.js"),
         "__DISCLAIMER__": DISCLAIMER,

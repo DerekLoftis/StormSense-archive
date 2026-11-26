@@ -135,6 +135,12 @@ jobs:
               --notes "The newest StormSense CREST site (map page, one page per station, data and feeds) as crest_site.zip, replaced on every run."
           gh release upload crest-pages -R "$GITHUB_REPOSITORY" --clobber crest_site.zip
 
+      - name: Pages artifact
+        if: steps.build.outcome == 'success' && github.event_name != 'pull_request' && vars.CREST_PAGES == 'true'
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
+
       - name: Load the feeds into ArcGIS Online
         if: steps.build.outcome == 'success' && github.event_name != 'pull_request'
         continue-on-error: true
@@ -145,7 +151,7 @@ jobs:
           ARCGIS_PASSWORD: ${{ secrets.ARCGIS_PASSWORD }}
         run: |
           if [ -z "$ARCGIS_URL" ]; then echo "ArcGIS secrets not set; skipped"; exit 0; fi
-          pip install -q "arcgis==2.4.0"
+          pip install -q requests
           python -m crest.arcgis_push site/crest/feeds
 
       - name: Show the end of a failed build as an annotation
@@ -162,15 +168,15 @@ jobs:
       id-token: write
     environment:
       name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}crest/
+      url: ${{ steps.retry.outputs.page_url || steps.deployment.outputs.page_url }}
     steps:
-      - uses: actions/download-artifact@v4
-        with:
-          name: crest-site
-          path: site
       - uses: actions/configure-pages@v5
-      - uses: actions/upload-pages-artifact@v3
-        with:
-          path: site
       - id: deployment
+        continue-on-error: true
+        uses: actions/deploy-pages@v4
+      # GitHub sometimes can't see the Pages artifact for a short while after it is uploaded
+      - if: steps.deployment.outcome == 'failure'
+        run: sleep 60
+      - id: retry
+        if: steps.deployment.outcome == 'failure'
         uses: actions/deploy-pages@v4
