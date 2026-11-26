@@ -7,7 +7,7 @@ import numpy as np
 import pandas as pd
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from crest import feeds, page, stats  # noqa: E402
+from crest import feeds, inputs, page, stats  # noqa: E402
 
 T0 = pd.Timestamp("2026-11-10T00:00Z")
 
@@ -99,3 +99,27 @@ def test_station_doc_feeds_and_page(tmp_path):
     html = (out / "crest_test.html").read_text()
     assert "StormSense(TM) Predictive Plots" in html and "__DOC__" not in html and "</script>" in html
     assert "Test gauge" in (out / "index.html").read_text()
+
+
+def test_obs_tarballs_unpack_and_the_runs_fill_the_newest_hours(tmp_path):
+    import io
+    import tarfile
+    # the daily tarball keeps its CSVs under obs_<day>/6min/
+    tp = tmp_path / "obs_2026-11-10.tar.xz"
+    with tarfile.open(tp, "w:xz") as t:
+        for name, body in (("obs_2026-11-10/6min/TEST.csv", b"date_time_z,water_level_ft_mllw\n2026-11-10T00:00Z,1.5\n"),
+                           ("obs_2026-11-10/raw/TEST.csv", b"x\n"), ("obs_2026-11-10/report.csv", b"x\n")):
+            ti = tarfile.TarInfo(name)
+            ti.size = len(body)
+            t.addfile(ti, io.BytesIO(body))
+    folder = tmp_path / "day"
+    assert inputs.unpack_obs(str(tp), str(folder)) == 1 and (folder / "TEST.csv").exists()
+    # a run carries the day before its issue time; the archive wins where both have a value
+    arch = pd.Series([1.0, 1.1], index=pd.date_range("2026-11-10T00:00Z", periods=2, freq="6min"))
+    t0 = pd.Timestamp("2026-11-10T00:06Z")
+    runs = {"2026-11-10T06Z": {"stations": {"TEST": {"t0": 0, "members": {}, "obs": {"t0": int(t0.value // 10**6), "v": [9.0, None, 1.3]}},
+                                            "NEW": {"t0": 0, "members": {}, "obs": {"t0": int(t0.value // 10**6), "v": [2.0]}},
+                                            "OLD": {"t0": 0, "members": {}}}}}
+    out = inputs.top_up_obs({"TEST": arch}, runs)
+    assert out["TEST"].tolist() == [1.0, 1.1, 1.3] and out["TEST"].index[-1] == pd.Timestamp("2026-11-10T00:18Z")
+    assert out["NEW"].tolist() == [2.0] and "OLD" not in out

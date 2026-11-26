@@ -28,6 +28,7 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 REPO_ROOT = os.path.dirname(HERE)
 RUN_NAME = re.compile(r"ensemble_(\d{4}-\d\d-\d\dT\d\dZ)\.tar\.gz$")
 OBS_NAME = re.compile(r"obs_(\d{4}-\d\d-\d\d)\.tar\.xz$")
+OBS_FILE = re.compile(r"(^|/)6min/[^/]+\.csv$")
 STEP_MIN = 6
 LEAD_H = 72
 
@@ -109,7 +110,16 @@ def reduce_run(path, navd88=None):
             t0 = pd.Timestamp(info["t0"])
             grid = pd.date_range(t0, t0 + pd.Timedelta(hours=LEAD_H), freq=f"{STEP_MIN}min")
             df.index = tt
-            df = df[~df.index.duplicated()].reindex(grid)
+            df = df[~df.index.duplicated()]
+            seen = None
+            if own and "observed_ft" in df:
+                # the gauge's last day before issue: fills CREST's observations past the daily obs archive
+                o = df["observed_ft"].dropna()
+                if len(o):
+                    og = pd.date_range(o.index[0], o.index[-1], freq=f"{STEP_MIN}min")
+                    seen = {"t0": int(og[0].value // 10**6),
+                            "v": [None if not np.isfinite(x) else round(float(x), 3) for x in o.reindex(og).to_numpy(float)]}
+            df = df.reindex(grid)
             members = {}
             for c in df.columns:
                 if not c.endswith("_ft") or c.endswith("_surge_ft") or c == "observed_ft":
@@ -120,6 +130,8 @@ def reduce_run(path, navd88=None):
                 key = "tide" if c == "astro_tide_ft" else c[:-3]
                 members[key] = [None if not np.isfinite(x) else round(float(x), 3) for x in v]
             out["stations"][st] = {"t0": int(t0.value // 10**6), "members": members}
+            if seen:
+                out["stations"][st]["obs"] = seen
     return out, picks
 
 
@@ -173,6 +185,19 @@ def obs_assets(start, end):
     return dict(sorted(out.items()))
 
 
+def unpack_obs(tar_path, folder):
+    """Write a day tarball's 6-minute CSVs (obs_<day>/6min/<ST>.csv; older ones 6min/<ST>.csv) to folder."""
+    os.makedirs(folder, exist_ok=True)
+    n = 0
+    with tarfile.open(tar_path) as t:
+        for m in t.getmembers():
+            if m.isfile() and OBS_FILE.search(m.name):
+                with open(os.path.join(folder, os.path.basename(m.name)), "wb") as f:
+                    f.write(t.extractfile(m).read())
+                n += 1
+    return n
+
+
 def load_obs(work, start, end, local_dir=None):
     """{station: pd.Series ft MLLW on the 6-minute clock} for start <= t < end, from the daily obs
     tarballs (cached under work/obs/<day>/), or from local_dir/<ST>.csv (time, value) for testing."""
@@ -185,14 +210,10 @@ def load_obs(work, start, end, local_dir=None):
     else:
         for day, url in obs_assets(start - pd.Timedelta(days=1), end).items():
             folder = os.path.join(work, "obs", day)
-            if not os.path.isdir(folder):
+            # a folder without CSVs is a day that was unpacked wrongly or not at all: read it again
+            if not glob.glob(os.path.join(folder, "*.csv")):
                 tp = releases.download(url, os.path.join(work, "obs", f"obs_{day}.tar.xz"))
-                os.makedirs(folder, exist_ok=True)
-                with tarfile.open(tp) as t:
-                    for m in t.getmembers():
-                        n = m.name.lstrip("./")
-                        if n.startswith("6min/") and n.endswith(".csv"):
-                            open(os.path.join(folder, os.path.basename(n)), "wb").write(t.extractfile(m).read())
+                unpack_obs(tp, folder)
                 os.remove(tp)
             for p in glob.glob(os.path.join(folder, "*.csv")):
                 d = pd.read_csv(p)
@@ -205,6 +226,24 @@ def load_obs(work, start, end, local_dir=None):
         s = pd.concat(ss)
         s = s[~s.index.duplicated(keep="last")].sort_index()
         out[st] = s[(s.index >= start) & (s.index < end)].dropna()
+    return out
+
+
+def top_up_obs(obs, runs):
+    """Add the observations the run tarballs carry (each holds the day before its issue time) where
+    the daily obs archive has none yet: the archive is written once a day, so without this the
+    newest forecasts would be charted without the newest water levels. The archive wins where both have a value."""
+    extra = {}
+    for cyc in sorted(runs):
+        for st, d in runs[cyc]["stations"].items():
+            o = d.get("obs")
+            if o and o.get("v"):
+                idx = pd.date_range(pd.Timestamp(o["t0"], unit="ms", tz="UTC"), periods=len(o["v"]), freq=f"{STEP_MIN}min")
+                extra.setdefault(st, []).append(pd.Series(o["v"], index=idx, dtype=float).dropna())
+    out = dict(obs)
+    for st, parts in extra.items():
+        s = pd.concat(([obs[st]] if st in obs else []) + parts)
+        out[st] = s[~s.index.duplicated(keep="first")].sort_index()
     return out
 
 

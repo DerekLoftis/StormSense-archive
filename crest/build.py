@@ -115,7 +115,12 @@ def main(argv=None):
     ph = pd.read_csv(a.picks) if a.picks else inputs.picks_table(pk)
     print(f"runs: {len(runs)}; picks rows {len(ph)}")
     obs = inputs.load_obs(a.work, first - pd.Timedelta(days=1), last + pd.Timedelta(days=4), a.obs_dir or None)
-    print(f"observations: {len(obs)} gauges")
+    newest = max((s.index[-1] for s in obs.values() if len(s)), default=None)
+    obs = inputs.top_up_obs(obs, runs)
+    newest2 = max((s.index[-1] for s in obs.values() if len(s)), default=None)
+    print(f"observations: {len(obs)} gauges, archive to {newest}, with the runs' own to {newest2}")
+    if not obs:
+        print("::warning title=CREST observations::no gauge observations were read; charts and flood events will lack them")
     levels = inputs.load_levels(offline=a.offline)
     hx = inputs.load_health()
     changes = load_changes()
