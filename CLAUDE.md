@@ -153,7 +153,9 @@ project's shared folder (skill code, baselines, notes, station sheet, disclosure
   Suffolk); homes are picked by zoning patterns (an assumption per city, not the cities' code tables). `ffe.py` uses
   HRPDC's elevation certificates (5,268 buildings, finished first floor NAVD88) instead of the assumed floor where a
   building has one. Cities over 1.2 billion cells (Virginia Beach) keep the DEM and results on disk (`spread.py`
-  `store`). maps.nnva.gov goes down for minutes at a time around 3 AM ET: just run again.
+  `store`). maps.nnva.gov goes down for minutes at a time around 3 AM ET: just run again. A HUC-12 no gauge measures is
+  left out (`tether_overrides.csv` station `-`, prefix with `*`): `03010205*`, the Back Bay, North Landing and Northwest
+  River watersheds south of the Great Bridge lock, which drain to Currituck Sound. Results per city: README "Numbers".
 - Not wired yet: a workflow, Pages hosting and the push to the AGOL folder "StormSense CREST". Each area's prepared
   tables and file geodatabase are in the project's shared folder under `inundation/<area>/`.
 

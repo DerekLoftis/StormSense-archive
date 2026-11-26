@@ -143,7 +143,7 @@ python -m inundation.status --prepared prepared --name norfolk --site <StormSens
 
 ## Numbers (run of 2026-11-26 00Z, a forecast major flood)
 
-At each gauge's forecast peak (4.9 to 6.1 ft NAVD88, about 14:30Z on 26 Nov):
+At each gauge's forecast peak (most between 4.9 and 6.1 ft NAVD88, about 14:30Z on 26 Nov):
 
 | City | Roads flooded (mi) | of which only by pipes | Ponded (mi) | Buildings flooded | Homes with damage | Est. damage | At the 90% level (mi / buildings) |
 |---|---|---|---|---|---|---|---|
@@ -152,16 +152,22 @@ At each gauge's forecast peak (4.9 to 6.1 ft NAVD88, about 14:30Z on 26 Nov):
 | Virginia Beach (north of the Back Bay watershed) | 5.0 | 0.8 | 2.1 | 284 | 120 | $0.15M | 7.5 / 433 |
 | Portsmouth (no pipes published) | 6.0 | – | 1.2 | 424 | 211 | $0.79M | 7.5 / 525 |
 | Hampton (no assessed values found) | 26.3 | 1.3 | 6.0 | 2,090 | – | – | 33.3 / 2,649 |
+| Chesapeake (north of the Great Bridge lock; pipe lines only) | 23.6 | 2.9 | 8.1 | 1,332 | 516 | $0.99M | 32.8 / 1,794 |
 
 - Norfolk: 360,651 pieces (1,765 km), 93,969 buildings, 9 gauges; 32,598 pipes, 4,956 ditches and 38,352 structures
   in 2,441 networks; one floodwall system. Before the pipes and the floodwall: 34.8 miles and 1,958 buildings.
 - The damage figure is ruled by the first floor: with every home on a slab at grade the same water gives $37.0M in
-  Norfolk, $3.8M in Newport News, $4.1M in Virginia Beach and $6.5M in Portsmouth. Elevation certificates replace the
-  assumed floor for 786 Norfolk buildings, 235 in Virginia Beach, 66 in Portsmouth and 5 in Newport News.
+  Norfolk, $16.8M in Chesapeake, $6.5M in Portsmouth, $4.1M in Virginia Beach and $3.8M in Newport News. Elevation
+  certificates replace the assumed floor for 786 Norfolk buildings, 608 in Chesapeake, 235 in Virginia Beach, 66 in
+  Portsmouth and 5 in Newport News.
 - Newport News: the pipes add almost nothing at this level because nearly all the low ground is already joined to
   tidal water over the surface. Hampton: half of the total is the Back River gauge's (BRDH) area.
-- Virginia Beach: the Lake Rudee gauge (USLR) peaks at 6.08 ft where Rudee Inlet (RDIV) peaks at 5.01 ft, and its
-  observations sit about 1 ft above its neighbours': worth a look at its datum before its area's numbers are trusted.
+- Gauge levels: the flags are only as good as each gauge's NAVD88 reference, and a 0.25 ft step shows it. Over the
+  week before this run most of the 29 gauges used here average 0.36 to 0.58 ft NAVD88; Rudee Inlet (RDIV, -0.34)
+  sits 0.7 ft under Lake Rudee (USLR, 0.36) right behind it, and LCEV (-0.01), HPPV (0.11), CBBT (0.13), SLRV (0.14),
+  DPCV (0.70) and WRSV (1.03) are off the pack too. Some of that is real (river slope, ocean against bay), some is
+  likely datum: a question for the forecast, since these numbers follow it. Chesapeake's total is nearly all the
+  Southern Branch: Money Point's area (MNPT, peak 5.49 ft) 12.1 miles and Deep Creek's (DPCV, 6.29 ft) 10.2.
 - Not yet checked against observed flooding (Norfolk publishes flooded-street reports:
   `Storm/Storm_Data/MapServer/26` on orfmaps.norfolk.gov).
 
@@ -172,7 +178,8 @@ A HUC-12 whose water level no StormSense gauge measures is left out rather than 
 The one rule so far is `03010205*`: Back Bay, the North Landing River and the Northwest River (the south of Virginia
 Beach and Chesapeake) drain to Currituck Sound, are driven by wind rather than tide, and are shut off from the
 Elizabeth River by the Great Bridge lock. Tied to Lake Rudee they showed 66 road miles flooded on a day when nothing
-there was. Their pieces and buildings stay in the tables with an empty `station`; `status` and the page skip them and
+there was. That leaves out 239,164 road pieces and 78,804 buildings in Virginia Beach and 173,410 pieces and 41,189 buildings in
+Chesapeake (Great Bridge south of the lock, Hickory, the Dismal Swamp). Their pieces and buildings stay in the tables with an empty `station`; `status` and the page skip them and
 the page says which watersheds are missing. A gauge there (or a Currituck Sound forecast) brings them back.
 
 ## Open points
