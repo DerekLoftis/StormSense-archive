@@ -11,8 +11,9 @@ dashboard on those layers) or any other tool. Columns, types and labels are in c
     forecasts.csv                the forecast archive: one row per station, forecast and main guidance
                                  with its scores (whole forecast and per lead band), its own highest water
                                  and the flood category that reaches, and a link to its chart
-    flood_events.geojson / .csv  one point per observed flood (Action or above): peak, category, and
-                                 each main guidance's mean peak-height and timing error
+    flood_events.geojson / .csv  one point per observed flood (Action or above): peak, category, whether it
+                                 has ended or was still in progress at the gauge's last observation, and each
+                                 main guidance's mean peak-height and timing error (none while in progress)
     changes.csv                  dated model and pipeline changes
 """
 import csv
@@ -59,7 +60,8 @@ def write(out, net, docs, sc, obs, levels, changes, period):
                "best": s["best"] or "", "best_name": stats.NAMES.get(s["best"], "") if s["best"] else "",
                "cone_pct": round(s["cone"] * 100, 1) if s["cone"] is not None else None,
                "obs_coverage_pct": s["cov"], "runs": s["runs"], "events": s["events"],
-               "last_event": s["last_event"] or "", "suspect_obs": int(bool(s["suspect"])), "verdict": s["verdict"],
+               "last_event": (s["last_event"] or "") + (" (in progress)" if s.get("last_event_ongoing") else ""),
+               "suspect_obs": int(bool(s["suspect"])), "verdict": s["verdict"],
                "crest_url": f"{BASE}crest_{s['id'].lower()}.html",
                "forecast_url": f"{LATEST}{s['id']}_fore72_NAVD.html"}
         for m in MAIN:
@@ -113,15 +115,21 @@ def write(out, net, docs, sc, obs, levels, changes, period):
     for d in docs:
         for e in d["events"]:
             row = {"station": d["station"], "name": d["name"], "lon": loc[d["station"]][0], "lat": loc[d["station"]][1],
-                   "peak_time": _iso(e["peak_t"]), "peak_ft_mllw": e["peak"], "category": e["category"].capitalize()}
+                   "peak_time": _iso(e["peak_t"]), "peak_ft_mllw": e["peak"], "category": e["category"].capitalize(),
+                   "status": "In progress" if e.get("ongoing") else "Ended"}
             for m in MAIN:
                 b = e["by"].get(m) or {}
                 row[f"peak_err_{m}"] = b.get("pe")
                 row[f"timing_err_min_{m}"] = b.get("te")
                 row[f"runs_{m}"] = b.get("n")
             p = e["by"].get("primary") or {}
-            row["summary"] = f"Peak {e['peak']:.2f} ft MLLW" + (
-                f"; published forecasts {p['pe']:+.2f} ft on the peak over {p['n']} runs" if p.get("pe") is not None else "")
+            if e.get("ongoing"):   # the gauge's record ends in this flood: the highest water so far is not its peak yet
+                t = pd.Timestamp(e["end"])
+                row["summary"] = (f"Still at or above Action at the last observation ({t.day} {t:%b %H:%M}Z): "
+                                  f"{e['peak']:.2f} ft MLLW so far; peak errors follow once the water has fallen")
+            else:
+                row["summary"] = f"Peak {e['peak']:.2f} ft MLLW" + (
+                    f"; published forecasts {p['pe']:+.2f} ft on the peak over {p['n']} runs" if p.get("pe") is not None else "")
             rows.append(row)
     _csv(os.path.join(out, "flood_events.csv"), rows, schema.columns("floods"))
     _geojson(os.path.join(out, "flood_events.geojson"), rows)

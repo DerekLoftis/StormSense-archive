@@ -59,6 +59,43 @@ def test_events_find_the_flood_and_score_each_guidance_peak():
     assert e["by"]["primary"]["hit"] == 1.0
 
 
+def test_a_flood_the_record_ends_in_is_marked_and_not_scored_yet(tmp_path):
+    # the gauge's newest observation is on the rising limb, above Action: the highest water so far is not the peak
+    o = obs_series(peak=2.0)
+    cut = o[o.index <= T0 + pd.Timedelta(hours=24)]
+    lv = {"action": 3.5, "minor": 4.0, "moderate": 5.0, "major": 6.0}
+    runs = {"2026-11-10T00Z": run(o, {"primary": 0.2, "petss": -0.5})}
+    ev = stats.events(cut[cut.index >= T0], lv, runs, "TEST", last=cut.index[-1])
+    assert len(ev) == 1 and ev[0]["ongoing"] and ev[0]["by"] == {} and ev[0]["peak"] == round(float(cut.iloc[-1]), 2)
+    # the same flood once the record runs past it (the water has fallen) is finished and scored as before
+    done = stats.events(o[o.index >= T0], lv, runs, "TEST", last=o.index[-1])
+    assert len(done) == 1 and "ongoing" not in done[0] and done[0]["by"]["primary"]["n"] == 1 and done[0]["peak"] > ev[0]["peak"]
+    # a finished month is cut at its end, not at the gauge's newest observation: a flood crossing it is not "in progress"
+    assert "ongoing" not in stats.events(cut[cut.index >= T0], lv, runs, "TEST", last=o.index[-1])[0]
+
+    # the pages' data and the feeds say so, and give no peak error for it
+    sc = scores([{"cycle": "2026-11-10T00Z", "station": "TEST", "member": m, "band": b, "Skill": 0.85}
+                 for m in ("primary", "petss") for b in ("0-72", "full", "0-36") + tuple(stats.SEGMENTS)])
+    period = {"id": "30d", "label": "Last 30 days", "start": T0.isoformat(), "end": (T0 + pd.Timedelta(days=4)).isoformat(),
+              "start_t": T0, "end_t": T0 + pd.Timedelta(days=4)}
+    info = {"name": "Test gauge", "lat": 37.0, "lon": -76.3, "navd88": 1.6, "suspect": False, "added": "", "source": "coops:1"}
+    d = stats.station_doc("TEST", info, period, sc, pd.DataFrame(), pd.DataFrame(), runs, {"TEST": cut}, lv, pd.DataFrame(), [])
+    assert d["events"][-1]["ongoing"] and d["card"]["events"] == 1
+    # a finished month that ended during the flood: the gauge's record goes on after it, so nothing is "in progress"
+    month = dict(period, end_t=T0 + pd.Timedelta(hours=24), end=(T0 + pd.Timedelta(hours=24)).isoformat())
+    over = stats.station_doc("TEST", info, month, sc, pd.DataFrame(), pd.DataFrame(), runs, {"TEST": o}, lv, pd.DataFrame(), [])
+    assert over["events"] and "ongoing" not in over["events"][-1]
+    net = stats.network_doc(period, [d], [])
+    assert net["stations"][0]["last_event_ongoing"] is True
+    feeds.write(str(tmp_path / "feeds"), net, [d], sc, {"TEST": cut}, {"TEST": lv}, [], period)
+    flood = next(csv.DictReader(open(tmp_path / "feeds" / "flood_events.csv", newline="")))
+    assert flood["status"] == "In progress" and flood["category"] == "Minor" and flood["peak_time"] == "2026-11-11T00:00:00Z"
+    assert flood["peak_err_primary"] == flood["timing_err_min_primary"] == flood["runs_primary"] == flood["peak_err_petss"] == ""
+    assert flood["summary"].startswith("Still at or above Action at the last observation (11 Nov 00:00Z): 4.51 ft MLLW so far")
+    station = next(csv.DictReader(open(tmp_path / "feeds" / "stations.csv", newline="")))
+    assert station["events"] == "1" and station["last_event"] == "2026-11-11 (in progress)"
+
+
 def test_leaderboard_report_card_and_picks():
     rows = []
     cycles = [f"2026-11-1{d}T{h:02d}Z" for d in range(2) for h in (0, 6, 12)]
@@ -120,12 +157,15 @@ def test_station_doc_feeds_and_page(tmp_path):
     assert row["chart_url"].endswith("crest_test.html?embed=1&view=forecast&theme=light#run=2026-11-10T00Z&show=primary")
     flood = next(csv.DictReader(open(out / "feeds" / "flood_events.csv", newline="")))
     assert flood["category"] in ("Action", "Minor") and flood["peak_time"].endswith("Z") and flood["name"] == "Test gauge"
+    assert flood["status"] == "Ended" and flood["summary"].startswith("Peak ") and float(flood["peak_err_primary"]) == 0.1
     manifest = {"built": "x", "default": "30d", "stations": ["TEST"], "periods": [{"id": "30d", "label": "Last 30 days", "stations": ["TEST"]}]}
     page.write_site(str(out), manifest, {"TEST": info})
     html = (out / "crest_test.html").read_text()
     assert "StormSense(TM) Predictive Plots" in html and "__DOC__" not in html and "</script>" in html
     # the pages take their colors from schema.py, and have the compact one-forecast view the ArcGIS dashboard embeds
     assert "__COLORS__" not in html and json.dumps(schema.COLORS, separators=(",", ":")) in html and 'Q.get("view") === "forecast"' in html
+    # the floods tab has a line for a flood still under way at the gauge's last observation
+    assert 'id="evNow"' in html and "e.ongoing" in html
     assert (out / "img" / "stormsense_logo.png").exists() and (out / "img" / "ccrm_logo.png").exists()
     assert "Test gauge" in (out / "index.html").read_text()
 

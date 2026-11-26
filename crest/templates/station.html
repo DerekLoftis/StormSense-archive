@@ -89,6 +89,7 @@
   <section id="floods" hidden>
     <div class="card"><h2>Observed floods</h2>
       <p class="note" id="evNote"></p>
+      <p class="verdict" id="evNow" hidden></p>
       <div class="scroll"><table id="evTable"></table></div>
       <div id="evChart" class="chart sm" hidden></div></div>
     <div class="card" style="margin-top:12px"><h2>High waters by guidance</h2>
@@ -291,6 +292,10 @@ function drawFloods(){
   var ev = DOC.events || [], L = DOC.levels || {};
   if (L.action == null) $("evNote").textContent = "This gauge has no NWS flood categories, so floods are not detected here; high waters are still scored below.";
   else $("evNote").textContent = ev.length ? "Each time the observed water reached NWS Action (" + fx(lvl(L.action, DOC.navd), 2) + " " + ul() + "), and how each guidance forecast the peak in the runs issued up to 72 hours before it: mean peak-height error, mean absolute timing error, and the share of runs that forecast Action or above." : "The gauge did not reach NWS Action (" + fx(lvl(L.action, DOC.navd), 2) + " " + ul() + ") in this period.";
+  // a flood the gauge's record ends in: its highest water so far is not its peak yet, so nothing is scored against it
+  var now = ev.filter(function(e){ return e.ongoing; })[0];
+  $("evNow").hidden = !now;
+  if (now) $("evNow").textContent = "A flood was in progress at the gauge's last observation (" + now.end.slice(0, 16).replace("T", " ") + " UTC): " + fx(lvl(now.peak, DOC.navd), 2) + " " + ul() + " so far (" + now.category + "). Its peak and each guidance's peak error are listed once the water has fallen below Action.";
   var rows = [];
   ev.forEach(function(e, i){ Object.keys(e.by).forEach(function(m){ var b = e.by[m]; rows.push({i: i, peak_t: e.peak_t, peak: e.peak, cat: e.category, m: m, name: DOC.names[m] || m, n: b.n, pe: b.pe, ape: b.ape, te: b.te, hit: b.hit}); }); });
   if (rows.length) table($("evTable"), [{k: "peak_t", label: "Peak (UTC)", t: 1, fmt: function(x){ return esc(x.peak_t.slice(0, 16).replace("T", " ")); }},
@@ -300,11 +305,11 @@ function drawFloods(){
     {k: "te", label: "|Timing| min", fmt: function(x){ return fx(x.te, 0); }}, {k: "hit", label: "Forecast Action", fmt: function(x){ return x.hit == null ? "–" : Math.round(x.hit * 100) + "%"; }}],
     rows, {sortKey: "ape", dir: 1});
   else $("evTable").innerHTML = "";
-  var lastBy = ev.length ? ev[ev.length - 1].by : {};
+  var done = ev.filter(function(e){ return Object.keys(e.by).length; }), lastEv = done[done.length - 1], lastBy = lastEv ? lastEv.by : {};
   if (Object.keys(lastBy).length){ $("evChart").hidden = false; var ser = [];
-    Object.keys(ev[ev.length - 1].by).forEach(function(m){ ser.push({type: "scatter", name: DOC.names[m] || m, color: col(m), data: ev[ev.length - 1].by[m].runs.map(function(x){ return [x[0], len(x[1])]; })}); });
+    Object.keys(lastBy).forEach(function(m){ ser.push({type: "scatter", name: DOC.names[m] || m, color: col(m), data: lastBy[m].runs.map(function(x){ return [x[0], len(x[1])]; })}); });
     Highcharts.chart("evChart", {xAxis: {reversed: true, title: {text: "Hours before the peak the run was issued"}}, yAxis: {title: {text: "Peak error (" + ul() + ", forecast minus observed)"}, plotLines: [{value: 0, color: css("--muted"), width: 1}]},
-      title: {text: "Latest flood: peak error by lead", style: {fontSize: "13px", color: css("--ink")}}, series: ser}); } else $("evChart").hidden = true;
+      title: {text: "Latest flood (" + lastEv.peak_t.slice(0, 10) + "): peak error by lead", style: {fontSize: "13px", color: css("--ink")}}, series: ser}); } else $("evChart").hidden = true;
   var hw = (DOC.floods || []).map(function(f){ var o = {m: f.member, name: DOC.names[f.member] || f.member, runs: f.runs, hw: f.hw, pe: f.pe, ape: f.ape, te: f.te};
     ["action","minor","moderate","major"].forEach(function(c){ o[c] = f.cats[c]; }); return o; });
   function cat(c){ return {k: c, label: c[0].toUpperCase() + c.slice(1) + " hit/miss/FA", val: function(x){ return x[c] ? x[c][0] : null; }, fmt: function(x){ var v = x[c]; return v ? v[0] + " / " + v[1] + " / " + v[2] : "–"; }}; }

@@ -1,10 +1,11 @@
 # StormSense CREST (Chart Review and Evaluation Statistics Tool): one self-contained review page per
 # station scoring every archived forecast, a map page, and CSV/GeoJSON feeds for ArcGIS. Code: crest/.
 #
-# Each run rebuilds the rolling 30-day and 7-day views and the month so far, and on the 1st-3rd also
-# finishes the month just ended. A finished month's data is saved once as crest_month_YYYY-MM.tar.gz on
-# release "crest-data", so later runs list every month without recomputing it; the first run (no
-# crest-data yet) builds every month since the archive began. Pages and feeds go to release
+# Each run rebuilds the rolling 30-day and 7-day views and the month so far, and in a new month's first
+# days also the month just ended, until its last forecasts are verified (3.5 days after it ended). Then
+# the finished month's data is saved once as crest_month_YYYY-MM.tar.gz on release "crest-data", so later
+# runs list every month without recomputing it; the first run (no crest-data yet) builds every month
+# since the archive began. Pages and feeds go to release
 # "crest-pages" (crest_site.zip) and, once the repository variable CREST_PAGES is "true" (after the
 # repo is public and Pages uses GitHub Actions), to GitHub Pages at
 # https://derekloftis.github.io/StormSense-archive/crest/.
@@ -97,7 +98,7 @@ jobs:
           else
             P="30d,7d,month"
             PREV=$(date -u -d "$(date -u +%Y-%m-01) -1 day" +%Y-%m)
-            case " $HAVE " in *" $PREV "*) ;; *) P="$P,$PREV" ;; esac   # finish last month once
+            case " $HAVE " in *" $PREV "*) ;; *) P="$P,$PREV" ;; esac   # last month, until it is saved
           fi
           echo "periods: $P"
           python -m crest.build --out site/crest --work work --periods "$P" --months-from months --bundle bundle $ARGS 2>&1 | tee crest_log.txt
@@ -148,10 +149,14 @@ jobs:
         with:
           path: site
 
+      # The Pages deploy starts when this job ends, so this step has a limit: a layer ArcGIS has not finished
+      # in time is reported and left to finish there, and the pages go out.
       - name: Load the feeds into ArcGIS Online
         if: steps.build.outcome == 'success' && github.event_name != 'pull_request'
         continue-on-error: true
+        timeout-minutes: 45
         env:
+          PYTHONUNBUFFERED: "1"   # each line as it happens, so the log times every layer
           ARCGIS_URL: ${{ secrets.ARCGIS_URL }}
           ARCGIS_API_KEY: ${{ secrets.ARCGIS_API_KEY }}
           ARCGIS_USERNAME: ${{ secrets.ARCGIS_USERNAME }}

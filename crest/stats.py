@@ -192,8 +192,10 @@ def floods(fs):
     return sorted(out, key=lambda x: (x["ape"] is None, x["ape"]))
 
 
-def events(obs, levels, runs, st):
-    """Observed floods (Action or above) and how each guidance forecast their peaks."""
+def events(obs, levels, runs, st, last=None):
+    """Observed floods (Action or above) and how each guidance forecast their peaks.
+    `last` is the time of the gauge's newest observation. A flood still at or above Action then is `ongoing`: its
+    highest water so far is not its peak yet, so no forecast is compared with it until the water has fallen back."""
     act = (levels or {}).get("action")
     if act is None or obs is None or obs.empty:
         return []
@@ -212,8 +214,9 @@ def events(obs, levels, runs, st):
         w = obs[(obs.index >= g[0]) & (obs.index <= g[-1])]
         pt, pv = w.idxmax(), float(w.max())
         cat = [c for c in CATS if (levels.get(c) is not None and pv >= levels[c])][-1]
+        ongoing = last is not None and g[-1] >= last
         by = {}
-        for cyc, run in runs.items():
+        for cyc, run in ({} if ongoing else runs).items():
             d = run["stations"].get(st)
             if not d:
                 continue
@@ -239,6 +242,8 @@ def events(obs, levels, runs, st):
                        "te": r(np.mean([abs(x[2]) for x in lst]), 0), "hit": r(np.mean([x[3] for x in lst]), 2), "runs": lst}
         out.append({"start": g[0].isoformat(), "end": g[-1].isoformat(), "peak_t": pt.isoformat(), "peak": round(pv, 2),
                     "category": cat, "by": summ})
+        if ongoing:
+            out[-1]["ongoing"] = True
     return out
 
 
@@ -331,7 +336,13 @@ def station_doc(st, info, period, sc, fs, ph, runs, obs, levels, hx, changes):
     dec = decay(sc)
     cn = cone(sc)
     hl = health(hx, st, start, end)
-    ev = events(o[(o.index >= start) & (o.index < end)] if o is not None else None, levels, runs, st)
+    seen = o[(o.index >= start) & (o.index < end)] if o is not None else None
+    # the gauge's newest observation in the period is where its record ends, unless the record goes on well past the
+    # period (a finished month; the others end on the hour, so the record can run up to an hour past them)
+    last = None
+    if seen is not None and len(seen) and o.index[-1] - seen.index[-1] <= pd.Timedelta(hours=2):
+        last = seen.index[-1]
+    ev = events(seen, levels, runs, st, last=last)
     members = [m for m in ORDER if m in lb_all] + sorted(set(lb_all) - set(ORDER))
     obs_end = end + pd.Timedelta(days=3)
     return {
@@ -362,7 +373,8 @@ def network_doc(period, docs, changes):
                         "best": best, "cone": d["card"]["cone"], "cov": d["card"]["coverage"],
                         "runs": d["regime_runs"]["all"], "events": len(ev),
                         "last_event": ev[-1]["peak_t"][:10] if ev else None,
-                        "last_event_cat": ev[-1]["category"] if ev else None, "verdict": d["card"]["verdict"]})
+                        "last_event_cat": ev[-1]["category"] if ev else None,
+                        "last_event_ongoing": bool(ev and ev[-1].get("ongoing")), "verdict": d["card"]["verdict"]})
         if d["suspect"]:
             continue
         for m, v in s72.items():
