@@ -1,11 +1,14 @@
 /* CREST shared helpers: colors, units, pills, sortable tables, CSV download, theme for Highcharts. */
-var COL = {primary:"#0b3954", stormsense:"#00b8c4", petss:"#d9480f", etss:"#e8a33d", stofs2d:"#5f3dc4", stofs3d:"#9c6ade",
-  cbofs:"#2b8a3e", nwm_short:"#94a3b8", nwm_medium:"#64748b", nws:"#c2255c", psurge:"#a61e4d", tidewatch:"#16687E",
-  ens_mean:"#f59f00", stormsense_raw:"#66d9e8", baseline:"#868e96", tide:"#adb5bd", obs:"#1f4fbf"};
+var COL = __COLORS__;
 var DISCLAIMER = "StormSense(TM) Predictive Plots are computer-generated operational storm tide forecasts; the user assumes any and all risk.";
 var Q = new URLSearchParams(location.search);
 var U = {datum: (Q.get("datum") || "MLLW").toUpperCase() === "NAVD" ? "NAVD" : "MLLW", units: Q.get("units") === "m" ? "m" : "ft"};
 if (Q.get("embed") === "1") document.body.classList.add("embed");
+if (Q.get("name") === "1") document.body.classList.add("named");
+if (Q.get("theme") === "light" || Q.get("theme") === "dark") document.documentElement.setAttribute("data-theme", Q.get("theme"));
+/* "#run=2026-11-25T18Z&show=petss" style arguments: a page embedded in a dashboard is re-pointed by its hash alone, without reloading */
+function hashArgs(){ var h = location.hash.slice(1); return new URLSearchParams(h.indexOf("=") >= 0 ? h : ""); }
+function arg(k){ return hashArgs().get(k) || Q.get(k); }
 function $(id){return document.getElementById(id)}
 function css(v){return getComputedStyle(document.documentElement).getPropertyValue(v).trim()}
 function col(m){return COL[m] || "#888"}

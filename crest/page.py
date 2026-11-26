@@ -4,8 +4,11 @@ No CDN: Derek's browser hung on CDN scripts, and the pages must work inside VIMS
 import base64
 import json
 import os
+import shutil
 
 from stormsense import stations as S
+
+from . import schema
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 T = os.path.join(HERE, "templates")
@@ -33,7 +36,7 @@ def _common():
         "__SS_LOGO__": _uri(os.path.join(HERE, "branding", "stormsense_logo.png")),
         "__CCRM_LOGO__": _uri(os.path.join(HERE, "branding", "ccrm_logo.png")),
         "__HIGHCHARTS__": _read(JSLIB, "highcharts.js"),
-        "__COMMON__": _read(T, "common.js"),
+        "__COMMON__": _read(T, "common.js").replace("__COLORS__", json.dumps(schema.COLORS, separators=(",", ":"))),
         "__DISCLAIMER__": DISCLAIMER,
     }
 
@@ -74,4 +77,8 @@ def write_site(out, manifest, table):
                                                __LEAFLET_CSS__=_read(HERE, "jslib", "leaflet.css"),
                                                __COAST__=_read(HERE, "branding", "coast.geojson")))
     open(os.path.join(out, "index.html"), "w", encoding="utf-8").write(html)
+    # the logos as files too, for the ArcGIS dashboard (the pages themselves carry them inline)
+    os.makedirs(os.path.join(out, "img"), exist_ok=True)
+    for f in ("stormsense_logo.png", "ccrm_logo.png"):
+        shutil.copy(os.path.join(HERE, "branding", f), os.path.join(out, "img", f))
     print(f"pages: index.html and {n} station pages -> {out}")
