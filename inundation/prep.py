@@ -23,7 +23,7 @@ import time
 
 import numpy as np
 
-from . import FLOODED_FT, PIECE_M, PONDED_FT, depth, page, segments, tether, vgin
+from . import FLOODED_FT, PIECE_M, PONDED_FT, barriers, damage, depth, drainage, page, segments, tether, value, vgin
 
 OVER_WATER_FT = 1.0   # ground below this (ft NAVD88; MHHW at Sewells Point is 1.15) cannot be a road surface
 APPROACH_M = 60       # pieces of the same street this close to an over-water piece are on the bridge too
@@ -92,10 +92,20 @@ def bridges(pieces, ground):
     return code
 
 
-def road_table(pieces, dem, cidx, origin):
+def via_pipes(connect, surface):
+    """1 where water reaches the place through the storm drains before it does over the surface."""
+    return (np.isfinite(connect) & (~np.isfinite(surface) | (connect < surface))).astype(int)
+
+
+def road_table(pieces, dem, cidx, origin, surface=None):
     g, c = depth.sample(dem, cidx, origin, pieces["sx"], pieces["sy"])
     ground, connect = middle(g), middle(c)
+    extra = {}
+    if surface is not None:
+        cs = middle(depth.sample(dem, surface, origin, pieces["sx"], pieces["sy"])[1])
+        extra = {"connect_surface_ft": cs, "via_pipes": via_pipes(connect, cs)}
     return {
+        **extra,
         "ground_ft": ground, "connect_ft": connect,
         "ponded_ft": depth.first_level(ground, connect, PONDED_FT),
         "flooded_ft": depth.first_level(ground, connect, FLOODED_FT),
@@ -103,7 +113,7 @@ def road_table(pieces, dem, cidx, origin):
     }
 
 
-def building_table(features, transform, dem, cidx, origin, levels=depth.LEVELS_FT):
+def building_table(features, transform, dem, cidx, origin, levels=depth.LEVELS_FT, surface=None):
     """Ground (median and low side) and connect level over each footprint, from the cells it touches."""
     from rasterio import features as rfeat
     from rasterio.transform import from_origin
@@ -127,6 +137,9 @@ def building_table(features, transform, dem, cidx, origin, levels=depth.LEVELS_F
     ci = cidx.ravel()[cell]
     c = np.where(ci == depth.NEVER, np.inf, levels[np.minimum(ci, len(levels) - 1)])
     ok = np.isfinite(z)
+    if surface is not None:
+        si = surface.ravel()[cell]
+        cs = np.where(si == depth.NEVER, np.inf, levels[np.minimum(si, len(levels) - 1)])[ok]
     b, z, c = b[ok], z[ok], c[ok]
     count = np.bincount(b, minlength=n)
     start = np.concatenate([[0], np.cumsum(count)[:-1]])
@@ -141,6 +154,10 @@ def building_table(features, transform, dem, cidx, origin, levels=depth.LEVELS_F
 
     ground, low, connect = pick(z, 0.5), pick(z, 0.1), pick(c, 0.5)
     connect[~np.isfinite(connect)] = np.nan
+    extra = {}
+    if surface is not None:
+        csurf = pick(cs, 0.5)
+        csurf[~np.isfinite(csurf)] = np.nan
     # footprints that touched no cell (off the grid): read the centroid
     miss = np.flatnonzero(~has)
     if len(miss):
@@ -149,10 +166,14 @@ def building_table(features, transform, dem, cidx, origin, levels=depth.LEVELS_F
         okc = np.isfinite(cx)
         g1, c1 = depth.sample(dem, cidx, origin, cx[okc], cy[okc])
         ground[miss[okc]], low[miss[okc]], connect[miss[okc]] = g1, g1, c1
+        if surface is not None:
+            csurf[miss[okc]] = depth.sample(dem, surface, origin, cx[okc], cy[okc])[1]
+    if surface is not None:
+        extra = {"connect_surface_ft": csurf, "via_pipes": via_pipes(connect, csurf)}
     cen = np.array([[g.centroid.x, g.centroid.y] if g is not None and not g.is_empty else [np.nan, np.nan] for g in geoms])
     area = np.array([g.area if g is not None else np.nan for g in geoms])
     return {
-        "x": cen[:, 0], "y": cen[:, 1], "area_m2": area, "cells": count,
+        "x": cen[:, 0], "y": cen[:, 1], "area_m2": area, "cells": count, **extra,
         "ground_ft": ground, "low_ft": low, "connect_ft": connect,
         "ponded_ft": depth.first_level(ground, connect, PONDED_FT),
         "flooded_ft": depth.first_level(ground, connect, FLOODED_FT),
@@ -188,6 +209,9 @@ def main(argv=None):
     ap.add_argument("--gdb", action="store_true", help="also write a file geodatabase (<name>.gdb) for ArcGIS Pro")
     ap.add_argument("--no-page", action="store_true")
     ap.add_argument("--title", help="the area's name as the page shows it; default the locality's name")
+    ap.add_argument("--no-drainage", action="store_true", help="leave the stormwater pipes out (surface water only)")
+    ap.add_argument("--no-barriers", action="store_true", help="leave the floodwalls and levees of the National Levee Database out")
+    ap.add_argument("--no-values", action="store_true", help="leave out parcels, assessed values and damage inputs")
     a = ap.parse_args(argv)
     from pyproj import Transformer
     os.makedirs(a.out, exist_ok=True); os.makedirs(a.work, exist_ok=True)
@@ -209,21 +233,55 @@ def main(argv=None):
 
     dem_path, cidx_path = f"{a.work}/dem_ft.npy", f"{a.work}/cidx.npy"
     origin = (bounds[0], bounds[3])
-    if os.path.exists(dem_path) and os.path.exists(cidx_path):
-        dem, cidx = np.load(dem_path, mmap_mode="r"), np.load(cidx_path, mmap_mode="r")
+    piped_path = f"{a.work}/cidx_piped.npy"
+    dsrc = None if a.no_drainage else drainage.sources().get(a.fips)
+    if os.path.exists(dem_path):
+        dem = np.load(dem_path, mmap_mode="r")
     else:
         tiles = a.dem or ["/vsicurl/" + u for u in depth.coned_tiles(bounds)]
         log("elevation tiles:", ", ".join(os.path.basename(t) for t in tiles))
         dem, _ = depth.read_dem(tiles, bounds)
         np.save(dem_path, dem)
-        cidx = depth.connect_index(dem, log=log)
-        np.save(cidx_path, cidx)
     if dem.shape != (bounds[3] - bounds[1], bounds[2] - bounds[0]):
         raise SystemExit(f"{dem_path} does not match the area's bounds; delete it and run again")
+    wall, protected, bdoc = None, [], {"routes": [], "areas": []}
+    if not a.no_barriers:
+        west, south = inv(bounds[0], bounds[1]); east, north = inv(bounds[2], bounds[3])
+        bdoc = cached(f"{a.work}/barriers.json", lambda: barriers.fetch((west, south, east, north), log))
+        lines, protected = barriers.shapes(bdoc, fwd)
+        wall = barriers.cells(lines, dem.shape, origin)
+        log(f"flood barriers: {len(lines)} systems, {len(wall[0]):,} wall cells, {len(protected)} leveed areas")
+    net = None
+    if dsrc:
+        layers = cached(f"{a.work}/drainage.json", lambda: drainage.fetch(dsrc, log))
+        net = drainage.network(layers, fwd, dsrc, protected=protected)
+        log("stormwater:", net["counts"] if net else "no features")
+    surface = None
+    if net is not None:
+        if os.path.exists(cidx_path) and os.path.exists(piped_path):
+            surface, cidx = np.load(cidx_path, mmap_mode="r"), np.load(piped_path, mmap_mode="r")
+        else:
+            surface, cidx = depth.connect_index(np.asarray(dem), log=log, links=drainage.links(net, dem, origin), blocked=wall)
+            np.save(cidx_path, surface); np.save(piped_path, cidx)
+    elif os.path.exists(cidx_path):
+        cidx = np.load(cidx_path, mmap_mode="r")
+    else:
+        cidx = depth.connect_index(np.asarray(dem), log=log, blocked=wall)
+        np.save(cidx_path, cidx)
 
-    rt = road_table(pieces, dem, cidx, origin)
-    bt, bgeoms = building_table(bldgs, fwd, dem, cidx, origin)
+    rt = road_table(pieces, dem, cidx, origin, surface)
+    bt, bgeoms = building_table(bldgs, fwd, dem, cidx, origin, surface=surface)
     log("ground and connect levels read")
+    vsrc = None if a.no_values else value.sources().get(a.fips)
+    vcols = {}
+    if vsrc:
+        parcels = cached(f"{a.work}/parcels.geojson", lambda: {"type": "FeatureCollection", "features": value.fetch_parcels(vsrc)})["features"]
+        records = cached(f"{a.work}/assessment.json", lambda: value.fetch_assessment(vsrc))
+        zhvi = cached(f"{a.work}/zhvi.json", lambda: {k: list(v) for k, v in value.fetch_zhvi().items()})
+        vcols = value.attach(bgeoms, parcels, fwd, value.roll(records, vsrc), vsrc, zhvi)
+        vcols["first_floor_ft"] = damage.first_floor_ft(vcols["year_built"], vsrc["firm_year"])
+        log(f"values: {int(np.isfinite(vcols['value_bldg']).sum()):,} of {len(bldgs):,} buildings have an assessed building value "
+            f"({vsrc['tax_year']}), {int(vcols['residential'].sum()):,} are homes")
 
     w, s = inv(bounds[0], bounds[1]); e, n = inv(bounds[2], bounds[3])
     hucs = cached(f"{a.work}/huc12.geojson", lambda: {"type": "FeatureCollection", "features": tether.huc12((w, s, e, n))})["features"]
@@ -247,10 +305,11 @@ def main(argv=None):
         "building": np.arange(len(bldgs)), "vgin_oid": [f["properties"].get("OBJECTID") for f in bldgs],
         "source_id": [f["properties"].get("SOURCEFEATUREID") for f in bldgs],
         "lon": np.where(okb, blon, np.nan), "lat": np.where(okb, blat, np.nan),
-        **{k: v for k, v in bt.items() if k not in ("x", "y")}}
+        **{k: v for k, v in bt.items() if k not in ("x", "y")}, **vcols}
     f2, f6 = "%.2f", "%.6f"
     fmt = {"ground_ft": f2, "low_ft": f2, "connect_ft": f2, "ponded_ft": f2, "flooded_ft": f2, "wet_low_ft": f2,
-           "length_m": f2, "lon": f6, "lat": f6, "station_km": f2, "area_m2": "%.0f"}
+           "length_m": f2, "lon": f6, "lat": f6, "station_km": f2, "area_m2": "%.0f", "connect_surface_ft": f2,
+           "year_built": "%.0f", "value_total": "%.0f", "value_impr": "%.0f", "value_bldg": "%.0f", "zhvi": "%.0f", "first_floor_ft": "%.0f"}
     write_csv(f"{a.out}/{a.name}_roads.csv.gz", road_cols, fmt)
     write_csv(f"{a.out}/{a.name}_buildings.csv.gz", bldg_cols, fmt)
 
@@ -275,10 +334,20 @@ def main(argv=None):
         write_layers(f"{a.out}/{a.name}.gdb", pieces, road_cols, bgeoms, bldg_cols, epsg)
     sources = {"depth": "NOAA/USGS CoNED Chesapeake Bay topobathy, 1 m (2016)", "roads": "VGIN road centerlines (VBMP RCL)",
                "buildings": "VGIN building footprints"}
+    if net is not None:
+        sources["drainage"] = dsrc.get("source", "city stormwater layers")
+    if bdoc["routes"]:
+        sources["barriers"] = barriers.SOURCE + ": " + ", ".join(sorted({str(f["properties"].get("SYSTEM_NAME")) for f in bdoc["routes"]}))
+    if vsrc:
+        sources["values"] = f"{vsrc['assessment']['name']}; {vsrc['tax_year_note']}"
+        sources["zillow"] = "Zillow Home Value Index by ZIP code (typical home value), " + (next(iter(zhvi.values()))[1] if zhvi else "")
+        sources["damage"] = damage.CITATION
     if not a.no_page:
         used = sorted(set(rt["station"]) | set(bt["station"][okb]))
         page.write_static(f"{a.out}/page", a.name, a.title or loc["properties"].get("NAME") or a.name, bounds, epsg, pieces,
-                          road_cols, roads, fwd, bgeoms, bldg_cols, dem, cidx, [s for s in sts if s["station"] in used], sources)
+                          road_cols, roads, fwd, bgeoms, bldg_cols, dem, cidx, [s for s in sts if s["station"] in used], sources,
+                          values=None if not vsrc else {"tax_year": vsrc["tax_year"], "firm_year": vsrc["firm_year"],
+                                                        "zillow_month": next(iter(zhvi.values()))[1] if zhvi else ""})
     with open(f"{a.out}/{a.name}_prep.json", "w") as fh:
         json.dump({"fips": a.fips, "name": a.name, "locality": loc["properties"].get("NAMELSAD"), "epsg": epsg,
                    "bounds": bounds, "levels_ft": [float(depth.LEVELS_FT[0]), float(depth.LEVELS_FT[-1]), 0.25],
@@ -286,6 +355,10 @@ def main(argv=None):
                    "roads": "VGIN VBMP_RCL", "buildings": "VGIN VA_Building_Footprints",
                    "road_segments": len(roads), "road_pieces": int(len(lon)), "buildings_n": len(bldgs),
                    "piece_m": PIECE_M, "ponded_ft": PONDED_FT, "flooded_ft": FLOODED_FT,
+                   "drainage": None if net is None else {"source": dsrc.get("source"), **net["counts"]},
+                   "barriers": sorted({str(f["properties"].get("SYSTEM_NAME")) for f in bdoc["routes"]}),
+                   "values": None if not vsrc else {"tax_year": vsrc["tax_year"], "note": vsrc["tax_year_note"], "firm_year": vsrc["firm_year"],
+                                                    "assessment": vsrc["assessment"]["name"], "damage_curves": damage.CITATION},
                    "prepared_utc": time.strftime("%Y-%m-%dT%H:%MZ", time.gmtime())}, fh, indent=1)
     log("wrote", a.out)
 

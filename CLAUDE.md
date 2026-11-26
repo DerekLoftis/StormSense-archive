@@ -136,6 +136,14 @@ project's shared folder (skill code, baselines, notes, station sheet, disclosure
   `python -m inundation.status --prepared <dir> --name norfolk --site <Latest site dir> --out <dir>` per run:
   state now / at the forecast peak / at the 90% level, hours flooded, GeoJSON for hosted layers, `levels.json` for
   the area's self-contained map page (`inundation/page.py`, `templates/map.html`).
+- Since 2026-11-26 (Derek's asks): water also travels through the city's stormwater pipes (`drainage.py`,
+  `drainage_sources.json` per FIPS; static like Norfolk's TITAN), floodwalls from the USACE National Levee Database
+  hold it back and cut the pipes (`barriers.py`), red buildings are labelled "Flooded Building", and buildings get
+  year built, assessed value (`value.py`, `value_sources.json`: Norfolk parcels + FY27 assessment roll), the ZIP's
+  Zillow typical home value, and "Est. Damage at Max Forecast Depth" from the USACE generic depth-damage curves
+  (EGM 01-03 / 04-01; `damage.py`), homes only. No first floor elevations in Virginia: floors are assumed at the
+  Hazus crawlspace default (3 ft, 4 ft after the first FIRM) until Derek's Newport News survey or HRPDC's elevation
+  certificates are in. `check_titan.py` scores the extent against TITAN's depth tiles (0.72 overlap downtown at 5.5 ft).
 - Bridges have no deck in the bare-earth DEM: pieces with `bridge` > 0 and buildings `over_water` are never flagged.
   The Mobjack Norfolk SLR services are RGB extent pictures (no depth). Needs `inundation/requirements.txt`.
 - Not wired yet: a workflow, Pages hosting and the push to the AGOL folder "StormSense CREST". Norfolk's prepared
@@ -202,7 +210,9 @@ project's shared folder (skill code, baselines, notes, station sheet, disclosure
 
 - Use Derek's default cloud environment (the one that reaches web4, api.water.noaa.gov, api.weather.gov,
   NOMADS; since 2026-11-25 also mobjack.vims.edu, vginmaps.vdem.virginia.gov, vgin.vdem.virginia.gov and
-  services.arcgis.com). No Claude session reaches tidesandcurrents.noaa.gov or *.github.io; NOAA AWS buckets work.
+  services.arcgis.com; since 2026-11-26 gisshare.norfolk.gov, orfmaps.norfolk.gov, data.norfolk.gov,
+  services2/services3.arcgis.com, tiles.arcgis.com, geo.vbgov.com, maps.nnva.gov, files.zillowstatic.com and the
+  USACE/HRPDC document hosts). No Claude session reaches tidesandcurrents.noaa.gov or *.github.io; NOAA AWS buckets work.
 - GitHub Actions has full internet (except NOMADS ETSS paths, 403), so put blocked downloads in a
   workflow. Read live pages from a workflow, not the sandbox; job logs and artifacts aren't readable
   from the sandbox, but check-run annotations are.

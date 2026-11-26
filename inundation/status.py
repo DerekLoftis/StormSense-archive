@@ -43,7 +43,8 @@ def read_table(path):
         return np.array([float(v) if v != "" else np.nan for v in cols[k]])
     for k in head:
         if k in ("ground_ft", "low_ft", "connect_ft", "ponded_ft", "flooded_ft", "wet_low_ft", "length_m",
-                 "lon", "lat", "station_km", "area_m2", "bridge", "over_water"):
+                 "lon", "lat", "station_km", "area_m2", "bridge", "over_water", "connect_surface_ft", "via_pipes",
+                 "year_built", "value_total", "value_impr", "value_bldg", "zhvi", "first_floor_ft", "residential"):
             cols[k] = num(k)
         else:
             cols[k] = np.array(cols[k], dtype=object)
@@ -161,12 +162,12 @@ def write_geojson(path, layers, layer, keep, names, rows):
     fwd = Transformer.from_crs(meta["crs"], 4326, always_xy=True).transform
     g = shapely.transform(shapely.from_wkb(geoms[keep]), lambda c: np.column_stack(fwd(c[:, 0], c[:, 1])))
     g = shapely.set_precision(g, 1e-7)
-    numeric = {n for n in names if n.endswith("_ft") or n in ("length_m", "area_m2", "hours_flooded", "chance", "lon", "lat")}
+    numeric = {n for n in names if n.endswith(("_ft", "_usd", "_pct")) or n in ("length_m", "area_m2", "hours_flooded", "chance", "lon", "lat")}
 
     def val(n, v):
         if n in numeric:
             return float(v) if v != "" else None
-        if isinstance(v, (int, np.integer)) or (n in ("piece", "building", "vgin_oid") and str(v).lstrip("-").isdigit()):
+        if isinstance(v, (int, np.integer)) or (n in ("piece", "building", "vgin_oid", "year_built", "via_pipes") and str(v).lstrip("-").isdigit()):
             return int(v)
         return v
     with open(path, "w") as fh:
@@ -191,6 +192,11 @@ def main(argv=None):
     ap.add_argument("--layers", help="the area's .gpkg or .gdb (from prep): also write the status tables as GeoJSON")
     a = ap.parse_args(argv)
     os.makedirs(a.out, exist_ok=True)
+    prep = {}
+    if os.path.exists(f"{a.prepared}/{a.name}_prep.json"):
+        with open(f"{a.prepared}/{a.name}_prep.json") as fh:
+            prep = json.load(fh)
+    prep["values"] = prep.get("values") or {}
     roads = read_table(f"{a.prepared}/{a.name}_roads.csv.gz")
     bldgs = read_table(f"{a.prepared}/{a.name}_buildings.csv.gz")
     rskip, bskip = roads["bridge"] > 0, bldgs["over_water"] > 0
@@ -203,18 +209,19 @@ def main(argv=None):
             print(f"{st}: no forecast read ({e}); its features are left out")
     rres, bres = evaluate(roads, levels, rskip), evaluate(bldgs, levels, bskip)
 
-    def write(kind, cols, res, id_col, extra, layer):
+    def write(kind, cols, res, id_col, extra, layer, more=None):
+        more = more or {}
         keep = np.flatnonzero((res["state_now"] > 0) | (res["state_peak"] > 0) | (res["state_p90"] > 0))
         names = [id_col, *extra, "station", "ground_ft", "connect_ft", "level_now_ft", "depth_now_ft", "state_now",
                  "level_peak_ft", "depth_peak_ft", "state_peak", "depth_p90_ft", "state_p90", "first_flooded_utc",
-                 "last_flooded_utc", "hours_flooded", "chance", "lon", "lat"]
+                 "last_flooded_utc", "hours_flooded", "chance", "lon", "lat", *more]
         rows = [[cols[id_col][i], *[cols[k][i] for k in extra], cols["station"][i],
                  f"{cols['ground_ft'][i]:.2f}", "" if not np.isfinite(cols["connect_ft"][i]) else f"{cols['connect_ft'][i]:.2f}",
                  "" if not np.isfinite(res["level_now_ft"][i]) else f"{res['level_now_ft'][i]:.2f}",
                  f"{res['depth_now_ft'][i]:.2f}", int(res["state_now"][i]), f"{res['level_peak_ft'][i]:.2f}",
                  f"{res['depth_peak_ft'][i]:.2f}", int(res["state_peak"][i]), f"{res['depth_p90_ft'][i]:.2f}",
                  int(res["state_p90"][i]), iso(res["first"][i]), iso(res["last"][i]), f"{res['hours_flooded'][i]:.1f}",
-                 f"{res['chance'][i]:.2f}", f"{cols['lon'][i]:.6f}", f"{cols['lat'][i]:.6f}"] for i in keep]
+                 f"{res['chance'][i]:.2f}", f"{cols['lon'][i]:.6f}", f"{cols['lat'][i]:.6f}", *[v[i] for v in more.values()]] for i in keep]
         with open(f"{a.out}/{a.name}_{kind}_status.csv", "w", newline="") as fh:
             w = csv.writer(fh)
             w.writerow(names)
@@ -223,8 +230,36 @@ def main(argv=None):
             write_geojson(f"{a.out}/{a.name}_{kind}_status.geojson", a.layers, layer, keep, names, rows)
         return keep
 
-    rkeep = write("roads", roads, rres, "piece", ["street", "mtfcc", "length_m"], "road_pieces")
-    bkeep = write("buildings", bldgs, bres, "building", ["vgin_oid", "area_m2"], "buildings")
+    def whole(v, f="%.0f"):
+        return ["" if not np.isfinite(x) else f % x for x in np.asarray(v, float)]
+
+    rmore, bmore, dmg = {}, {"label": np.where(bres["state_peak"] == 2, "Flooded Building", "")}, None
+    if "via_pipes" in roads:
+        rmore["via_pipes"] = whole(roads["via_pipes"])
+        bmore["via_pipes"] = whole(bldgs["via_pipes"])
+    if "value_bldg" in bldgs:
+        from . import damage
+        firm = prep.get("values", {}).get("firm_year", 9999)
+        home = (bldgs["residential"] > 0) & ~bskip
+        val = np.where(home, bldgs["value_bldg"], np.nan)
+        dmg = {}
+        for when in ("peak", "p90"):
+            usd, frac, above, ffh = damage.estimate(bres[f"depth_{when}_ft"], val, bldgs["year_built"], bldgs["curve"], firm)
+            dmg[when] = {"usd": usd, "frac": frac, "above": above, "ffh": ffh}
+        slab = damage.estimate(bres["depth_peak_ft"], val, bldgs["year_built"], bldgs["curve"], firm, "slab")[0]
+        year = prep["values"]["tax_year"]
+        bmore.update({
+            "use": bldgs["use"], "year_built": whole(bldgs["year_built"]), "tax_year": np.full(len(val), year, object),
+            "assessed_total_usd": whole(bldgs["value_total"]), "assessed_building_usd": whole(bldgs["value_bldg"]),
+            "zillow_zip_typical_usd": whole(bldgs["zhvi"]), "first_floor_assumed_ft": whole(np.where(home, dmg["peak"]["ffh"], np.nan)),
+            "depth_above_floor_peak_ft": whole(np.where(home, dmg["peak"]["above"], np.nan), "%.2f"),
+            "damage_peak_pct": whole(np.where(home, 100 * dmg["peak"]["frac"], np.nan), "%.1f"),
+            "damage_peak_usd": whole(np.where(home, dmg["peak"]["usd"], np.nan)),
+            "damage_p90_usd": whole(np.where(home, dmg["p90"]["usd"], np.nan)),
+            "damage_peak_if_slab_usd": whole(np.where(home, slab, np.nan))})
+        dmg["slab"] = slab
+    rkeep = write("roads", roads, rres, "piece", ["street", "mtfcc", "length_m"], "road_pieces", rmore)
+    bkeep = write("buildings", bldgs, bres, "building", ["vgin_oid", "area_m2"], "buildings", bmore)
 
     def total(st=None):
         rm = (~rskip) & rres["has_forecast"] & ((roads["station"] == st) if st else True)
@@ -235,11 +270,28 @@ def main(argv=None):
             out[when] = {"road_miles_flooded": round(float(roads["length_m"][rm & (s == 2)].sum() / M_PER_MILE), 2),
                          "road_miles_ponded": round(float(roads["length_m"][rm & (s == 1)].sum() / M_PER_MILE), 2),
                          "buildings_flooded": int((bm & (b == 2)).sum())}
+            if "connect_surface_ft" in roads:        # flooded at this level only because the storm drains carry the water there
+                def only_pipes(cols, res):
+                    over = cols["connect_surface_ft"]
+                    return ~(res[f"depth_{when}_ft"] + cols["ground_ft"] >= over)        # NaN: the surface never reaches it
+                out[when]["road_miles_flooded_only_via_pipes"] = round(float(roads["length_m"][rm & (s == 2) & only_pipes(roads, rres)].sum() / M_PER_MILE), 2)
+                out[when]["buildings_flooded_only_via_pipes"] = int((bm & (b == 2) & only_pipes(bldgs, bres)).sum())
+            if dmg and when in dmg:
+                out[when]["homes_damaged"] = int((bm & (dmg[when]["usd"] > 0)).sum())
+                out[when]["home_damage_usd"] = int(round(float(dmg[when]["usd"][bm].sum()), -3))
+                if when == "peak":
+                    out[when]["home_damage_if_slab_usd"] = int(round(float(dmg["slab"][bm].sum()), -3))
         return out
 
     summary = {"area": a.name, "made_utc": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%MZ"),
                "ponded_ft": PONDED_FT, "flooded_ft": FLOODED_FT, "stations_without_forecast": missing,
                "totals": total(), "stations": {}}
+    if dmg:
+        from . import damage
+        summary["damage"] = {"curves": damage.CITATION, "value": f"{prep['values'].get('assessment', 'assessed')} building (improvement) value",
+                             "first_floor": "Hazus default heights above ground: crawlspace 3 ft for homes built up to the first flood "
+                                            f"insurance rate map ({prep['values'].get('firm_year')}), 4 ft after; 'if_slab' assumes 1 ft",
+                             "scope": "single-family homes, duplexes to fourplexes; other buildings are not estimated"}
     for st, lv in levels.items():
         summary["stations"][st] = {
             "forecast_updated": lv["updated"], "guidance": lv["guidance"],

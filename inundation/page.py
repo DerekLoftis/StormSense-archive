@@ -15,7 +15,7 @@ import time
 
 import numpy as np
 
-from . import FLOODED_FT, PONDED_FT, depth
+from . import FLOODED_FT, PONDED_FT, damage, depth
 
 HERE = os.path.dirname(__file__)
 UNIT_M = 0.5
@@ -89,8 +89,9 @@ def raster(dem, cidx, origin, sts_xy, cell=CELL_M):
 
 
 def write_static(out, name, title, bounds, epsg, pieces, road_cols, roads_raw, fwd, bgeoms, bldg_cols, dem, cidx,
-                 sts, sources):
-    """sts: [{station, name, lat, lon}] the gauges features are tethered to, in the order used for indices."""
+                 sts, sources, values=None):
+    """sts: [{station, name, lat, lon}] the gauges features are tethered to, in the order used for indices.
+    values: {"tax_year", "firm_year", "zillow_month"} when the building table has the value.attach columns."""
     from PIL import Image
     os.makedirs(out, exist_ok=True)
     x0, ytop = bounds[0], bounds[3]
@@ -109,6 +110,8 @@ def write_static(out, name, title, bounds, epsg, pieces, road_cols, roads_raw, f
          "road": b64(np.asarray(pieces["road"])[keep], "<u2" if len(roads_raw) < 65536 else "<u4"),
          "road_bytes": 2 if len(roads_raw) < 65536 else 4,
          "len": b64(np.round(np.asarray(pieces["length_m"])[keep] * 100), "<u2"), "id": b64(keep, "<u4")}
+    if "via_pipes" in rc:
+        p["via"] = b64(np.asarray(rc["via_pipes"])[keep], "u1")
 
     # the whole road network, thinned, as the map's background
     counts, coords, cls, names = [], [], [], []
@@ -152,6 +155,32 @@ def write_static(out, name, title, bounds, epsg, pieces, road_cols, roads_raw, f
          "ground": b64(hundredths(np.asarray(bc["ground_ft"])[bkeep]), "<i2"),
          "connect": b64(hundredths(np.asarray(bc["connect_ft"])[bkeep]), "<i2"),
          "station": b64([order[s] for s in np.asarray(bc["station"])[bkeep]], "u1"), "id": b64(bkeep, "<u4")}
+    if "via_pipes" in bc:
+        b["via"] = b64(np.asarray(bc["via_pipes"])[bkeep], "u1")
+    vdoc = None
+    if values and "value_bldg" in bc:
+        def money(k):
+            v = np.asarray(bc[k], float)[bkeep]
+            return b64(np.clip(np.where(np.isfinite(v), v, 0), 0, 4294967295), "<u4")
+        yr = np.asarray(bc["year_built"], float)[bkeep]
+        zips = sorted({z for z in np.asarray(bc["zip"])[bkeep] if z})[:255]
+        zi = {z: i for i, z in enumerate(zips)}
+        zh = {}
+        for z, v in zip(np.asarray(bc["zip"])[bkeep], np.asarray(bc["zhvi"], float)[bkeep]):
+            if z and np.isfinite(v):
+                zh[z] = int(v)
+        names = list(damage.STRUCTURE_PCT)
+        use = [str(u or "").strip() for u in np.asarray(bc["use"])[bkeep]]
+        uses = sorted({u for u in use if u})[:255]
+        ui = {u: i for i, u in enumerate(uses)}
+        b.update(year=b64(np.where(np.isfinite(yr), yr, 0), "<u2"), vtotal=money("value_total"), vbldg=money("value_bldg"),
+                 res=b64(np.asarray(bc["residential"])[bkeep], "u1"),
+                 curve=b64([names.index(c) if c in names else 0 for c in np.asarray(bc["curve"])[bkeep]], "u1"),
+                 ffh=b64(np.nan_to_num(np.asarray(bc["first_floor_ft"], float)[bkeep], nan=3), "u1"),
+                 zip=b64([zi.get(z, 255) for z in np.asarray(bc["zip"])[bkeep]], "u1"),
+                 use=b64([ui.get(u, 255) for u in use], "u1"))
+        vdoc = {**values, "zips": zips, "zhvi": [zh.get(z) for z in zips], "uses": uses,
+                "damage": {"depth0": float(damage.DEPTH_FT[0]), "curves": [damage.STRUCTURE_PCT[k] for k in names], "citation": damage.CITATION}}
 
     rgb = raster(dem, cidx, (x0, ytop), np.column_stack([sx, sy]))
     Image.fromarray(rgb, "RGB").save(os.path.join(out, "extent.png"), optimize=True)
@@ -164,7 +193,7 @@ def write_static(out, name, title, bounds, epsg, pieces, road_cols, roads_raw, f
         "ponded_ft": PONDED_FT, "flooded_ft": FLOODED_FT, "no_level": NO_LEVEL,
         "stations": [{"id": s["station"], "name": s["name"], "x": int(ux([sx[i]])[0]), "y": int(uy([sy[i]])[0]),
                       "inside": bool(bounds[0] <= sx[i] <= bounds[2] and bounds[1] <= sy[i] <= bounds[3])} for i, s in enumerate(sts)],
-        "pieces": p, "roads": r, "buildings": b,
+        "pieces": p, "roads": r, "buildings": b, "values": vdoc,
         "raster": {"file": "extent.png", "cell_m": CELL_M, "width": int(rgb.shape[1]), "height": int(rgb.shape[0])},
         "totals": {"road_miles": round(float(np.asarray(rc["length_m"])[ok_road].sum() / 1609.344), 1),
                    "road_pieces": int(ok_road.sum()), "buildings": int((np.asarray(bc["over_water"]) == 0).sum())},

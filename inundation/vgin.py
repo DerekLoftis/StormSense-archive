@@ -42,7 +42,8 @@ def _with_oid(fields):
 
 
 def query(layer, where, fields, log=None):
-    """Every feature matching `where`, paged by OBJECTID so nothing is skipped or repeated."""
+    """Every feature matching `where`, paged by OBJECTID so nothing is skipped or repeated. Pages until a request
+    comes back empty, because servers cap a page at their own size (1000 or 2000) and do not always say so."""
     out, last = [], -1
     while True:
         d = _get(f"{layer}/query", {
@@ -55,8 +56,6 @@ def query(layer, where, fields, log=None):
         last = max(f["properties"].get("OBJECTID", f.get("id")) for f in feats)
         if log:
             log(f"  {len(out)} features")
-        if len(feats) < PAGE and not d.get("exceededTransferLimit") and not (d.get("properties") or {}).get("exceededTransferLimit"):
-            break
     return out
 
 

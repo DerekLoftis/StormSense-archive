@@ -131,3 +131,123 @@ def test_page_packing_round_trips():
     line = np.array([[0, 0], [5, 0.05], [10, 0], [10, 10]], float)
     assert len(page.simplify(line, 1.0)) == 3 and len(page.simplify(line, 0.01)) == 4
     assert page.road_class("S1100HOV") == 2 and page.road_class("S1200PRI") == 1 and page.road_class("S1400") == 0
+
+
+def test_a_pipe_carries_water_under_the_berm():
+    pytest.importorskip("scipy")
+    from inundation import drainage
+    dem = np.full((5, 12), 60.0, np.float32)
+    dem[:, 0] = -5.0                 # tidal water on the west edge
+    dem[2, 1:4] = 1.0                # low ground joined to it
+    dem[2, 4] = 6.0                  # a berm
+    dem[2, 5:8] = 0.5                # a low spot behind the berm
+    dem[2, 9:11] = 2.0               # a second low spot, behind a floodwall
+    lon = lambda c: c + 0.5          # cell centres as coordinates (identity transform, origin (0, 5))
+    pipe = lambda c0, c1: {"geometry": {"type": "LineString", "coordinates": [[lon(c0), 2.5], [lon(c1), 2.5]]}, "properties": {}}
+    inlet = lambda c, kind="Catch Basin": {"geometry": {"type": "Point", "coordinates": [lon(c), 2.5]}, "properties": {"T": kind}}
+    layers = {"pipes": [pipe(2, 6), pipe(3, 9)], "structures": [inlet(2), inlet(6), inlet(3), inlet(9)]}
+    src = {"structure_type_field": "T", "closed_types": ["manhole"]}
+    same = lambda x, y: (x, y)
+    net = drainage.network(layers, same, src)
+    assert net["counts"]["networks"] == 2
+    surface, piped = depth.connect_index(dem, links=drainage.links(net, dem, (0, 5), window=0))
+    lev = depth.LEVELS_FT
+    assert lev[surface[2, 6]] == 6.0                 # over the surface: only once the berm is under water
+    assert lev[piped[2, 6]] == 1.0                   # through the pipe: as soon as the inlet at the other end is
+    assert lev[piped[2, 10]] == 2.0 and surface[2, 10] == depth.NEVER
+    # a manhole lid is not an opening
+    layers["structures"][1] = inlet(6, "Manhole")
+    net = drainage.network(layers, same, src)
+    _, piped = depth.connect_index(dem, links=drainage.links(net, dem, (0, 5), window=0))
+    assert lev[piped[2, 6]] == 6.0
+
+
+def test_a_floodwall_holds_the_water_and_cuts_the_pipes():
+    pytest.importorskip("scipy")
+    pytest.importorskip("shapely")
+    from shapely.geometry import LineString, box
+    from inundation import barriers, drainage
+    dem = np.full((5, 12), 60.0, np.float32)
+    dem[:, 0] = -5.0                 # tidal water on the west edge
+    dem[:, 1:] = 1.0                 # flat low ground all the way east
+    wall = barriers.cells([LineString([(6.5, -3), (6.5, 9)])], dem.shape, (0, 5), half=0)
+    assert sorted(zip(*wall)) == [(r, 6) for r in range(5)]            # the line's cells, clipped to the grid
+    open_, held = depth.connect_index(dem), depth.connect_index(dem, blocked=wall)
+    lev = depth.LEVELS_FT
+    assert lev[open_[2, 9]] == 1.0 and lev[held[2, 3]] == 1.0 and held[2, 9] == depth.NEVER and held[2, 6] == depth.NEVER
+    # a pipe from the wet side to the dry side is cut at the leveed area
+    pt = lambda c: {"geometry": {"type": "Point", "coordinates": [c + 0.5, 2.5]}, "properties": {}}
+    layers = {"pipes": [{"geometry": {"type": "LineString", "coordinates": [[3.5, 2.5], [9.5, 2.5]]}, "properties": {}}], "structures": [pt(3), pt(9)]}
+    same = lambda x, y: (x, y)
+    net = drainage.network(layers, same)
+    _, through = depth.connect_index(dem, blocked=wall, links=drainage.links(net, dem, (0, 5), window=0))
+    assert lev[through[2, 9]] == 1.0                                   # with no leveed area the pipe passes under the wall
+    net = drainage.network(layers, same, protected=[box(7, 0, 12, 5)])
+    assert net["counts"]["cut_at_barriers"] == 1 and list(net["zone"]) == [0, 1]
+    _, cut = depth.connect_index(dem, blocked=wall, links=drainage.links(net, dem, (0, 5), window=0))
+    assert cut[2, 9] == depth.NEVER
+
+
+def test_depth_damage_follows_the_corps_tables():
+    from inundation import damage
+    # EGM 01-03 / 04-01, structure, no basement: the water measured from the first floor
+    assert damage.structure_fraction(0, "one_story") == pytest.approx(0.134)
+    assert damage.structure_fraction(1, "one_story") == pytest.approx(0.233)
+    assert damage.structure_fraction(3, "two_story") == pytest.approx(0.263)
+    assert damage.structure_fraction(-1, "split_level") == pytest.approx(0.064)
+    assert damage.structure_fraction(0.5, "one_story") == pytest.approx((0.134 + 0.233) / 2)
+    assert damage.structure_fraction(-2, "one_story") == 0 and damage.structure_fraction(-5, "two_story") == 0
+    assert damage.structure_fraction(30, "one_story") == pytest.approx(0.807)
+    assert damage.structure_fraction(np.nan, "one_story") == 0
+    # Hazus default first floor heights for a crawlspace: 3 ft before the first flood map, 4 ft after
+    assert list(damage.first_floor_ft(np.array([1950.0, 1995.0, np.nan]), 1979)) == [3, 4, 3]
+    assert damage.first_floor_ft(1950, 1979, "slab") == 1
+    usd, frac, above, ffh = damage.estimate(4.0, 200000, 1950, "one_story", 1979)
+    assert (round(float(usd)), float(above), float(ffh)) == (46600, 1.0, 3.0) and float(frac) == pytest.approx(0.233)
+    assert float(damage.estimate(0.0, 200000, 1950, "one_story", 1979)[0]) == 0      # dry ground: nothing, whatever the floor
+
+
+def test_assessed_values_go_from_the_parcel_to_its_buildings():
+    pytest.importorskip("shapely")
+    from shapely.geometry import box, mapping
+    from inundation import value
+    src = {"parcels": {"key": "GPIN"}, "residential_uses": ["single family"],
+           "one_story_classes": ["^510 "], "two_story_classes": ["^513 "], "split_level_classes": []}
+    records = [
+        {"key": "A", "use": "Single Family", "class": "513 Two story", "year_built": "1921", "living_area": "2,400",
+         "improvement_value": "300000", "total_value": "450000", "zip": "23507-1234"},
+        {"key": "B", "use": "Office", "class": "400 Commercial", "year_built": "1988", "living_area": "",
+         "improvement_value": "900000", "total_value": "1500000", "zip": "23510"},
+        {"key": "B", "use": "Office", "class": "400 Commercial", "year_built": "1990", "living_area": "",
+         "improvement_value": "100000", "total_value": "100000", "zip": "23510"}]
+    rolled = value.roll(records, src)
+    assert rolled["A"]["residential"] and rolled["A"]["curve"] == "two_story" and rolled["A"]["zip"] == "23507"
+    assert rolled["B"]["impr"] == 1000000 and rolled["B"]["year"] == 1988 and not rolled["B"]["residential"]
+    parcels = [{"geometry": mapping(box(0, 0, 40, 40)), "properties": {"GPIN": "A"}},
+               {"geometry": mapping(box(50, 0, 90, 40)), "properties": {"GPIN": "B"}}]
+    house, shed, office, nowhere = box(5, 5, 20, 20), box(30, 30, 35, 35), box(55, 5, 80, 30), box(200, 200, 210, 210)
+    c = value.attach([house, shed, office, nowhere, None], parcels, lambda x, y: (x, y), rolled, src, {"23507": [410000.0, "2026-10"]})
+    assert list(c["parcel"]) == ["A", "A", "B", "", ""]
+    assert c["value_bldg"][0] == 270000 and c["value_bldg"][1] == 30000 and c["value_bldg"][2] == 1000000   # by footprint area
+    assert c["value_total"][0] == 450000 and c["year_built"][0] == 1921 and c["curve"][0] == "two_story"
+    assert list(c["residential"]) == [1, 1, 0, 0, 0] and c["zhvi"][0] == 410000 and np.isnan(c["zhvi"][2])
+    assert np.isnan(c["value_bldg"][3]) and np.isnan(c["year_built"][4])
+
+
+def test_one_pass_spread_matches_labelling_level_by_level():
+    pytest.importorskip("scipy")
+    pytest.importorskip("numba")
+    rng = np.random.default_rng(7)
+    for trial in range(6):
+        dem = rng.uniform(-3, 12, (70, 90)).astype(np.float32)
+        dem = (dem + np.roll(dem, 1, 0) + np.roll(dem, 1, 1) + np.roll(dem, (1, 1), (0, 1))) / 4      # some structure
+        dem[:, :3] = -6.0                                   # the sea
+        dem[rng.random(dem.shape) < 0.02] = np.nan          # holes in the data
+        n = 60
+        links = (rng.integers(0, 70, n), rng.integers(3, 90, n), rng.integers(0, 9, n))
+        wall = (np.arange(10, 60), np.full(50, 40)) if trial % 2 else None
+        a = depth.connect_index(dem, links=links, blocked=wall, method="label")
+        b = depth.connect_index(dem, links=links, blocked=wall, method="spread")
+        assert (a[0] == b[0]).all() and (a[1] == b[1]).all()
+        assert (depth.connect_index(dem, blocked=wall, method="label") == depth.connect_index(dem, blocked=wall, method="spread")).all()
+        assert (b[1] <= b[0]).all() and (b[1] < b[0]).any()  # pipes only bring the water sooner

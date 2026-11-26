@@ -4,3 +4,4 @@ shapely>=2
 pyogrio
 scipy
 Pillow
+numba

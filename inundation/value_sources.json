@@ -1,0 +1,22 @@
+{
+  "51710": {
+    "name": "Norfolk",
+    "tax_year": "FY2027",
+    "tax_year_note": "City of Norfolk Real Estate Assessor, values effective 1 July 2026 (fiscal year 2027)",
+    "firm_year": 1979,
+    "firm_note": "Norfolk's first flood insurance rate map: 1 August 1979 (FEMA community 510104)",
+    "parcels": {"url": "https://gisshare.norfolk.gov/pubserver/rest/services/OpenData/Parcels/FeatureServer/1", "key": "GPIN"},
+    "assessment": {
+      "type": "socrata",
+      "url": "https://data.norfolk.gov/resource/qva7-tzrf.csv",
+      "name": "Property Assessment and Sales - FY27 (data.norfolk.gov)",
+      "columns": {"key": "gpin", "use": "property_use", "class": "property_class_description", "year_built": "improvement_year_built",
+                  "living_area": "residential_finished_living", "improvement_value": "current_improvement_value",
+                  "total_value": "current_total_value", "zip": "property_zip"}
+    },
+    "residential_uses": ["single family", "duplex", "triplex", "fourplex", "residential"],
+    "one_story_classes": ["^510 ", "^512 "],
+    "two_story_classes": ["^513 ", "^514 "],
+    "split_level_classes": ["^515 "]
+  }
+}

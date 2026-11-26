@@ -90,23 +90,62 @@ def tidal_seed(dem_ft, level=LEVELS_FT[0]):
     return (int(r), int(c)), int(sizes[k])
 
 
-def connect_index(dem_ft, levels=LEVELS_FT, seed=None, log=None):
+def connect_index(dem_ft, levels=LEVELS_FT, seed=None, log=None, links=None, blocked=None, method=None):
     """For every cell, the index of the lowest level at which it is under water joined to the seed
-    (NEVER where it stays dry or cut off through the top level)."""
+    (NEVER where it stays dry or cut off through the top level).
+
+    links=(rows, cols, network) adds the stormwater pipes (drainage.links): cells that belong to the same network
+    are joined below ground, so once water covers one of them, every other one at or below the level floods the
+    ground around it. With links the result is a pair: (index over the surface only, index with the pipes).
+    blocked=(rows, cols) are cells water never enters or crosses: a floodwall (barriers.cells).
+    method: "label" labels the wet cells once per level (scipy, whole grid in memory); "spread" visits each cell
+    once (spread.py, needs numba, takes a memory-mapped DEM of any size). Default: spread when numba is installed.
+    """
+    if method != "label":
+        from . import spread
+        if spread.njit is not None:
+            return spread.connect_index(dem_ft, levels, seed, log, links, blocked)
+        if method == "spread":
+            raise ImportError("numba is not installed")
     from scipy import ndimage
     if seed is None:
         seed, _ = tidal_seed(dem_ft, levels[0])
     out = np.full(dem_ft.shape, NEVER, np.uint8)
+    piped = np.full(dem_ft.shape, NEVER, np.uint8) if links is not None else None
+    if links is not None:
+        lr, lc, ln = (np.asarray(a) for a in links)
+        _, ln = np.unique(ln, return_inverse=True)
     eight = np.ones((3, 3))
     for k, lev in enumerate(levels):
-        lab, _ = ndimage.label(dem_ft <= lev, structure=eight)   # NaN compares False: no-data cells stay dry
-        wet = lab == lab[seed]
-        new = wet & (out == NEVER)
-        out[new] = k
+        low = dem_ft <= lev                                      # NaN compares False: no-data cells stay dry
+        if blocked is not None and len(blocked[0]):
+            low[blocked] = False
+        lab, n = ndimage.label(low, structure=eight)
+        del low
+        sea = lab[seed]
+        wet = lab == sea
+        out[wet & (out == NEVER)] = k
+        msg = f"  level {lev:+.2f} ft: {int(wet.sum()):,} cells wet"
+        if links is not None:
+            nl = lab[lr, lc]                                     # the body of water each opening is in (0: dry)
+            on = nl > 0
+            bodies = np.zeros(n + 1, bool)
+            bodies[sea] = True
+            charged = np.zeros(int(ln.max()) + 1 if len(ln) else 1, bool)
+            while True:                                          # water passes body -> network -> body until nothing new
+                charged[ln[on & bodies[nl]]] = True
+                reach = np.unique(nl[on & charged[ln]])
+                if bodies[reach].all():
+                    break
+                bodies[reach] = True
+            wetp = bodies[lab]
+            piped[wetp & (piped == NEVER)] = k
+            msg += f", {int(wetp.sum()) - int(wet.sum()):,} more through the pipes"
+            del wetp
         if log:
-            log(f"  level {lev:+.2f} ft: {int(wet.sum()):,} cells wet")
-        del lab, wet, new
-    return out
+            log(msg)
+        del lab, wet
+    return out if links is None else (out, piped)
 
 
 def sample(dem_ft, cidx, origin, x, y, levels=LEVELS_FT):
