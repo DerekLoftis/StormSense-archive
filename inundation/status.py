@@ -201,7 +201,7 @@ def main(argv=None):
     bldgs = read_table(f"{a.prepared}/{a.name}_buildings.csv.gz")
     rskip, bskip = roads["bridge"] > 0, bldgs["over_water"] > 0
     levels, missing = {}, []
-    for st in sorted(set(roads["station"]) | set(bldgs["station"])):
+    for st in sorted((set(roads["station"]) | set(bldgs["station"])) - {""}):       # "": ground no gauge stands for
         try:
             levels[st] = station_levels(a.site, st)
         except Exception as e:

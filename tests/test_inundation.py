@@ -103,6 +103,12 @@ def test_nearest_gauge_and_huc12_override():
     assert list(st) == ["WEST", "EAST", "EAST"] and np.isclose(km[2], 8)
     with pytest.raises(ValueError):
         tether.nearest(x, y, sts, flat, huc, {"B": "NOPE"})
+    # a watershed no gauge stands for is left untethered; a full code wins over a prefix
+    huc = np.array(["0301A", "0301B", "0208C"], dtype=object)
+    st, km = tether.nearest(x, y, sts, flat, huc, {"0301*": "-", "0301B": "EAST"})
+    assert list(st) == ["", "EAST", "WEST"] and np.isnan(km[0]) and np.isclose(km[1], 1)
+    assert tether.rule("0301A", {"0301*": "-"}) == "" and tether.rule("0208C", {"0301*": "-"}) is None
+    assert tether.overrides()["03010205*"] == "-"            # Back Bay and the North Landing River
     assert all(s["lat"] and not s["station"].startswith(("NN", "VB")) for s in tether.stations())
 
 

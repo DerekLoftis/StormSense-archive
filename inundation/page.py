@@ -102,7 +102,7 @@ def write_static(out, name, title, bounds, epsg, pieces, road_cols, roads_raw, f
 
     # road pieces that can go under by the top level and are not on a bridge
     rc = road_cols
-    keep = np.flatnonzero((np.asarray(rc["bridge"]) == 0) & np.isfinite(rc["connect_ft"]))
+    keep = np.flatnonzero((np.asarray(rc["bridge"]) == 0) & np.isfinite(rc["connect_ft"]) & (np.asarray(rc["station"], object) != ""))
     pxy = np.column_stack([ux(pieces["x0"][keep]), uy(pieces["y0"][keep]), ux(pieces["x1"][keep]), uy(pieces["y1"][keep])])
     p = {"n": int(len(keep)), "xy": b64(pxy, "<u2"), "ground": b64(hundredths(rc["ground_ft"][keep]), "<i2"),
          "connect": b64(hundredths(rc["connect_ft"][keep]), "<i2"),
@@ -137,7 +137,7 @@ def write_static(out, name, title, bounds, epsg, pieces, road_cols, roads_raw, f
 
     # buildings that can go under and do not stand in the water
     bc = bldg_cols
-    bkeep = [i for i in np.flatnonzero(np.isfinite(bc["connect_ft"]) & (np.asarray(bc["over_water"]) == 0))
+    bkeep = [i for i in np.flatnonzero(np.isfinite(bc["connect_ft"]) & (np.asarray(bc["over_water"]) == 0) & (np.asarray(bc["station"], object) != ""))
              if bgeoms[i] is not None and not bgeoms[i].is_empty]
     bcount, bxy = [], []
     for i in bkeep:

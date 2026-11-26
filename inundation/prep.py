@@ -358,13 +358,17 @@ def main(argv=None):
         for hh, ss, kk in zip(h, st, km):
             r = rows.setdefault((hh, ss), {"road_pieces": 0, "buildings": 0, "max_km": 0.0})
             r[kind] += 1
-            r["max_km"] = max(r["max_km"], kk)
+            r["max_km"] = max(r["max_km"], kk if np.isfinite(kk) else 0.0)
     stn = {s["station"]: s["name"] for s in sts}
     with open(f"{a.out}/{a.name}_tether.csv", "w") as fh:
         fh.write("huc12,huc12_name,station,station_name,road_pieces,buildings,farthest_km,forced\n")
         for (hh, ss), r in sorted(rows.items()):
-            fh.write(f"{hh},{names.get(hh, '')},{ss},\"{stn.get(ss, '')}\",{r['road_pieces']},{r['buildings']},"
-                     f"{r['max_km']:.1f},{'yes' if forced.get(hh) == ss else ''}\n")
+            fh.write(f"{hh},{names.get(hh, '')},{ss},\"{stn.get(ss, '') if ss else 'no gauge: left out'}\",{r['road_pieces']},{r['buildings']},"
+                     f"{r['max_km']:.1f},{'yes' if tether.rule(hh, forced) == ss else ''}\n")
+    ungauged = sorted({names.get(hh, hh) for (hh, ss) in rows if ss == ""})
+    n_ungauged = {k: sum(r[k] for (hh, ss), r in rows.items() if ss == "") for k in ("road_pieces", "buildings")}
+    if ungauged:
+        log(f"no gauge for {n_ungauged['road_pieces']:,} road pieces and {n_ungauged['buildings']:,} buildings in {', '.join(ungauged)}: left out")
 
     if not a.no_gpkg:
         write_layers(f"{a.out}/{a.name}.gpkg", pieces, road_cols, bgeoms, bldg_cols, epsg)
@@ -383,7 +387,9 @@ def main(argv=None):
         if n_cert:
             sources["first_floors"] = f"{ffe.SOURCE}: {n_cert:,} buildings"
     if not a.no_page:
-        used = sorted(set(rt["station"]) | set(bt["station"][okb]))
+        used = sorted((set(rt["station"]) | set(bt["station"][okb])) - {""})
+        if ungauged:
+            sources["ungauged"] = ", ".join(ungauged)
         page.write_static(f"{a.out}/page", a.name, a.title or loc["properties"].get("NAME") or a.name, bounds, epsg, pieces,
                           road_cols, roads, fwd, bgeoms, bldg_cols, dem, cidx, [s for s in sts if s["station"] in used], sources,
                           values=None if not vsrc else {"tax_year": vsrc["tax_year"], "firm_year": vsrc.get("firm_year"), "certificates": n_cert, "home_rule": vsrc.get("residential_note"),
@@ -401,6 +407,8 @@ def main(argv=None):
                                                     "assessment": vsrc["assessment"]["name"], "damage_curves": damage.CITATION,
                                                     "elevation_certificates": n_cert, "first_floor_source": ffe.SOURCE if n_cert else None,
                                                     "home_rule": vsrc.get("residential_note")},
+                   "ungauged": None if not ungauged else {"huc12": ungauged, **n_ungauged,
+                                                          "why": "no StormSense gauge stands for this water (tether_overrides.csv)"},
                    "prepared_utc": time.strftime("%Y-%m-%dT%H:%MZ", time.gmtime())}, fh, indent=1)
     log("wrote", a.out)
 

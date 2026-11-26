@@ -62,8 +62,26 @@ def overrides(path=OVERRIDES):
         return {r["huc12"].strip(): r["station"].strip() for r in csv.DictReader(fh) if r.get("huc12") and r.get("station")}
 
 
+NO_GAUGE = "-"       # in tether_overrides.csv: no StormSense gauge stands for this water, so its ground is left out
+
+
+def rule(huc12, forced):
+    """The station tether_overrides.csv gives a HUC-12 ("" for NO_GAUGE), or None where it has no row. A row's
+    huc12 can end in * to cover every HUC-12 that starts with it; a full code wins over a prefix, a longer prefix
+    over a shorter one."""
+    if not forced:
+        return None
+    s = forced.get(huc12)
+    if s is None:
+        for k in sorted((k for k in forced if k.endswith("*") and str(huc12).startswith(k[:-1])), key=len, reverse=True):
+            s = forced[k]
+            break
+    return None if s is None else ("" if s == NO_GAUGE else s)
+
+
 def nearest(x, y, sts, transform, huc=None, forced=None):
-    """Station id and distance (km) for each point. sts from stations(); forced: {huc12: station}."""
+    """Station id and distance (km) for each point. sts from stations(); forced: overrides(). A point in a
+    HUC-12 that the overrides mark as having no gauge gets station "" and distance NaN."""
     from scipy.spatial import cKDTree
     sx, sy = transform(np.array([s["lon"] for s in sts]), np.array([s["lat"] for s in sts]))
     ids = np.array([s["station"] for s in sts], dtype=object)
@@ -71,10 +89,17 @@ def nearest(x, y, sts, transform, huc=None, forced=None):
     st, km = ids[k].copy(), d / 1000.0
     if huc is not None and forced:
         where = {s["station"]: i for i, s in enumerate(sts)}
-        for h, s in forced.items():
+        huc = np.asarray(huc, dtype=object)
+        for h in sorted(set(huc.tolist())):
+            s = rule(h, forced)
+            if s is None:
+                continue
+            m = huc == h
+            if s == "":
+                st[m], km[m] = "", np.nan
+                continue
             if s not in where:
                 raise ValueError(f"tether_overrides.csv: {s} is not a station that can be tethered to")
-            m = huc == h
             st[m] = s
             km[m] = np.hypot(x[m] - sx[where[s]], y[m] - sy[where[s]]) / 1000.0
     return st, km
