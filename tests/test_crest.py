@@ -72,6 +72,13 @@ def test_a_flood_the_record_ends_in_is_marked_and_not_scored_yet(tmp_path):
     assert len(done) == 1 and "ongoing" not in done[0] and done[0]["by"]["primary"]["n"] == 1 and done[0]["peak"] > ev[0]["peak"]
     # a finished month is cut at its end, not at the gauge's newest observation: a flood crossing it is not "in progress"
     assert "ongoing" not in stats.events(cut[cut.index >= T0], lv, runs, "TEST", last=o.index[-1])[0]
+    # still at flood level (a lower Action stage) but the highest water is more than 3 hours behind: the peak is in
+    low = dict(lv, action=2.0)
+    for hours, near in ((26, True), (28.3, False)):
+        part = o[o.index <= T0 + pd.Timedelta(hours=hours)]
+        e = stats.events(part[part.index >= T0], low, runs, "TEST", last=part.index[-1])[-1]
+        assert part.iloc[-1] >= 2.0 and bool(e.get("ongoing")) is near and bool(e["by"]) is not near, hours
+        assert bool(e.get("past_peak")) is not near and e["end"] == part.index[-1].isoformat(), hours
 
     # the pages' data and the feeds say so, and give no peak error for it
     sc = scores([{"cycle": "2026-11-10T00Z", "station": "TEST", "member": m, "band": b, "Skill": 0.85}
@@ -94,6 +101,18 @@ def test_a_flood_the_record_ends_in_is_marked_and_not_scored_yet(tmp_path):
     assert flood["summary"].startswith("Still at or above Action at the last observation (11 Nov 00:00Z): 4.51 ft MLLW so far")
     station = next(csv.DictReader(open(tmp_path / "feeds" / "stations.csv", newline="")))
     assert station["events"] == "1" and station["last_event"] == "2026-11-11 (in progress)"
+    # three hours and more after the highest water, with the gauge still at flood level: "Past peak", with its errors
+    part = o[o.index <= T0 + pd.Timedelta(hours=28.3)]
+    d = stats.station_doc("TEST", info, period, sc, pd.DataFrame(), pd.DataFrame(), runs, {"TEST": part}, low, pd.DataFrame(), [])
+    net = stats.network_doc(period, [d], [])
+    assert d["events"][-1]["past_peak"] and net["stations"][0]["last_event_ongoing"] is False
+    feeds.write(str(tmp_path / "past"), net, [d], sc, {"TEST": part}, {"TEST": low}, [], period)
+    flood = list(csv.DictReader(open(tmp_path / "past" / "flood_events.csv", newline="")))[-1]
+    assert flood["status"] == "Past peak" and flood["peak_time"] == "2026-11-11T00:48:00Z" and float(flood["peak_err_primary"]) == 0.2
+    assert flood["summary"] == ("Peak 4.70 ft MLLW; published forecasts +0.20 ft on the peak over 1 run; "
+                                "still at or above Action at the last observation (11 Nov 04:18Z)")
+    station = next(csv.DictReader(open(tmp_path / "past" / "stations.csv", newline="")))
+    assert station["last_event"] == "2026-11-11"
 
 
 def test_leaderboard_report_card_and_picks():
@@ -165,7 +184,7 @@ def test_station_doc_feeds_and_page(tmp_path):
     # the pages take their colors from schema.py, and have the compact one-forecast view the ArcGIS dashboard embeds
     assert "__COLORS__" not in html and json.dumps(schema.COLORS, separators=(",", ":")) in html and 'Q.get("view") === "forecast"' in html
     # the floods tab has a line for a flood still under way at the gauge's last observation
-    assert 'id="evNow"' in html and "e.ongoing" in html
+    assert 'id="evNow"' in html and "e.ongoing" in html and "e.past_peak" in html
     assert (out / "img" / "stormsense_logo.png").exists() and (out / "img" / "ccrm_logo.png").exists()
     assert "Test gauge" in (out / "index.html").read_text()
 

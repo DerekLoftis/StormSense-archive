@@ -194,8 +194,9 @@ def floods(fs):
 
 def events(obs, levels, runs, st, last=None):
     """Observed floods (Action or above) and how each guidance forecast their peaks.
-    `last` is the time of the gauge's newest observation. A flood still at or above Action then is `ongoing`: its
-    highest water so far is not its peak yet, so no forecast is compared with it until the water has fallen back."""
+    `last` is the time of the gauge's newest observation. A flood still at or above Action then is not over. While its
+    highest water is inside the last PEAK_WINDOW_H hours it is `ongoing`: the peak may not be in yet, so no forecast is
+    compared with it. After that it is `past_peak`: still at flood level, and compared with its highest water so far."""
     act = (levels or {}).get("action")
     if act is None or obs is None or obs.empty:
         return []
@@ -214,7 +215,8 @@ def events(obs, levels, runs, st, last=None):
         w = obs[(obs.index >= g[0]) & (obs.index <= g[-1])]
         pt, pv = w.idxmax(), float(w.max())
         cat = [c for c in CATS if (levels.get(c) is not None and pv >= levels[c])][-1]
-        ongoing = last is not None and g[-1] >= last
+        still = last is not None and g[-1] >= last   # the gauge's record ends in this flood
+        ongoing = still and pt > last - pd.Timedelta(hours=PEAK_WINDOW_H)
         by = {}
         for cyc, run in ({} if ongoing else runs).items():
             d = run["stations"].get(st)
@@ -242,8 +244,8 @@ def events(obs, levels, runs, st, last=None):
                        "te": r(np.mean([abs(x[2]) for x in lst]), 0), "hit": r(np.mean([x[3] for x in lst]), 2), "runs": lst}
         out.append({"start": g[0].isoformat(), "end": g[-1].isoformat(), "peak_t": pt.isoformat(), "peak": round(pv, 2),
                     "category": cat, "by": summ})
-        if ongoing:
-            out[-1]["ongoing"] = True
+        if still:
+            out[-1]["ongoing" if ongoing else "past_peak"] = True
     return out
 
 

@@ -125,9 +125,11 @@ project's shared folder (skill code, baselines, notes, station sheet, disclosure
   stations start on their `added` day. Default guidance = published fore72 (`primary`). Change markers:
   `crest/changes.csv` (add a row for each model or pipeline change). Derek's decisions 2026-11-25 are in the design doc.
 - Floods (`stats.events`): observed water at or above NWS Action, exceedances under 12 h apart are one flood. A flood
-  the gauge's record ends in is `ongoing` (feed `status` "In progress", "+" in the dashboard's table): its highest
-  water so far is listed, and no guidance's peak error is given until the water has fallen back below Action. The
-  daily run sees observations to about 12:18Z, so a flood on the run's day is complete the next morning.
+  the gauge's record ends in is not over. With its highest water in the record's last 3 h it is `ongoing` (feed
+  `status` "In progress", "+" in the dashboard's table): the highest water so far is listed and no guidance's peak
+  error is given. After that it is `past_peak` ("Past peak"), scored against its highest water so far; below Action it
+  is "Ended". The daily run sees observations to about 12:18Z, so a flood on the run's morning is complete the next
+  morning.
 - Local test: `python -m crest.build --out /tmp/c --work /tmp/cw --scores scores.csv.gz --floods flood_scores.csv
   --picks picks_history.csv --runs ensemble_*.tar.gz --obs-dir <dir of ST.csv> --offline --stations SWPT`.
 

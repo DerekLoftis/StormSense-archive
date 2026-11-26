@@ -292,10 +292,13 @@ function drawFloods(){
   var ev = DOC.events || [], L = DOC.levels || {};
   if (L.action == null) $("evNote").textContent = "This gauge has no NWS flood categories, so floods are not detected here; high waters are still scored below.";
   else $("evNote").textContent = ev.length ? "Each time the observed water reached NWS Action (" + fx(lvl(L.action, DOC.navd), 2) + " " + ul() + "), and how each guidance forecast the peak in the runs issued up to 72 hours before it: mean peak-height error, mean absolute timing error, and the share of runs that forecast Action or above." : "The gauge did not reach NWS Action (" + fx(lvl(L.action, DOC.navd), 2) + " " + ul() + ") in this period.";
-  // a flood the gauge's record ends in: its highest water so far is not its peak yet, so nothing is scored against it
-  var now = ev.filter(function(e){ return e.ongoing; })[0];
-  $("evNow").hidden = !now;
-  if (now) $("evNow").textContent = "A flood was in progress at the gauge's last observation (" + now.end.slice(0, 16).replace("T", " ") + " UTC): " + fx(lvl(now.peak, DOC.navd), 2) + " " + ul() + " so far (" + now.category + "). Its peak and each guidance's peak error are listed once the water has fallen below Action.";
+  // a flood the gauge's record ends in. Near its highest water the peak may not be in yet, so nothing is scored against
+  // it; hours past its highest water it is scored like the others, and the note says the water is still up
+  var now = ev.filter(function(e){ return e.ongoing; })[0], past = ev.filter(function(e){ return e.past_peak; })[0];
+  var at = function(t){ return t.slice(0, 16).replace("T", " ") + " UTC"; };
+  $("evNow").hidden = !(now || past);
+  if (now) $("evNow").textContent = "A flood was in progress at the gauge's last observation (" + at(now.end) + "): " + fx(lvl(now.peak, DOC.navd), 2) + " " + ul() + " so far (" + now.category + "). Its peak and each guidance's peak error are listed once the highest water is 3 hours past or the water has fallen below Action.";
+  else if (past) $("evNow").textContent = "The latest flood was still at or above Action at the gauge's last observation (" + at(past.end) + "). Its highest water so far, " + fx(lvl(past.peak, DOC.navd), 2) + " " + ul() + " at " + at(past.peak_t) + " (" + past.category + "), is compared with the forecasts below.";
   var rows = [];
   ev.forEach(function(e, i){ Object.keys(e.by).forEach(function(m){ var b = e.by[m]; rows.push({i: i, peak_t: e.peak_t, peak: e.peak, cat: e.category, m: m, name: DOC.names[m] || m, n: b.n, pe: b.pe, ape: b.ape, te: b.te, hit: b.hit}); }); });
   if (rows.length) table($("evTable"), [{k: "peak_t", label: "Peak (UTC)", t: 1, fmt: function(x){ return esc(x.peak_t.slice(0, 16).replace("T", " ")); }},
