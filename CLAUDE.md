@@ -105,7 +105,8 @@ project's shared folder (skill code, baselines, notes, station sheet, disclosure
   GeoJSON for the ArcGIS Experience Builder dashboard (`crest/arcgis_push.py`, secrets `ARCGIS_URL` + `ARCGIS_API_KEY`
   or `ARCGIS_USERNAME`/`ARCGIS_PASSWORD`, VIMS org, folder "StormSense CREST").
 - Reads skill_scores/flood_scores.csv.gz (newest ensemble release), run tarballs (reduced to work/runs/<cycle>.json.gz,
-  cached by actions/cache), obs-YYYY-MM day tarballs, data/index/obs, NWPS levels. Periods 30d, 7d, each month;
+  cached by actions/cache), obs-YYYY-MM day tarballs (`obs_<day>/6min/<ST>.csv`; the newest hours come from the run
+  tarballs' own `observed_ft`, since the obs archive is daily), data/index/obs, NWPS levels. Periods 30d, 7d, each month;
   stations start on their `added` day. Default guidance = published fore72 (`primary`). Change markers:
   `crest/changes.csv` (add a row for each model or pipeline change). Derek's decisions 2026-11-25 are in the design doc.
 - Local test: `python -m crest.build --out /tmp/c --work /tmp/cw --scores scores.csv.gz --floods flood_scores.csv
