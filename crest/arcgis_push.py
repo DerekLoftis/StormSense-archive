@@ -13,7 +13,8 @@ Optional: ARCGIS_FOLDER (default "StormSense CREST").
 Uses the ArcGIS REST API directly (only `requests`; the arcgis package needs Kerberos headers to
 install). The first run adds each CSV to that folder and publishes it as a hosted feature layer
 (points from the lon/lat columns, field types detected by ArcGIS); later runs replace the CSV and
-publish again with overwrite, which keeps the layer's item and URL. Sharing stays as Derek sets it.
+publish again with overwrite, which keeps the layer's item and URL. Layers are read-only (editing
+off), which ArcGIS requires before a layer can be shared publicly. Sharing stays as Derek sets it.
 Daily Skill is time-enabled on its "date" field so the map's time slider can replay a period.
 """
 import json
@@ -124,6 +125,8 @@ def push(p, folder, have, title, path, has_xy):
     pp = p.call("POST", f"{p.rest}/content/features/analyze", itemid=cid, filetype="csv",
                 analyzeParameters={"enableGlobalGeocoding": False, "sourceLocale": "en"})["publishParameters"]
     pp["name"] = svc["url"].rstrip("/").split("/")[-2] if svc and svc.get("url") else title.replace(" ", "_")
+    if isinstance(pp.get("layerInfo"), dict):
+        pp["layerInfo"]["capabilities"] = "Query"  # read-only: ArcGIS won't share an editable layer publicly
     if has_xy:
         pp.update(locationType="coordinates", latitudeFieldName="lat", longitudeFieldName="lon")
     else:
@@ -134,7 +137,21 @@ def push(p, folder, have, title, path, has_xy):
         raise RuntimeError(f"publish refused: {res.get('error') or res}")
     if res.get("jobId"):
         wait(p, res["serviceItemId"], res["jobId"])
-    return res["serviceItemId"], res.get("serviceurl") or (svc or {}).get("url"), "overwritten" if svc else "published"
+    url = res.get("serviceurl") or (svc or {}).get("url")
+    read_only(p, url)
+    return res["serviceItemId"], url, "overwritten" if svc else "published"
+
+
+def read_only(p, service_url):
+    """Turn editing off on the service if publishing left it on, so public sharing keeps working."""
+    try:
+        caps = p.call("GET", service_url).get("capabilities", "")
+        if any(c in caps for c in ("Create", "Update", "Delete", "Editing")):
+            admin = service_url.replace("/rest/services/", "/rest/admin/services/")
+            p.call("POST", f"{admin}/updateDefinition", updateDefinition={"capabilities": "Query"})
+            print("  editing turned off")
+    except Exception as e:
+        print("  could not turn editing off:", e)
 
 
 def time_enable(p, service_url, field="date"):
