@@ -141,15 +141,39 @@ python -m inundation.status --prepared prepared --name norfolk --site <StormSens
 12 minutes on 4 cores with 12 GB of memory (the pipes double the connectivity step). `--no-drainage`,
 `--no-barriers`, `--no-values` and `--no-certificates` leave those parts out. `status` takes seconds.
 
-## Numbers from the pilot (run of 2026-11-26 00Z, a forecast major flood)
+## Numbers (run of 2026-11-26 00Z, a forecast major flood)
 
-Norfolk: 15,322 road segments, 360,651 pieces (1,765 km), 93,969 buildings, 9 gauges; 32,598 pipes, 4,956 ditches
-and 38,352 structures in 2,441 networks; one floodwall system. At each gauge's forecast peak (4.9 to 5.9 ft NAVD88,
-about 14:30Z on 26 Nov): 39.7 road miles flooded (6.7 of them only because of the pipes), 6.7 ponded, 2,053
-buildings flooded (115 only because of the pipes), 811 homes with an estimated $2.4 million of structure damage; at
-the 90% level 47.4 miles, 2,576 buildings, $3.9 million. Before the pipes and the floodwall: 34.8 miles and 1,958
-buildings. Not yet checked against observed flooding (Norfolk publishes flooded-street reports:
-`Storm/Storm_Data/MapServer/26` on orfmaps.norfolk.gov).
+At each gauge's forecast peak (4.9 to 6.1 ft NAVD88, about 14:30Z on 26 Nov):
+
+| City | Roads flooded (mi) | of which only by pipes | Ponded (mi) | Buildings flooded | Homes with damage | Est. damage | At the 90% level (mi / buildings) |
+|---|---|---|---|---|---|---|---|
+| Norfolk | 39.7 | 6.7 | 6.7 | 2,053 | 792 | $2.50M | 47.4 / 2,576 |
+| Newport News | 3.0 | 0.0 | 0.6 | 168 | 97 | $0.23M | 3.7 / 206 |
+| Virginia Beach (north of the Back Bay watershed) | 5.0 | 0.8 | 2.1 | 284 | 120 | $0.15M | 7.5 / 433 |
+| Portsmouth (no pipes published) | 6.0 | – | 1.2 | 424 | 211 | $0.79M | 7.5 / 525 |
+| Hampton (no assessed values found) | 26.3 | 1.3 | 6.0 | 2,090 | – | – | 33.3 / 2,649 |
+
+- Norfolk: 360,651 pieces (1,765 km), 93,969 buildings, 9 gauges; 32,598 pipes, 4,956 ditches and 38,352 structures
+  in 2,441 networks; one floodwall system. Before the pipes and the floodwall: 34.8 miles and 1,958 buildings.
+- The damage figure is ruled by the first floor: with every home on a slab at grade the same water gives $37.0M in
+  Norfolk, $3.8M in Newport News, $4.1M in Virginia Beach and $6.5M in Portsmouth. Elevation certificates replace the
+  assumed floor for 786 Norfolk buildings, 235 in Virginia Beach, 66 in Portsmouth and 5 in Newport News.
+- Newport News: the pipes add almost nothing at this level because nearly all the low ground is already joined to
+  tidal water over the surface. Hampton: half of the total is the Back River gauge's (BRDH) area.
+- Virginia Beach: the Lake Rudee gauge (USLR) peaks at 6.08 ft where Rudee Inlet (RDIV) peaks at 5.01 ft, and its
+  observations sit about 1 ft above its neighbours': worth a look at its datum before its area's numbers are trusted.
+- Not yet checked against observed flooding (Norfolk publishes flooded-street reports:
+  `Storm/Storm_Data/MapServer/26` on orfmaps.norfolk.gov).
+
+## Watersheds without a gauge
+
+A HUC-12 whose water level no StormSense gauge measures is left out rather than tied to the nearest gauge:
+`tether_overrides.csv` takes `-` as the station, and a code ending in `*` covers every HUC-12 that starts with it.
+The one rule so far is `03010205*`: Back Bay, the North Landing River and the Northwest River (the south of Virginia
+Beach and Chesapeake) drain to Currituck Sound, are driven by wind rather than tide, and are shut off from the
+Elizabeth River by the Great Bridge lock. Tied to Lake Rudee they showed 66 road miles flooded on a day when nothing
+there was. Their pieces and buildings stay in the tables with an empty `station`; `status` and the page skip them and
+the page says which watersheds are missing. A gauge there (or a Currituck Sound forecast) brings them back.
 
 ## Open points
 
@@ -157,10 +181,12 @@ buildings. Not yet checked against observed flooding (Norfolk publishes flooded-
 - Low spots with no pipe to tidal water stay dry; rain is not in it.
 - Other buildings than homes get no damage estimate; contents are not estimated; first floor heights are assumed.
 - The water picture on the page is drawn at 5 m (roads and buildings use the 1 m DEM); 1 m needs tiles.
-- Hampton Roads: each city needs its entry in `drainage_sources.json` and `value_sources.json`. HRPDC's regional
-  parcels (geo.hrsd.com `regionalgis/HRGeo_Parcels_Public`) carry assessed values for Chesapeake, Newport News,
-  Norfolk, Portsmouth, Virginia Beach, Williamsburg, Gloucester, Isle of Wight, James City, York and Franklin (not
-  Hampton, Poquoson or Suffolk), year built for seven of them, and no use codes.
+- Hampton Roads: Suffolk, Poquoson, York, James City, Gloucester and Mathews are not configured yet (no pipes found
+  for Suffolk or Poquoson; HRPDC's regional parcels carry values for Williamsburg, Gloucester, Isle of Wight, James
+  City, York and Franklin too, but not for Hampton, Poquoson or Suffolk). Homes are picked by zoning patterns outside
+  Norfolk and Chesapeake: an assumption per city until the cities' use codes are in. The year of each city's first
+  FIRM is only set for Norfolk (1979, unverified), so the 4 ft post-FIRM floor is not applied elsewhere.
+- Derek's Newport News first floor survey (several thousand houses) goes in the way `ffe.py` adds the certificates.
 - `chance` uses the 10-90% band at the forecast's peak; the run's own error trajectories would be better.
 - "Now" is the last observation at the forecast run; a lighter, more frequent job could refresh it.
 - Statewide, 5 m pieces are tens of millions of features: decide the packaging (per locality or HUC-12) first.

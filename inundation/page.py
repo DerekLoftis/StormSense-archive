@@ -186,7 +186,8 @@ def write_static(out, name, title, bounds, epsg, pieces, road_cols, roads_raw, f
     rgb = raster(dem, cidx, (x0, ytop), np.column_stack([sx, sy]))
     Image.fromarray(rgb, "RGB").save(os.path.join(out, "extent.png"), optimize=True)
 
-    ok_road = np.asarray(rc["bridge"]) == 0
+    ok_road = (np.asarray(rc["bridge"]) == 0) & (np.asarray(rc["station"]).astype(str) != "")      # no gauge: left out
+    ok_bldg = (np.asarray(bc["over_water"]) == 0) & (np.asarray(bc["station"]).astype(str) != "")
     static = {
         "name": name, "title": title, "epsg": epsg, "x0": x0, "ytop": ytop, "unit_m": UNIT_M,
         "width_m": bounds[2] - bounds[0], "height_m": bounds[3] - bounds[1],
@@ -197,7 +198,7 @@ def write_static(out, name, title, bounds, epsg, pieces, road_cols, roads_raw, f
         "pieces": p, "roads": r, "buildings": b, "values": vdoc,
         "raster": {"file": "extent.png", "cell_m": CELL_M, "width": int(rgb.shape[1]), "height": int(rgb.shape[0])},
         "totals": {"road_miles": round(float(np.asarray(rc["length_m"])[ok_road].sum() / 1609.344), 1),
-                   "road_pieces": int(ok_road.sum()), "buildings": int((np.asarray(bc["over_water"]) == 0).sum())},
+                   "road_pieces": int(ok_road.sum()), "buildings": int(ok_bldg.sum())},
         "prepared_utc": time.strftime("%Y-%m-%dT%H:%MZ", time.gmtime()), "sources": sources, "disclaimer": DISCLAIMER,
     }
     with open(os.path.join(out, "static.json"), "w") as fh:
