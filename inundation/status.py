@@ -161,7 +161,15 @@ def write_geojson(path, layers, layer, keep, names, rows):
     meta, _, geoms, _ = pyogrio.raw.read(layers, layer=layer, columns=[])
     fwd = Transformer.from_crs(meta["crs"], 4326, always_xy=True).transform
     g = shapely.transform(shapely.from_wkb(geoms[keep]), lambda c: np.column_stack(fwd(c[:, 0], c[:, 1])))
-    g = shapely.set_precision(g, 1e-7)
+    try:
+        g = shapely.set_precision(g, 1e-7)
+    except shapely.errors.GEOSException:          # a footprint with a hole outside its shell: mend that one, keep the rest
+        def one(q):
+            try:
+                return shapely.set_precision(q, 1e-7)
+            except shapely.errors.GEOSException:
+                return shapely.set_precision(shapely.make_valid(q), 1e-7)
+        g = np.array([one(q) for q in g], dtype=object)
     numeric = {n for n in names if n.endswith(("_ft", "_usd", "_pct")) or n in ("length_m", "area_m2", "hours_flooded", "chance", "lon", "lat")}
 
     def val(n, v):
