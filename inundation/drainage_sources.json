@@ -1,0 +1,13 @@
+{
+  "51710": {
+    "name": "Norfolk",
+    "source": "City of Norfolk open GIS data (gisshare.norfolk.gov, OpenData/Environmental_Group_OpenData)",
+    "pipes": [{"url": "https://gisshare.norfolk.gov/pubserver/rest/services/OpenData/Environmental_Group_OpenData/MapServer/8", "fields": "PIPE_ID,PIPE_SIZE,OWNER"}],
+    "ditches": [{"url": "https://gisshare.norfolk.gov/pubserver/rest/services/OpenData/Environmental_Group_OpenData/MapServer/7", "fields": "DITCH_TYPE"}],
+    "structures": [{"url": "https://gisshare.norfolk.gov/pubserver/rest/services/OpenData/Environmental_Group_OpenData/MapServer/9", "fields": "GENERAL_TYPE,STRUCTURE_TYPE,ACCESSORY,OUTFALL,RIM_ELEVATION_FT"}],
+    "structure_type_field": "GENERAL_TYPE",
+    "closed_types": ["manhole", "junction box", "pipe connection", "abandoned", "plugged", "stub", "roof drain", "pipe to building", "underground control", "utility conflict", "unknown"],
+    "valve_field": "ACCESSORY",
+    "valve_words": ["fv", "flap", "gate", "check"]
+  }
+}
