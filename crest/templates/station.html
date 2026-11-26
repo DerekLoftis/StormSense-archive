@@ -9,12 +9,12 @@
 <body>
 <div class="wrap">
   <div class="mast">
-    <img class="ss" src="__SS_LOGO__" alt="StormSense">
+    <a class="logo" href="https://www.vims.edu/people/loftis_jd/StormSense/" target="_blank" rel="noopener"><img src="__SS_LOGO__" alt="StormSense: forecasting flooding from storm surge, rain, and tides"></a>
     <div class="mid">
       <h1 id="title">StormSense CREST</h1>
       <p class="sub" id="subtitle"></p>
     </div>
-    <img src="__VIMS_LOGO__" alt="Virginia Institute of Marine Science">
+    <a class="logo ccrm" href="https://www.vims.edu/ccrm/research/modeling/" target="_blank" rel="noopener"><img src="__CCRM_LOGO__" alt="William &amp; Mary VIMS, Batten School of Coastal &amp; Marine Sciences, Center for Coastal Resources Management"></a>
   </div>
 
   <div class="controls">
@@ -153,9 +153,9 @@ function drawLB(){
     {k: "name", label: "Guidance", t: 1, fmt: function(r){ return sw(r.m) + esc(r.name); }},
     S("0-12"), S("12-36"), S("36-72"), S("0-72"), S("full"),
     {k: "span", label: "Hours"}, {k: "n", label: "Runs"},
-    {k: "bias", label: "Bias " + ul(), fmt: function(r){ return sgn(len(r.bias)); }, title: "forecast minus observed, own period"},
-    {k: "mae", label: "MAE " + ul(), fmt: function(r){ return fx(len(r.mae), 2); }},
-    {k: "rmse", label: "RMSE " + ul(), fmt: function(r){ return fx(len(r.rmse), 2); }},
+    {k: "bias", label: "Bias " + ul(), u: 1, fmt: function(r){ return sgn(len(r.bias)); }, title: "forecast minus observed, own period"},
+    {k: "mae", label: "MAE " + ul(), u: 1, fmt: function(r){ return fx(len(r.mae), 2); }},
+    {k: "rmse", label: "RMSE " + ul(), u: 1, fmt: function(r){ return fx(len(r.rmse), 2); }},
     {k: "r2", label: "R²", fmt: function(r){ return fx(r.r2, 2); }}
   ], rows, {sortKey: "0-72", rowAttr: function(r){ return r.m === "primary" ? ' class="sel"' : ""; }});
   $("lbNote").textContent = "High water: runs whose 72 hours reached NWS Action at the gauge (or the period's top 10% of water levels where the gauge has no NWS categories). The ensemble mean is a what-if computed by CREST, not a published forecast.";
@@ -200,13 +200,14 @@ function drawRuns(){
     {k: "p", label: "Published", fmt: function(x){ return pill(x.p); }}, {k: "ss", label: "StormSense", fmt: function(x){ return pill(x.ss); }},
     {k: "pe", label: "P-ETSS", fmt: function(x){ return pill(x.pe); }}, {k: "nw", label: "NWS", fmt: function(x){ return pill(x.nw); }}
   ], rows, {sortKey: "cycle", dir: -1, rowAttr: function(x){ return ' class="click' + (state.run === x.cycle ? " sel" : "") + '" tabindex="0"'; },
-    onRow: function(x){ state.run = x.cycle; drawRun(); drawRuns(); }});
+    onRow: function(x){ state.run = x.cycle; drawRuns(); }});
   if (!state.run && rows.length){
     var has = function(r){ return r.series && Object.keys(r.series).length; };
     var pick = DOC.runs.filter(function(r){ return has(r) && r.stats.primary; });
     if (!pick.length) pick = DOC.runs.filter(has);
     if (!pick.length) pick = DOC.runs;
-    state.run = pick[pick.length - 1].cycle; drawRun(); drawRuns(); }
+    state.run = pick[pick.length - 1].cycle; drawRuns(); return; }
+  drawRun();
 }
 function levelLines(){
   var L = DOC.levels || {}, out = [];
@@ -239,7 +240,7 @@ function drawRun(){
         data: r.series[m].map(function(v, i){ return [t0 + i * r.dt, lvl(v, DOC.navd)]; })}); });
     Highcharts.chart("runChart", {chart: {zoomType: "x"}, xAxis: {type: "datetime", plotLines: [{value: t0, color: css("--muted"), width: 1, label: {text: "issued", rotation: 0, y: 12, x: 4, style: {color: css("--muted"), fontSize: "11px"}}}]},
       yAxis: {title: {text: "Water level (" + ul() + " " + (U.datum === "NAVD" ? "NAVD88" : "MLLW") + ")"}, plotLines: levelLines()},
-      tooltip: {shared: true, valueDecimals: 2, xDateFormat: "%a %e %b %H:%M UTC"}, series: ser});
+      tooltip: {shared: true, valueDecimals: 2, valueSuffix: " " + ul(), xDateFormat: "%a %e %b %H:%M UTC"}, series: ser});
   }
   $("runGuide").textContent = "Guidance shown: " + mems.filter(function(m){ return state.shown[m]; }).map(function(m){ return DOC.names[m] || m; }).join(", ");
   // regression for the shown members
@@ -253,8 +254,8 @@ function drawRun(){
   var srows = Object.keys(r.stats).map(function(m){ var f = r.stats[m].full || r.stats[m]["0-72"] || []; return {m: m, name: DOC.names[m] || m, S: f[0], bias: f[1], mae: f[2], rmse: f[3], r2: f[4]}; });
   if (!srows.length){ $("runStats").innerHTML = '<tr><td class="t">Not verified yet: scores appear once the gauge has observed this forecast\'s period.</td></tr>'; return; }
   table($("runStats"), [{k: "name", label: "Guidance", t: 1, fmt: function(x){ return sw(x.m) + esc(x.name); }}, {k: "S", label: "S", fmt: function(x){ return pill(x.S); }},
-    {k: "bias", label: "Bias " + ul(), fmt: function(x){ return sgn(len(x.bias)); }}, {k: "mae", label: "MAE", fmt: function(x){ return fx(len(x.mae), 2); }},
-    {k: "rmse", label: "RMSE", fmt: function(x){ return fx(len(x.rmse), 2); }}, {k: "r2", label: "R²", fmt: function(x){ return fx(x.r2, 2); }}], srows, {sortKey: "S"});
+    {k: "bias", label: "Bias " + ul(), u: 1, fmt: function(x){ return sgn(len(x.bias)); }}, {k: "mae", label: "MAE " + ul(), u: 1, fmt: function(x){ return fx(len(x.mae), 2); }},
+    {k: "rmse", label: "RMSE " + ul(), u: 1, fmt: function(x){ return fx(len(x.rmse), 2); }}, {k: "r2", label: "R²", fmt: function(x){ return fx(x.r2, 2); }}], srows, {sortKey: "S"});
 }
 function drawEnsemble(){
   var cats = ["0-6","6-12","12-18","18-24","24-30","30-36","36-42","42-48","48-54","54-60","60-66","66-72"];
@@ -278,9 +279,9 @@ function drawFloods(){
   var rows = [];
   ev.forEach(function(e, i){ Object.keys(e.by).forEach(function(m){ var b = e.by[m]; rows.push({i: i, peak_t: e.peak_t, peak: e.peak, cat: e.category, m: m, name: DOC.names[m] || m, n: b.n, pe: b.pe, ape: b.ape, te: b.te, hit: b.hit}); }); });
   if (rows.length) table($("evTable"), [{k: "peak_t", label: "Peak (UTC)", t: 1, fmt: function(x){ return esc(x.peak_t.slice(0, 16).replace("T", " ")); }},
-    {k: "peak", label: "Peak " + ul(), fmt: function(x){ return fx(lvl(x.peak, DOC.navd), 2); }}, {k: "cat", label: "Category", t: 1},
+    {k: "peak", label: "Peak " + ul(), u: 1, fmt: function(x){ return fx(lvl(x.peak, DOC.navd), 2); }}, {k: "cat", label: "Category", t: 1},
     {k: "name", label: "Guidance", t: 1, fmt: function(x){ return sw(x.m) + esc(x.name); }}, {k: "n", label: "Runs"},
-    {k: "pe", label: "Peak error " + ul(), fmt: function(x){ return sgn(len(x.pe)); }}, {k: "ape", label: "|Peak error|", fmt: function(x){ return fx(len(x.ape), 2); }},
+    {k: "pe", label: "Peak error " + ul(), u: 1, fmt: function(x){ return sgn(len(x.pe)); }}, {k: "ape", label: "|Peak error| " + ul(), u: 1, fmt: function(x){ return fx(len(x.ape), 2); }},
     {k: "te", label: "|Timing| min", fmt: function(x){ return fx(x.te, 0); }}, {k: "hit", label: "Forecast Action", fmt: function(x){ return x.hit == null ? "–" : Math.round(x.hit * 100) + "%"; }}],
     rows, {sortKey: "ape", dir: 1});
   else $("evTable").innerHTML = "";
@@ -293,7 +294,7 @@ function drawFloods(){
     ["action","minor","moderate","major"].forEach(function(c){ o[c] = f.cats[c]; }); return o; });
   function cat(c){ return {k: c, label: c[0].toUpperCase() + c.slice(1) + " hit/miss/FA", val: function(x){ return x[c] ? x[c][0] : null; }, fmt: function(x){ var v = x[c]; return v ? v[0] + " / " + v[1] + " / " + v[2] : "–"; }}; }
   table($("hwTable"), [{k: "name", label: "Guidance", t: 1, fmt: function(x){ return sw(x.m) + esc(x.name); }}, {k: "runs", label: "Runs"}, {k: "hw", label: "High waters"},
-    {k: "pe", label: "Peak error " + ul(), fmt: function(x){ return sgn(len(x.pe)); }}, {k: "ape", label: "|Peak error|", fmt: function(x){ return fx(len(x.ape), 2); }},
+    {k: "pe", label: "Peak error " + ul(), u: 1, fmt: function(x){ return sgn(len(x.pe)); }}, {k: "ape", label: "|Peak error| " + ul(), u: 1, fmt: function(x){ return fx(len(x.ape), 2); }},
     {k: "te", label: "|Timing| min", fmt: function(x){ return fx(x.te, 0); }}, cat("action"), cat("minor"), cat("moderate"), cat("major")], hw, {sortKey: "ape", dir: 1});
 }
 function drawGauge(){

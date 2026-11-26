@@ -24,8 +24,11 @@ h2{font-size:17px;font-weight:600}
 h3{font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:.07em;color:var(--muted)}
 a{color:var(--accent)}
 .mast{display:flex;align-items:center;gap:16px;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:10px 16px;flex-wrap:wrap}
-.mast img{height:56px;width:auto;max-width:100%}
-.mast .ss{background:#0b3954;border-radius:6px;padding:3px 8px}
+.mast img{height:66px;width:auto;max-width:100%}
+.mast .logo{display:block;line-height:0;border-radius:6px}
+.mast .logo:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .mast .ccrm img{background:#fff;border-radius:6px;padding:4px 8px}}
+:root[data-theme="dark"] .mast .ccrm img{background:#fff;border-radius:6px;padding:4px 8px}
 .mast .mid{flex:1;min-width:220px;text-align:center}
 .sub{color:var(--muted);font-size:13px;margin:3px 0 0}
 body.embed .mast{display:none}

@@ -52,7 +52,7 @@ function table(el, cols, rows, opt){
 }
 function downloadCSV(el, name){
   var t = el._csv; if (!t) return;
-  var lines = [t.cols.map(function(c){return c.label.replace(/<[^>]+>/g, "")}).join(",")].concat(t.rows.map(function(r){ return t.cols.map(function(c){ var v = t.val(r, c); return v == null ? "" : '"' + String(v).replace(/"/g, '""') + '"'; }).join(","); }));
+  var lines = [t.cols.map(function(c){return c.label.replace(/<[^>]+>/g, "")}).join(",")].concat(t.rows.map(function(r){ return t.cols.map(function(c){ var v = c.u ? c.fmt(r).replace(/<[^>]+>/g, "").replace("–", "") : t.val(r, c); return v == null ? "" : '"' + String(v).replace(/"/g, '""') + '"'; }).join(","); }));
   var a = document.createElement("a"); a.href = URL.createObjectURL(new Blob([lines.join("\n")], {type: "text/csv"})); a.download = name; document.body.appendChild(a); a.click(); a.remove();
 }
 function getJSON(url, cb){ fetch(url).then(function(r){ if (!r.ok) throw new Error(r.status); return r.json(); }).then(cb).catch(function(e){ cb(null, e); }); }
