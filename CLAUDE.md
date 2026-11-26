@@ -111,6 +111,24 @@ project's shared folder (skill code, baselines, notes, station sheet, disclosure
 - Local test: `python -m crest.build --out /tmp/c --work /tmp/cw --scores scores.csv.gz --floods flood_scores.csv
   --picks picks_history.csv --runs ensemble_*.tar.gz --obs-dir <dir of ST.csv> --offline --stations SWPT`.
 
+## Inundation (`inundation/`, pilot 2026-11-25; details in `inundation/README.md`)
+
+- Derek's ask: tie his HUC-12 depth grids (1 m, -2 to 10 ft NAVD88 in 0.25 ft steps, on an external drive; to be
+  hosted on mobjack.vims.edu `VIMS_PHYS`) to the nearest gauge's observations and fore72, and flag roads (VGIN
+  centerlines cut into 5 m pieces) and VGIN building footprints. Roads over 0.5 ft deep orange, ponded (0.25 ft)
+  yellow, buildings over 0.5 ft red.
+- `python -m inundation.prep --fips 51710 --name norfolk --out <dir> --work <dir> [--gdb]` once per area: each piece
+  and building gets `ground_ft`, `connect_ft` (lowest level at which water reaches it), `ponded_ft`, `flooded_ft`,
+  `huc12`, `station` (nearest gauge; `inundation/tether_overrides.csv` forces a HUC-12 to a gauge). Until Derek's
+  grids are hosted, depth comes from the 1 m CoNED topobathy DEM on NOAA's bucket (bathtub joined to tidal water).
+  `python -m inundation.status --prepared <dir> --name norfolk --site <Latest site dir> --out <dir>` per run:
+  state now / at the forecast peak / at the 90% level, hours flooded, GeoJSON for hosted layers, `levels.json` for
+  the area's self-contained map page (`inundation/page.py`, `templates/map.html`).
+- Bridges have no deck in the bare-earth DEM: pieces with `bridge` > 0 and buildings `over_water` are never flagged.
+  The Mobjack Norfolk SLR services are RGB extent pictures (no depth). Needs `inundation/requirements.txt`.
+- Not wired yet: a workflow, Pages hosting and the push to the AGOL folder "StormSense CREST". Norfolk's prepared
+  tables and file geodatabase are in the project's shared folder under `inundation/norfolk/`.
+
 ## Station sources that are not Tidewatch
 
 - CBBT 8638901, MNPT 8639348, DAHL 8635027, WADC 8594900: NOAA CO-OPS. NAVD88 above MLLW: CBBT 1.92,
@@ -171,7 +189,8 @@ project's shared folder (skill code, baselines, notes, station sheet, disclosure
 ## Network and platform limits
 
 - Use Derek's default cloud environment (the one that reaches web4, api.water.noaa.gov, api.weather.gov,
-  NOMADS). No Claude session reaches tidesandcurrents.noaa.gov or *.github.io; NOAA AWS buckets work.
+  NOMADS; since 2026-11-25 also mobjack.vims.edu, vginmaps.vdem.virginia.gov, vgin.vdem.virginia.gov and
+  services.arcgis.com). No Claude session reaches tidesandcurrents.noaa.gov or *.github.io; NOAA AWS buckets work.
 - GitHub Actions has full internet (except NOMADS ETSS paths, 403), so put blocked downloads in a
   workflow. Read live pages from a workflow, not the sandbox; job logs and artifacts aren't readable
   from the sandbox, but check-run annotations are.

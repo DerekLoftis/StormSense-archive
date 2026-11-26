@@ -1,0 +1,133 @@
+"""Offline tests of the inundation pieces: road splitting, water connectivity, levels, tethering, status."""
+import json
+import os
+import sys
+from datetime import datetime, timedelta, timezone
+
+import numpy as np
+import pytest
+
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from inundation import FLOODED_FT, PONDED_FT, depth, segments, status  # noqa: E402
+
+
+def flat(lon, lat):
+    """A stand-in projection: degrees are metres."""
+    return np.asarray(lon, float), np.asarray(lat, float)
+
+
+def road(coords, **props):
+    return {"type": "Feature", "properties": {"OBJECTID": 1, "RCL_ID": 7, "ST_FULL": "Test St", "MTFCC": "S1400",
+                                               "SEG_TYPE": 99, **props},
+            "geometry": {"type": "LineString", "coordinates": coords}}
+
+
+def test_split_makes_equal_pieces_no_longer_than_5_m():
+    p = segments.split([road([[0, 0], [23, 0]]), road([[0, 10], [3, 10], [3, 14]], OBJECTID=2)], flat)
+    first = p["road"] == 0
+    assert first.sum() == 5 and np.allclose(p["length_m"][first], 4.6)
+    assert np.allclose(p["x0"][first][1:], p["x1"][first][:-1])          # pieces join end to end
+    assert np.isclose(p["length_m"].sum(), 23 + 7)
+    assert p["sx"].shape == (len(p["road"]), segments.NSAMP)
+    corner = p["lines"][int(np.flatnonzero(~first)[0])]                  # 3.5 m pieces: the first holds the corner
+    assert len(corner) == 3 and tuple(corner[1]) == (3.0, 10.0)
+    assert list(p["ST_FULL"][first]) == ["Test St"] * 5
+
+
+def test_water_stays_out_of_a_low_spot_until_the_ground_between_is_overtopped():
+    pytest.importorskip("scipy")
+    dem = np.full((5, 9), 60.0, np.float32)
+    dem[:, 0] = -5.0                 # tidal water on the west edge
+    dem[2, 1:4] = [1.0, 1.0, 1.0]    # low ground joined to it
+    dem[2, 4] = 3.0                  # a berm
+    dem[2, 5:8] = 0.5                # a low spot behind the berm
+    ci = depth.connect_index(dem)
+    lev = depth.LEVELS_FT
+    assert lev[ci[2, 2]] == 1.0
+    assert lev[ci[2, 6]] == 3.0      # wet only once the berm is, though the ground is at 0.5
+    assert ci[0, 8] == depth.NEVER
+    g, c = depth.sample(dem, ci, (0, 5), np.array([6.5, 100.0]), np.array([2.5, 2.5]))
+    assert np.isclose(g[0], 0.5) and c[0] == 3.0 and np.isnan(g[1])
+    assert np.isclose(depth.first_level(g[:1], c[:1], FLOODED_FT)[0], 3.0)
+
+
+def test_depth_stack_gives_the_same_ground_and_connect_level():
+    lev = depth.LEVELS_FT
+    ground, connect = 1.1, 3.0
+    d = np.where(lev >= connect, lev - ground, 0.0)[:, None]
+    g, c = depth.from_depth_stack(np.hstack([d, np.zeros_like(d)]))
+    assert np.isclose(g[0], ground) and c[0] == connect and np.isnan(g[1]) and np.isnan(c[1])
+
+
+def test_states_follow_dereks_depths():
+    d = status.depth_at(4.0, np.array([3.8, 3.75, 3.5, 3.4, 1.0]), np.array([3.0, 3.0, 3.0, 3.0, 4.25]))
+    assert list(status.state_of(d)) == [0, 1, 1, 2, 0]      # 0.2 dry, 0.25 ponded, 0.5 ponded, 0.6 flooded, cut off
+    assert PONDED_FT == 0.25 and FLOODED_FT == 0.5
+
+
+def levels(peak, obs):
+    t0 = datetime(2026, 11, 26, 0, 12, tzinfo=timezone.utc)
+    t = [t0 + timedelta(minutes=6 * i) for i in range(721)]
+    h = np.arange(721) / 10
+    f = 1.0 + (peak - 1.0) * np.exp(-((h - 14) / 3.0) ** 2)
+    k = int(f.argmax())
+    return {"station": "AAAA", "updated": "", "guidance": "", "t": t, "f": f, "p10": f - 0.3, "p90": f + 0.3,
+            "flood_levels_ft": {}, "obs_ft": obs, "obs_time": t0, "peak_ft": float(f[k]), "peak_time": t[k],
+            "peak_p10_ft": float(f[k] - 0.3), "peak_p90_ft": float(f[k] + 0.3)}
+
+
+def test_evaluate_now_peak_window_and_chance():
+    cols = {"station": np.array(["AAAA"] * 4 + ["ZZZZ"], dtype=object),
+            "ground_ft": np.array([2.0, 4.4, 4.9, 9.0, 0.0]), "connect_ft": np.array([2.0, 4.5, 5.0, np.nan, 0.0])}
+    r = status.evaluate(cols, {"AAAA": levels(5.0, 2.6)}, np.zeros(5, bool))
+    assert list(r["state_now"]) == [2, 0, 0, 0, 0]
+    assert list(r["state_peak"]) == [2, 2, 0, 0, 0]
+    assert list(r["state_p90"]) == [2, 2, 1, 0, 0]
+    assert r["hours_flooded"][0] > r["hours_flooded"][1] > 0 and r["hours_flooded"][2] == 0
+    assert r["first"][1] < levels(5.0, 2.6)["peak_time"] < r["last"][1]
+    assert r["chance"][0] > 0.99 and 0.5 < r["chance"][1] < 1 and 0 < r["chance"][2] < 0.5 and r["chance"][3] == 0
+    assert not r["has_forecast"][4]                          # a gauge with no forecast is left out
+    skipped = status.evaluate(cols, {"AAAA": levels(5.0, 2.6)}, np.array([True, False, False, False, False]))
+    assert skipped["state_peak"][0] == 0                     # bridges and piers are never flagged
+
+
+def test_nearest_gauge_and_huc12_override():
+    pytest.importorskip("scipy")
+    from inundation import tether
+    sts = [{"station": "WEST", "name": "", "lon": 0.0, "lat": 0.0}, {"station": "EAST", "name": "", "lon": 10000.0, "lat": 0.0}]
+    x, y = np.array([1000.0, 9000.0, 2000.0]), np.zeros(3)
+    huc = np.array(["A", "A", "B"], dtype=object)
+    st, km = tether.nearest(x, y, sts, flat)
+    assert list(st) == ["WEST", "EAST", "WEST"] and np.allclose(km, [1, 1, 2])
+    st, km = tether.nearest(x, y, sts, flat, huc, {"B": "EAST"})
+    assert list(st) == ["WEST", "EAST", "EAST"] and np.isclose(km[2], 8)
+    with pytest.raises(ValueError):
+        tether.nearest(x, y, sts, flat, huc, {"B": "NOPE"})
+    assert all(s["lat"] and not s["station"].startswith(("NN", "VB")) for s in tether.stations())
+
+
+def test_station_levels_reads_the_published_navd_files(tmp_path):
+    os.makedirs(tmp_path / "fore72"); os.makedirs(tmp_path / "7day")
+    rows = [{"date_time_z": f"2026-11-26T{h:02d}:00:00Z", "SSforecast_ft": v, "SSforecast_p10_ft": v - 0.2, "SSforecast_p90_ft": v + 0.2}
+            for h, v in enumerate([1.0, 2.0, 5.4, 3.0])]
+    (tmp_path / "fore72" / "AAAA_fore72_NAVD.json").write_text(json.dumps(
+        {"datum": "NAVD88", "units": "feet", "updated": "x", "guidance": "g", "flood_levels_ft": {"minor": 2.9}, "data": rows}))
+    (tmp_path / "7day" / "AAAA_7day_NAVD.json").write_text(json.dumps(
+        {"data": [{"date_time_z": "2026-11-25T23:54:00Z", "water_level_ft": 1.9}, {"date_time_z": "2026-11-26T00:00:00Z", "water_level_ft": None}]}))
+    lv = status.station_levels(str(tmp_path), "AAAA")
+    assert lv["peak_ft"] == 5.4 and lv["peak_time"].hour == 2 and np.isclose(lv["peak_p90_ft"], 5.6) and lv["obs_ft"] == 1.9
+    (tmp_path / "fore72" / "BBBB_fore72_NAVD.json").write_text(json.dumps({"datum": "MLLW", "units": "feet", "data": rows}))
+    with pytest.raises(ValueError):
+        status.station_levels(str(tmp_path), "BBBB")
+
+
+def test_page_packing_round_trips():
+    pytest.importorskip("scipy")
+    from inundation import page
+    import base64
+    a = page.hundredths([1.234, np.nan, -2.0])
+    assert list(a) == [123, page.NO_LEVEL, -200]
+    assert list(np.frombuffer(base64.b64decode(page.b64(a, "<i2")), "<i2")) == list(a)
+    line = np.array([[0, 0], [5, 0.05], [10, 0], [10, 10]], float)
+    assert len(page.simplify(line, 1.0)) == 3 and len(page.simplify(line, 0.01)) == 4
+    assert page.road_class("S1100HOV") == 2 and page.road_class("S1200PRI") == 1 and page.road_class("S1400") == 0
