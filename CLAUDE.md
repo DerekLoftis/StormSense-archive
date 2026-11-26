@@ -107,7 +107,8 @@ project's shared folder (skill code, baselines, notes, station sheet, disclosure
 - ArcGIS Online (VIMS org vims-wm.maps.arcgis.com, folder "StormSense CREST", secrets `ARCGIS_URL` + `ARCGIS_USERNAME`/
   `ARCGIS_PASSWORD` or `ARCGIS_API_KEY`): `crest/schema.py` is the one list of feed columns, types, labels and guidance
   colors (the pages' colors too); `crest/arcgis_push.py` overwrites seven hosted layers in place on every run, typed
-  from the schema (Stations, Daily Skill, Flood Events, Leaderboard, Lead Decay, Forecasts, Changes; read-only);
+  from the schema (Stations, Daily Skill, Flood Events, Leaderboard, Lead Decay, Forecasts, Changes; read-only;
+  Forecasts is ~15 MB, and a file over 5 MB that one request does not get in goes up in parts);
   `crest/arcgis_dashboard.py` builds the web map and the ArcGIS Dashboards item "StormSense CREST Forecast Archive" and
   creates them once (edits made in ArcGIS are kept; the workflow's `dashboard` input, `CREST_DASHBOARD=rebuild`,
   writes them again). Sharing is Derek's: never change it from code. Check dashboard edits before a PR with

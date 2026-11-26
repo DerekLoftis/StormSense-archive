@@ -91,6 +91,8 @@ class Portal:
     def __init__(self, refuse_types=()):
         self.items, self.folders, self.published, self.resources, self.n = [], [], {}, {}, 0
         self.refuse_types = set(refuse_types)   # layer titles the portal will not publish with other than its own field types
+        self.limit = None    # the largest file (bytes) this portal takes in one request; None: any size
+        self.lost = set()    # titles whose first addItem makes the item and then answers with an error
 
     def new(self, **item):
         self.n += 1
@@ -113,17 +115,42 @@ class Portal:
             return {"success": True, "folder": self.folders[0]}
         if url.endswith("/content/users/u/F"):
             return {"items": [dict(i) for i in self.items], "nextStart": -1}
+        body = files["file"][1].read() if files and url.endswith(("/addItem", "/update")) else None
+        if body is not None and self.limit is not None and len(body) > self.limit:
+            return {"error": {"code": 413, "message": "Request Entity Too Large", "details": []}}
+        whole = body is not None and dict(header=body.split(b"\n", 1)[0].decode().strip(), size=len(body), sent="whole")
         if url.endswith("/addItem"):
             if files:
-                return {"success": True, "id": self.new(title=params["title"], type="CSV", header=files["file"][1].readline().decode().strip())["id"]}
+                made = self.new(title=params["title"], type="CSV", **whole)
+                if params["title"] in self.lost:
+                    self.lost.discard(params["title"])
+                    return {"error": {"code": 504, "message": "Gateway Timeout", "details": []}}
+                return {"success": True, "id": made["id"]}
+            if params.get("multipart") == "true":   # an item waiting for its file's parts
+                assert params["type"] == "CSV" and params["fileName"].endswith(".csv")
+                return {"success": True, "id": self.new(title=params["title"], type="CSV", parts={})["id"]}
             assert params["type"] in ("Web Map", "Dashboard") and params["typeKeywords"]
             return {"success": True, "id": self.new(title=params["title"], type=params["type"], text=params["text"], writes=1)["id"]}
         if url.endswith("/update"):
             if files:
-                item["header"] = files["file"][1].readline().decode().strip()
+                item.update(whole)
+            elif params.get("multipart") == "true":
+                assert params["fileName"].endswith(".csv") and "title" not in params
+                item["parts"] = {}
             else:
                 item.update(text=params["text"], writes=item["writes"] + 1)
             return {"success": True}
+        if url.endswith("/addPart"):
+            item["parts"][int(params["partNum"])] = files["file"][1]
+            return {"success": True}
+        if url.endswith("/commit"):
+            assert params["id"] == item["id"] and params["type"] == "CSV" and params["async"] == "true"
+            parts = [p for _, p in sorted(item.pop("parts").items())]
+            assert parts and all(len(p) == arcgis_push.PART for p in parts[:-1])   # only the last part may be short
+            body = b"".join(parts)
+            item.update(header=body.split(b"\n", 1)[0].decode().strip(), size=len(body), sent="parts")
+            item.update({k: params[k] for k in ("title", "tags", "snippet") if k in params})
+            return {"success": True, "id": item["id"]}
         if url.endswith("/data"):
             return json.loads(next(i for i in self.items if f"/items/{i['id']}/data" in url)["text"])
         if url.endswith("/addResources") or url.endswith("/updateResources"):
@@ -273,3 +300,57 @@ def test_upload_falls_back_to_arcgis_types_and_reports_uneven_sharing(portal, tm
     assert arcgis_push.main(feeds) == 0
     out = capsys.readouterr().out
     assert "::notice title=ArcGIS sharing::" in out and "private: " in out and arcgis_dashboard.DASH_TITLE in out
+
+
+def big_forecasts(feeds, monkeypatch, rows=300):
+    """Make the forecasts feed "large" (the real one is about 15 MB) by this test's small measure."""
+    path = os.path.join(feeds, schema.FEEDS["forecasts"][1])
+    row = open(path).read().splitlines()[1]
+    with open(path, "a") as f:
+        f.write("".join(row + "\n" for _ in range(rows)))
+    monkeypatch.setattr(arcgis_push, "BIG", 4000)
+    monkeypatch.setattr(arcgis_push, "PART", 5000)
+    assert os.path.getsize(path) > 3 * 5000
+    assert all(os.path.getsize(os.path.join(feeds, v[1])) < 4000 for k, v in schema.FEEDS.items() if k != "forecasts")
+    return path, row
+
+
+def test_a_large_feed_goes_up_in_parts_when_one_request_is_refused(portal, tmp_path, monkeypatch, capsys):
+    feeds = write_feeds(tmp_path / "feeds")
+    path, row = big_forecasts(feeds, monkeypatch)
+    portal.limit = 6000
+    assert arcgis_push.main(feeds) == 0
+    csvs = {i["title"]: i for i in portal.items if i["type"] == "CSV"}
+    fc = csvs.pop("CREST Forecasts")
+    assert fc["sent"] == "parts" and fc["size"] == os.path.getsize(path) and fc["header"].split(",") == schema.columns("forecasts")
+    assert len(csvs) == len(schema.FEEDS) - 1 and all(i["sent"] == "whole" for i in csvs.values())
+    assert portal.published["CREST Forecasts"]["fields"]["S"]["type"] == "esriFieldTypeDouble"
+    assert any(i["type"] == "Dashboard" for i in portal.items) and "sending it in parts" in capsys.readouterr().out
+    # the next day the same item gets the new file, again in parts, and keeps the properties its owner gave it
+    n = len(portal.items)
+    assert fc["tags"] == arcgis_push.TAGS
+    fc["tags"] = "the owner's own tags"
+    with open(path, "a") as f:
+        f.write(row + "\n")
+    assert arcgis_push.main(feeds) == 0
+    assert len(portal.items) == n and fc["size"] == os.path.getsize(path) and portal.published["CREST Forecasts"]["times"] == 2
+    assert fc["tags"] == "the owner's own tags"
+
+
+def test_a_large_feed_is_not_added_twice_when_the_first_request_fails_late(portal, tmp_path, monkeypatch):
+    feeds = write_feeds(tmp_path / "feeds")
+    path, _ = big_forecasts(feeds, monkeypatch)
+    portal.lost = {"CREST Forecasts"}     # ArcGIS makes the item, but the answer is an error
+    assert arcgis_push.main(feeds) == 0
+    mine = [i for i in portal.items if i["type"] == "CSV" and i["title"] == "CREST Forecasts"]
+    assert len(mine) == 1 and mine[0]["sent"] == "parts" and mine[0]["size"] == os.path.getsize(path)
+    assert portal.published["CREST Forecasts"]["times"] == 1
+
+
+def test_a_small_feed_that_is_refused_is_reported_not_sent_in_parts(portal, tmp_path, capsys):
+    feeds = write_feeds(tmp_path / "feeds")
+    portal.limit = 10
+    assert arcgis_push.main(feeds) == 1
+    out = capsys.readouterr().out
+    assert not portal.published and "::warning title=ArcGIS CREST Stations::413" in out and "in parts" not in out
+    assert "::warning title=ArcGIS dashboard::the dashboard needs layers that were not published" in out

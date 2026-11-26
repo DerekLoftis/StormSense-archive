@@ -34,6 +34,8 @@ from . import schema
 
 TAGS = "StormSense, CREST, VIMS, storm tide, forecast skill"
 SNIPPET = "StormSense CREST: archived storm tide forecasts scored against the gauges (VIMS)."
+BIG = 5 * 2 ** 20     # a file larger than this has a second way up, in parts (put_file)
+PART = 50 * 2 ** 20   # the size of a part; ArcGIS wants every part but the last to be 5 MB or more
 
 
 class Portal:
@@ -99,15 +101,58 @@ def connect():
     return Portal(url, key)
 
 
-def wait(p, item, job):
+def wait(p, item, job=None):
+    """Wait for a publish job, or without a job for the item itself (a file sent in parts being put together)."""
+    what = "publish" if job else "upload"
     for _ in range(120):
-        d = p.call("GET", f"{p.content}/items/{item}/status", jobId=job, jobType="publish")
+        d = p.call("GET", f"{p.content}/items/{item}/status", **({"jobId": job, "jobType": "publish"} if job else {}))
         if d.get("status") == "completed":
             return
         if d.get("status") == "failed":
-            raise RuntimeError(f"publish failed: {d.get('statusMessage')}")
+            raise RuntimeError(f"{what} failed: {d.get('statusMessage')}")
         time.sleep(5)
-    raise RuntimeError("publish did not finish in 10 minutes")
+    raise RuntimeError(f"{what} did not finish in 10 minutes")
+
+
+def put_file(p, folder, cid, path, name, **props):
+    """Add the file as a new item (cid None) or replace the item's file; returns the item's id.
+    One request does it. A file over 5 MB (the Forecasts CSV is about 15 MB) that ArcGIS does not take that way is
+    sent again in parts and committed, which is how Esri's own Python client adds anything over 5 MB."""
+    base = f"{p.content}/{folder}"
+
+    def whole(cid):
+        with open(path, "rb") as fh:
+            files = {"file": (name, fh, "text/csv")}
+            if cid is None:
+                return p.call("POST", f"{base}/addItem", files=files, **props)["id"]
+            p.call("POST", f"{base}/items/{cid}/update", files=files)
+            return cid
+
+    def parts(cid):
+        new = cid is None
+        if new:
+            cid = p.call("POST", f"{base}/addItem", multipart="true", fileName=name, **props)["id"]
+        else:
+            p.call("POST", f"{base}/items/{cid}/update", multipart="true", fileName=name)
+        with open(path, "rb") as fh:
+            for n, chunk in enumerate(iter(lambda: fh.read(PART), b""), 1):
+                p.call("POST", f"{base}/items/{cid}/addPart", files={"file": (f"split{n}.split", chunk)}, partNum=n)
+        # a new item's properties go with the commit, as Esri's client sends them; an existing item keeps its own
+        p.call("POST", f"{base}/items/{cid}/commit", id=cid, **{"async": "true"},
+               **(props if new else {"type": props["type"]}))
+        wait(p, cid)
+        return cid
+
+    try:
+        return whole(cid)
+    except Exception as e:
+        if os.path.getsize(path) <= BIG:
+            raise
+        print(f"  {name} was not taken in one request ({e}); sending it in parts")
+        if cid is None:   # a request can fail after ArcGIS has made the item: use that item, do not make a second
+            cid = next((i["id"] for i in p.items(folder)
+                        if i["title"] == props["title"] and i["type"] == props["type"]), None)
+        return parts(cid)
 
 
 def typed(pp, key):
@@ -127,15 +172,8 @@ def push(p, folder, have, key, path):
     title, _, has_xy, _ = schema.FEEDS[key]
     csv_item = next((i for i in have if i["title"] == title and i["type"] == "CSV"), None)
     svc = next((i for i in have if i["title"] == title and i["type"] == "Feature Service"), None)
-    upload = "crest_" + os.path.basename(path)
-    with open(path, "rb") as fh:
-        files = {"file": (upload, fh, "text/csv")}
-        if csv_item is None:
-            cid = p.call("POST", f"{p.content}/{folder}/addItem", files=files, type="CSV", title=title,
-                         tags=TAGS, snippet=SNIPPET)["id"]
-        else:
-            cid = csv_item["id"]
-            p.call("POST", f"{p.content}/{folder}/items/{cid}/update", files=files)
+    cid = put_file(p, folder, csv_item["id"] if csv_item else None, path, "crest_" + os.path.basename(path),
+                   type="CSV", title=title, tags=TAGS, snippet=SNIPPET)
     pp = p.call("POST", f"{p.rest}/content/features/analyze", itemid=cid, filetype="csv",
                 analyzeParameters={"enableGlobalGeocoding": False, "sourceLocale": "en"})["publishParameters"]
     pp["name"] = svc["url"].rstrip("/").split("/")[-2] if svc and svc.get("url") else title.replace(" ", "_")

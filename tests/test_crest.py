@@ -1,7 +1,9 @@
 """Offline tests of CREST's statistics, feeds and pages on a small synthetic archive."""
 import csv
 import json
+import math
 import os
+import re
 import sys
 
 import numpy as np
@@ -95,10 +97,19 @@ def test_station_doc_feeds_and_page(tmp_path):
     json.dump(net, open(out / "data" / "network_30d.json", "w"))
     feeds.write(str(out / "feeds"), net, [d], sc, {"TEST": o}, {"TEST": lv}, [], period)
     assert (out / "feeds" / "stations.geojson").exists() and (out / "feeds" / "daily_skill.csv").exists()
-    # every feed has exactly the columns of schema.py (the ArcGIS layers are typed from it)
-    for key, (_, name, _, _) in schema.FEEDS.items():
+    # every feed has exactly the columns of schema.py, and every value reads as its column's type and fits its
+    # length (the ArcGIS layers are typed from the schema, so a value of another kind would not load)
+    reads = {"str": lambda v: True, "int": lambda v: re.fullmatch(r"-?\d+", v), "float": lambda v: math.isfinite(float(v)),
+             "date": lambda v: re.fullmatch(r"\d{4}-\d\d-\d\dT\d\d:\d\d:\d\dZ", v)}
+    for key, (_, name, _, cols) in schema.FEEDS.items():
         with open(out / "feeds" / name, newline="") as f:
-            assert next(csv.reader(f)) == schema.columns(key), name
+            rows = csv.DictReader(f)
+            assert rows.fieldnames == schema.columns(key), name
+            for row in rows:
+                for c in cols:
+                    v = row[c[0]]
+                    assert v == "" or reads[c[1]](v), (name, c[0], v)
+                    assert c[1] != "str" or len(v) <= schema.esri_fields(key)[c[0]]["length"], (name, c[0], v)
     # the forecast archive: one row per forecast and guidance, with its own peak, its flood category and its chart
     fc = list(csv.DictReader(open(out / "feeds" / "forecasts.csv", newline="")))
     row = next(r for r in fc if r["member"] == "primary")
