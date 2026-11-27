@@ -160,7 +160,7 @@ project's shared folder (skill code, baselines, notes, station sheet, disclosure
   the area's self-contained map page (`inundation/page.py`, `templates/map.html`).
 - Since 2026-11-26 (Derek's asks): water also travels through the city's stormwater pipes (`drainage.py`,
   `drainage_sources.json` per FIPS; static like Norfolk's TITAN), floodwalls from the USACE National Levee Database
-  hold it back and cut the pipes (`barriers.py`), red buildings are labelled "Flooded Building", and buildings get
+  hold it back and cut the pipes (`barriers.py`), a click on a red building names it "Flood Affected Structure" (Derek, 2026-11-27; the "Flooded Building" labels on the map are gone), and buildings get
   year built, assessed value (`value.py`, `value_sources.json`: Norfolk parcels + FY27 assessment roll), the ZIP's
   Zillow typical home value, and "Est. Damage at Max Forecast Depth" from the USACE generic depth-damage curves
   (EGM 01-03 / 04-01; `damage.py`), homes only. No statewide first floor elevations in Virginia: floors are assumed at the
@@ -178,6 +178,10 @@ project's shared folder (skill code, baselines, notes, station sheet, disclosure
   `store`). maps.nnva.gov goes down for minutes at a time around 3 AM ET: just run again. A HUC-12 no gauge measures is
   left out (`tether_overrides.csv` station `-`, prefix with `*`): `03010205*`, the Back Bay, North Landing and Northwest
   River watersheds south of the Great Bridge lock, which drain to Currituck Sound. Results per city: README "Numbers".
+- Map page basemap (Derek, 2026-11-27): Satellite (opens here), Streets or Plain; Esri's Web Mercator tiles are drawn
+  into the page's UTM canvas (`drawBase` in `templates/map.html`), and the page falls back to Plain where other hosts
+  are blocked (artifacts), so check basemaps on a local build (`python3 -m http.server` over the built site), not in
+  an artifact.
 - Map page (Derek's asks 2026-11-27): the flood picture is an overview plus 1024-pixel tiles (`page/tiles/`; level,
   gauge and ground per 5 m cell) because one big picture did not draw on phones; depth is colored in Derek's eleven
   blues (to 0.5 ft, then each foot to 10); views Now / Forecast peak (opens here) / Last observed / Historical Floods /
@@ -202,7 +206,9 @@ project's shared folder (skill code, baselines, notes, station sheet, disclosure
 - Site (2026-11-27): `inundation/areas.csv` lists the localities (Hampton Roads, the Middle Peninsula, the Northern
   Neck and the Eastern Shore so far; add a row to add one). `python -m inundation.site --prepared <dir of <name>/> --latest <Latest site> --out site/inundation`
   writes each locality's page under `<name>/` and `index.html`, the map of all of them (`templates/statewide.html`:
-  Leaflet, Esri satellite hybrid or street basemap, opens on Sewells Point, water reprojected from the localities' UTM
+  Leaflet, Esri satellite hybrid or street basemap, opens on the whole coastal zone with every gauge (Derek,
+  2026-11-27; a click on a gauge puts its forecast in the plot, Sewells Point's until then), gauges colored by NWS
+  flood category with a ring for the highest category forecast, water reprojected from the localities' UTM
   depth tiles, totals from `areas.json` `curves`, each flagged road piece and building from zoom 15 in, read from the
   locality's own `static.json`). `inundation.yml` runs it after every StormSense run and deploys to
   Pages at /StormSense-archive/inundation/ (release `inundation-pages`); Pages is one site per repo, so it and

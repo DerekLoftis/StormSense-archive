@@ -2,7 +2,7 @@
 
 Which roads and buildings the gauges and the 72-hour forecast put under water, and what that costs. Pilot: Norfolk
 (FIPS 51710), 2026-11-25. Derek's rules: roads under more than 0.5 ft of water are orange, ponded water (0.25 ft) is
-yellow, buildings in more than 0.5 ft are red and labelled "Flooded Building". Since 2026-11-26 the water also
+yellow, buildings in more than 0.5 ft are red (a click names one "Flood Affected Structure"; Derek, 2026-11-27: no labels on the map, they covered the buildings). Since 2026-11-26 the water also
 travels through the stormwater pipes, floodwalls hold it back, and buildings carry year built, assessed value and an
 estimated damage.
 
@@ -198,6 +198,13 @@ python -m inundation.status --prepared prepared --name norfolk --site <StormSens
   written as `page/tiles/z0.png` (the whole area, at most 2048 pixels) plus 1024-pixel tiles the page loads as the
   reader zooms in. One big picture (`extent.png`, before 2026-11-27) did not draw on phones. Cells in a watershed no
   gauge measures are left empty.
+- Basemap (Derek, 2026-11-27: the plain background made the flooding hard to place): Satellite (Esri World Imagery
+  with its road and place-name layers; the page opens on it), Streets (World Street Map) or Plain (the page's own
+  drawing of land, water, roads and buildings). The page's view is the area's UTM grid, so each Web Mercator map tile
+  is drawn through the affine map of three of its corners (`drawBase`; `utm` and `lonlat` are Krueger's series).
+  Over a basemap the flood picture leaves ordinary tidal water clear and the page's own road network and building
+  outlines are not drawn, only the flagged ones. Where the map tiles cannot be loaded (a Claude artifact blocks other
+  hosts) the page falls back to Plain and says so. A viewer's own choice is remembered in the browser.
 - Views: Now, Forecast peak (the page opens here), Last observed, Historical Floods, Scenario. Scenario sets one
   water level for every gauge, -2 to 10 ft NAVD88 in 0.25 ft steps, and the roads, buildings and damage follow it; it
   opens at the step nearest 7 ft above MLLW at Sewells Point.
@@ -216,7 +223,7 @@ Northern Neck and the Eastern Shore so far. Add a row to add a locality.
     python -m inundation.site --prepared <folder of <name>/ folders> --latest <Latest site> --out site/inundation
 
 writes one site: `<name>/` is each prepared locality's own map page (its tables under `<name>/data/`) and
-`index.html` is the map of all of them (`templates/statewide.html`). That map opens on Sewells Point over a
+`index.html` is the map of all of them (`templates/statewide.html`). That map opens on the whole coastal zone, with every StormSense gauge, over a
 satellite basemap with roads and place names, or a street map (Esri's World Imagery, its two reference layers and
 World Street Map, drawn with Leaflet from `crest/jslib`). The water is drawn from the localities' own depth tiles:
 they are in each locality's UTM zone, so the page reprojects them as it draws (a far view from `tiles/z1.png`,
@@ -226,7 +233,16 @@ written by `prep`) so neighbours do not paint over each other. Roads, buildings 
 water level, so the far view never loads the road and building tables. From zoom 15 in, the page reads the
 `static.json` of each locality in view (its own page's data) and draws every flooded or ponded road piece and
 flooded building on the water; a click on one gives its depth, ground and gauge, a click elsewhere in a locality its
-counts and the link to its own map. The plot is Sewells Point's forecast.
+counts and the link to its own map. The plot is Sewells Point's forecast until a gauge is clicked: then it is that
+gauge's, with its flood levels (Derek, 2026-11-27).
+
+Gauges, on the map of all localities and on each locality's own: the dot has the color of the National Weather
+Service flood category of the gauge's level at the selected time (green below Action, yellow Action, orange Minor,
+red Moderate, purple Major, navy where no levels are set, grey without a reading), and a ring around it the color of
+the highest category its forecast reaches in the 72 hours. Zoomed out, the map of all localities labels the gauges
+with their abbreviations (a label that would sit on another gives way: the plot's gauge, the highest category and
+NOAA's gauges keep theirs); from zoom 10.5 in, the label also carries the level. When no gauge that a prepared
+locality follows is at Action, a note under the map says that this is why there is no blue to see.
 
 `.github/workflows/inundation.yml` runs it after every StormSense run and publishes to GitHub Pages at
 https://derekloftis.github.io/StormSense-archive/inundation/ (and to release `inundation-pages`). GitHub Pages

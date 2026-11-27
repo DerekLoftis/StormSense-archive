@@ -67,6 +67,11 @@ button:focus-visible,input:focus-visible,canvas:focus-visible{outline:2px solid 
 #map.drag{cursor:grabbing}
 .zoom{position:absolute;top:10px;right:10px;display:flex;flex-direction:column;gap:4px}
 .zoom button{width:32px;height:32px;padding:0;font-size:17px;line-height:1}
+.base{position:absolute;left:10px;top:10px;box-shadow:0 1px 5px rgba(0,0,0,.3)}
+.base button{padding:4px 10px;font-size:12.5px}
+.attr{position:absolute;right:0;bottom:0;background:rgba(255,255,255,.78);color:#333;font-size:10px;padding:1px 6px;border-top-left-radius:4px;pointer-events:none}
+.chips .dot{display:inline-block;width:11px;height:11px;border-radius:50%;border:1.5px solid #fff;box-shadow:0 0 0 1px rgba(0,0,0,.45)}
+.chips .ring{display:inline-block;width:9px;height:9px;border-radius:50%;border:3px solid #ffe600;box-shadow:0 0 0 1px rgba(0,0,0,.35)}
 .pop{position:absolute;max-width:310px;background:var(--panel);border:1px solid var(--line);border-radius:7px;padding:8px 10px;font-size:12.5px;box-shadow:0 4px 14px rgba(0,0,0,.18);pointer-events:none}
 .pop b{font-family:var(--display);font-size:13.5px}
 .pop .u{color:var(--muted)}
@@ -153,16 +158,24 @@ select{font:inherit;font-size:13.5px;color:var(--ink);background:var(--panel);bo
       <div class="mapbox">
         <canvas id="map" tabindex="0" aria-label="Map of roads and buildings under water at the selected time. Drag to move, scroll or pinch to zoom, click a road or building for its levels."></canvas>
         <div class="zoom"><button id="zIn" type="button" aria-label="Zoom in">+</button><button id="zOut" type="button" aria-label="Zoom out">−</button><button id="zFit" type="button" aria-label="Show the whole area" title="Whole area">⤢</button></div>
+        <span class="seg base" role="group" aria-label="Basemap">
+          <button type="button" data-b="sat" aria-pressed="true">Satellite</button>
+          <button type="button" data-b="streets" aria-pressed="false">Streets</button>
+          <button type="button" data-b="plain" aria-pressed="false">Plain</button>
+        </span>
         <div class="hint" id="scale"></div>
+        <div class="attr" id="attr" hidden>Esri, Maxar, Earthstar Geographics</div>
         <div class="pop" id="pop" hidden></div>
       </div>
       <div class="ramp" id="ramp" aria-label="Water depth in feet, by color"></div>
+      <div class="chips" id="gkeys" aria-label="Gauge colors: the NWS flood category of each gauge"></div>
+      <p class="note" id="baseNote" hidden></p>
       <div class="chips">
         <span><span class="sw" style="background:var(--flooded)"></span>Road under more than 0.5 ft</span>
         <span><span class="sw" style="background:var(--ponded)"></span>Ponded, 0.25 to 0.5 ft</span>
-        <span><span class="sw box" style="background:var(--building)"></span>Flooded Building, in more than 0.5 ft</span>
-        <span><span class="sw box" style="background:var(--map-water)"></span>Tidal water at an ordinary high tide</span>
-        <span><span class="sw" style="background:var(--map-bridge)"></span>Bridge or tunnel, not evaluated</span>
+        <span><span class="sw box" style="background:var(--building)"></span>Flood Affected Structure, in more than 0.5 ft</span>
+        <span class="plainOnly"><span class="sw box" style="background:var(--map-water)"></span>Tidal water at an ordinary high tide</span>
+        <span class="plainOnly"><span class="sw" style="background:var(--map-bridge)"></span>Bridge or tunnel, not evaluated</span>
         <span class="mk" hidden><svg width="13" height="13" viewBox="0 0 13 13" aria-hidden="true"><path d="M6.5 0.8 12.2 6.5 6.5 12.2 0.8 6.5Z" fill="var(--map-mark)" stroke="var(--map-halo)"/></svg>USGS high water mark (hollow: wave-affected)</span>
         <span class="mk" hidden><svg width="13" height="13" viewBox="0 0 13 13" aria-hidden="true"><path d="M6.5 1 12.3 11.6H0.7Z" fill="var(--map-mark)" stroke="var(--map-halo)"/></svg>USGS storm-tide sensor peak</span>
       </div>
@@ -213,6 +226,13 @@ var C = {};
 var DEPTH = ["#bfe6f5","#a6d5ef","#8cc3e9","#73b0e2","#5c9bd9","#4885cf","#386fc2","#2b59b2","#20449f","#172f8a","#0f1c73"];
 var DEPTH_LABEL = ["0.5","1","2","3","4","5","6","7","8","9","10"];
 var MAX_TILES = Math.min(window.innerWidth, window.innerHeight) < 700 ? 6 : 12;
+// basemap under the flood picture (Derek, 2026-11-27): Esri imagery with roads and place names, Esri streets, or the plain drawing
+var ESRI = "https://server.arcgisonline.com/ArcGIS/rest/services/", BASE = {sat:["World_Imagery"], streets:["World_Street_Map"], plain:[]},
+    REF = {sat:["Reference/World_Transportation", "Reference/World_Boundaries_and_Places"]}, BT = {img:{}, ok:0, bad:0, n:0, raf:0};
+// National Weather Service flood categories, in the colors of its river and tide gauge maps
+var CAT = {none:"#1a9850", action:"#ffe600", minor:"#ff9900", moderate:"#e60000", major:"#c800e6", open:"#0b3954", na:"#8a8f98"};
+var CAT_NAME = {none:"Below Action", action:"Action", minor:"Minor", moderate:"Moderate", major:"Major", na:"No reading"};
+var CAT_RANK = {na:0, open:0, none:0, action:1, minor:2, moderate:3, major:4};
 if (/[?&]embed=1/.test(location.search)) document.body.classList.add("embed");
 
 function fail(msg){ var e = $("error"); e.hidden = false; e.textContent = msg; $("when").textContent = "Not loaded"; }
@@ -249,6 +269,10 @@ function followNote(){ var out = []; for (var id in LV.stations){ var f = LV.sta
   if ($("followNote")) $("followNote").textContent = out.length ? " " + out.join(" ") : ""; }
 function setup(){
   readColors(); followNote();
+  R.base = "sat"; try { var kb = localStorage.getItem("stormsense-base"); if (kb && BASE[kb]) R.base = kb; } catch (e) {}
+  $("gkeys").innerHTML = "<span>Gauges:</span>" + ["none","action","minor","moderate","major","na"].map(function(k){ return '<span><i class="dot" style="background:' + CAT[k] + '"></i>' + CAT_NAME[k] + "</span>"; }).join("") +
+    '<span><i class="ring"></i>Ring: the highest category forecast in 72 hours</span>';
+  document.querySelectorAll(".base button").forEach(function(b){ b.onclick = function(){ BT.bad = 0; try { localStorage.setItem("stormsense-base", b.dataset.b); } catch (e) {} setBase(b.dataset.b, ""); }; });
   var P = S.pieces, B = S.buildings, RD = S.roads, i, k;
   R.pxy = arr(P.xy, Uint16Array); R.pg = arr(P.ground, Int16Array); R.pc = arr(P.connect, Int16Array);
   R.pst = bytes(P.station); R.proad = arr(P.road, P.road_bytes === 4 ? Uint32Array : Uint16Array); R.plen = arr(P.len, Uint16Array);
@@ -294,7 +318,7 @@ function setup(){
   $("bHist").disabled = !EV.events.length;
   var h = "<b>Water depth (ft)</b>"; DEPTH.forEach(function(c, q){ h += '<span><i style="background:' + c + '"></i>' + (q ? "" : "≤") + DEPTH_LABEL[q] + "</span>"; }); $("ramp").innerHTML = h;
   var ov = S.raster.overview; R.over = tile("z0", ov.file, ov.width, ov.height);
-  bind(); resize(true); use("fc");
+  bind(); resize(true); use("fc"); setBase(R.base, "");
   window.__inundation = function(){ return {view:T.view, event:A && A.ev, s:V.s, ox:V.ox, oy:V.oy}; };   // for browser checks
 }
 
@@ -502,6 +526,7 @@ function tile(key, url, w, h){ var t = R.tiles[key]; if (t) return t; t = R.tile
   return t; }
 function paint(t){ if (t.stamp === R.stamp) return; var a = t.a, lev = t.lev, zn = t.zone, g = t.gnd, n = a.length, K = R.kidx, L = R.L, W = R.colWater, D = R.colDepth, NZ = S.raster.no_zone,
     g0 = S.raster.ground0_ft * 100, gs = S.raster.ground_step_ft * 100;
+  if (R.base !== "plain") W = 0;                 // over a basemap the imagery shows the water
   for (var i = 0; i < n; i++){ var gi = g[i]; if (gi === 0){ a[i] = W; continue; } var z = zn[i]; if (z === NZ || z >= K.length || lev[i] > K[z]){ a[i] = 0; continue; }
     var d = L[z] - (g0 + (gi - 1) * gs); a[i] = D[d <= 50 ? 0 : d <= 100 ? 1 : d >= 1000 ? 10 : Math.ceil(d / 100)]; }
   t.ctx.putImageData(t.im, 0, 0); t.stamp = R.stamp; }
@@ -509,23 +534,70 @@ function resize(fit){ cv.style.aspectRatio = S.width_m + " / " + S.height_m; var
 function fitAll(){ var wu = S.width_m / S.unit_m, hu = S.height_m / S.unit_m; V.s = Math.min(R.w / wu, R.h / hu); V.ox = (R.w - wu * V.s) / 2; V.oy = (R.h - hu * V.s) / 2; }
 function zoomAt(x, y, k){ var wu = S.width_m / S.unit_m, min = Math.min(R.w / wu, R.h / (S.height_m / S.unit_m)) * 0.8, s = Math.max(min, Math.min(12 * S.unit_m, V.s * k)); k = s / V.s; V.ox = x - (x - V.ox) * k; V.oy = y - (y - V.oy) * k; V.s = s; draw(); $("pop").hidden = true; }
 function drawRaster(s, ox, oy, w, h){ if (!R.L) return;
-  var ra = S.raster, cu = ra.cell_m / S.unit_m, pc = s * cu, ov = ra.overview, o = R.over, r, c;
-  if (o && o.state === 1){ paint(o); ctx.imageSmoothingEnabled = pc * ov.factor < 3; ctx.drawImage(o.cv, ox, oy, ov.width * ov.factor * pc, ov.height * ov.factor * pc); }
-  if (ov.factor === 1 || pc * ov.factor <= 1.5) return;        // the overview is sharp enough
+  var ra = S.raster, cu = ra.cell_m / S.unit_m, pc = s * cu, ov = ra.overview, o = R.over, r, c, plain = R.base === "plain", f = ov.factor;
   var ts = ra.tile, c0 = Math.max(0, Math.floor(-ox / pc / ts)), c1 = Math.min(ra.cols - 1, Math.floor((w - ox) / pc / ts)), r0 = Math.max(0, Math.floor(-oy / pc / ts)), r1 = Math.min(ra.rows - 1, Math.floor((h - oy) / pc / ts));
-  if ((c1 - c0 + 1) * (r1 - r0 + 1) > MAX_TILES) return;
-  ctx.imageSmoothingEnabled = pc < 3; R.tick++;
+  var fine = !(f === 1 || pc * f <= 1.5) && (c1 - c0 + 1) * (r1 - r0 + 1) <= MAX_TILES;        // else the overview is sharp enough
+  if (o && o.state === 1 && (plain || !fine)){ paint(o); ctx.imageSmoothingEnabled = pc * f < 3; ctx.drawImage(o.cv, ox, oy, ov.width * f * pc, ov.height * f * pc); }
+  if (!fine) return;
+  R.tick++;
   for (r = r0; r <= r1; r++) for (c = c0; c <= c1; c++){ var tw = Math.min(ts, ra.width - c * ts), th = Math.min(ts, ra.height - r * ts), t = tile(r + "_" + c, ra.dir + "/t_" + r + "_" + c + ".png", tw, th);
-    if (t.state !== 1) continue; paint(t); t.used = R.tick; var dx = ox + c * ts * pc, dy = oy + r * ts * pc;
-    ctx.fillStyle = C.land; ctx.fillRect(dx, dy, tw * pc, th * pc); ctx.drawImage(t.cv, dx, dy, tw * pc, th * pc); }
+    var dx = ox + c * ts * pc, dy = oy + r * ts * pc;
+    if (t.state !== 1){ if (!plain && o && o.state === 1){ paint(o); ctx.imageSmoothingEnabled = true; ctx.drawImage(o.cv, c * ts / f, r * ts / f, tw / f, th / f, dx, dy, tw * pc, th * pc); } continue; }
+    paint(t); t.used = R.tick; ctx.imageSmoothingEnabled = pc < 3;
+    if (plain){ ctx.fillStyle = C.land; ctx.fillRect(dx, dy, tw * pc, th * pc); } ctx.drawImage(t.cv, dx, dy, tw * pc, th * pc); }
   var live = Object.keys(R.tiles).filter(function(k){ return k !== "z0" && R.tiles[k].state === 1; });
   if (live.length > MAX_TILES + 4){ live.sort(function(p, q){ return R.tiles[p].used - R.tiles[q].used; }).slice(0, live.length - MAX_TILES).forEach(function(k){ var t = R.tiles[k]; if (t.used === R.tick) return; t.cv.width = t.cv.height = 0; delete R.tiles[k]; }); }
 }
+/* ---------- basemap: Esri's map tiles (Web Mercator) drawn into the area's own UTM view ---------- */
+// Longitude and latitude to UTM and back (GRS80, Krueger's series to n^3: good to a millimetre)
+function utmK(){ var a = 6378137, f = 1 / 298.257222101, n = f / (2 - f), n2 = n * n, n3 = n2 * n; return {n:n, A:a / (1 + n) * (1 + n2 / 4 + n2 * n2 / 64),
+  al:[n / 2 - 2 / 3 * n2 + 5 / 16 * n3, 13 / 48 * n2 - 3 / 5 * n3, 61 / 240 * n3], be:[n / 2 - 2 / 3 * n2 + 37 / 96 * n3, n2 / 48 + n3 / 15, 17 / 480 * n3], de:[2 * n - 2 / 3 * n2 - 2 * n3, 7 / 3 * n2 - 8 / 5 * n3, 56 / 15 * n3]}; }
+var UK = utmK();
+function utm(lon, lat){ var lon0 = (S.epsg % 100) * 6 - 183, n = UK.n, phi = lat * Math.PI / 180, lam = (lon - lon0) * Math.PI / 180, q = 2 * Math.sqrt(n) / (1 + n);
+  var t = Math.sinh(Math.atanh(Math.sin(phi)) - q * Math.atanh(q * Math.sin(phi))), xi = Math.atan2(t, Math.cos(lam)), eta = Math.atanh(Math.sin(lam) / Math.sqrt(1 + t * t)), E = eta, N = xi;
+  for (var j = 1; j <= 3; j++){ N += UK.al[j-1] * Math.sin(2 * j * xi) * Math.cosh(2 * j * eta); E += UK.al[j-1] * Math.cos(2 * j * xi) * Math.sinh(2 * j * eta); }
+  return [500000 + 0.9996 * UK.A * E, 0.9996 * UK.A * N]; }
+function lonlat(E, N){ var lon0 = (S.epsg % 100) * 6 - 183, xi = N / (0.9996 * UK.A), eta = (E - 500000) / (0.9996 * UK.A), x = xi, e = eta;
+  for (var j = 1; j <= 3; j++){ x -= UK.be[j-1] * Math.sin(2 * j * xi) * Math.cosh(2 * j * eta); e -= UK.be[j-1] * Math.cos(2 * j * xi) * Math.sinh(2 * j * eta); }
+  var chi = Math.asin(Math.sin(x) / Math.cosh(e)), lat = chi; for (j = 1; j <= 3; j++) lat += UK.de[j-1] * Math.sin(2 * j * chi);
+  return [lon0 + Math.atan2(Math.sinh(e), Math.cos(x)) * 180 / Math.PI, lat * 180 / Math.PI]; }
+window.__utm = function(lon, lat){ return utm(lon, lat); }; window.__lonlat = function(E, N){ return lonlat(E, N); };
+function baseTile(layer, z, x, y){ var key = layer + "/" + z + "/" + y + "/" + x, t = BT.img[key]; if (t){ t.used = R.tick; return t; }
+  t = BT.img[key] = {state:0, used:R.tick, im:new Image()}; BT.n++; t.im.crossOrigin = "anonymous";
+  t.im.onload = function(){ t.state = 1; BT.ok++; if (!BT.raf) BT.raf = requestAnimationFrame(function(){ BT.raf = 0; draw(); }); };
+  t.im.onerror = function(){ t.state = -1; BT.bad++; if (!BT.ok && BT.bad >= 6 && R.base !== "plain") setBase("plain", "The satellite and street basemaps could not be loaded here, so the plain map is shown."); };
+  t.im.src = ESRI + layer + "/MapServer/tile/" + z + "/" + y + "/" + x;
+  if (BT.n > 320){ Object.keys(BT.img).sort(function(a, b){ return BT.img[a].used - BT.img[b].used; }).slice(0, 120).forEach(function(k){ BT.img[k].im.onload = BT.img[k].im.onerror = null; delete BT.img[k]; BT.n--; }); }
+  return t; }
+function drawBase(layers, s, ox, oy, w, h){ if (!layers || !layers.length) return;
+  var un = S.unit_m, ll = [[0, 0], [w, 0], [0, h], [w, h]].map(function(p){ return lonlat(S.x0 + (p[0] - ox) / s * un, S.ytop - (p[1] - oy) / s * un); });
+  var west = Math.min(ll[0][0], ll[2][0]), east = Math.max(ll[1][0], ll[3][0]), north = Math.max(ll[0][1], ll[1][1]), south = Math.min(ll[2][1], ll[3][1]);
+  var z = Math.max(6, Math.min(18, Math.round(Math.log2(156543.03392 * Math.cos((north + south) / 2 * Math.PI / 180) * s / un) + 0.35))), n, x0, x1, y0, y1;
+  var ty = function(lat, n){ var r = lat * Math.PI / 180; return (1 - Math.log(Math.tan(r) + 1 / Math.cos(r)) / Math.PI) / 2 * n; };
+  for (;; z--){ n = Math.pow(2, z); x0 = Math.floor((west + 180) / 360 * n); x1 = Math.floor((east + 180) / 360 * n); y0 = Math.floor(ty(north, n)); y1 = Math.floor(ty(south, n)); if ((x1 - x0 + 1) * (y1 - y0 + 1) <= 64 || z <= 6) break; }
+  var px = function(x, y){ var lon = x / n * 360 - 180, lat = Math.atan(Math.sinh(Math.PI * (1 - 2 * y / n))) * 180 / Math.PI, en = utm(lon, lat); return [(en[0] - S.x0) / un * s + ox, (S.ytop - en[1]) / un * s + oy]; };
+  ctx.imageSmoothingEnabled = true;
+  for (var y = y0; y <= y1; y++) for (var x = x0; x <= x1; x++){ var a = px(x, y), b = px(x + 1, y), c = px(x, y + 1);
+    layers.forEach(function(layer){ var t = baseTile(layer, z, x, y); if (t.state !== 1) return;
+      ctx.setTransform(DPR * (b[0] - a[0]) / 256, DPR * (b[1] - a[1]) / 256, DPR * (c[0] - a[0]) / 256, DPR * (c[1] - a[1]) / 256, DPR * a[0], DPR * a[1]); ctx.drawImage(t.im, -0.2, -0.2, 256.4, 256.4); }); }
+  ctx.setTransform(DPR, 0, 0, DPR, 0, 0); }
+function setBase(k, why){ R.base = k; R.stamp++;
+  document.querySelectorAll(".base button").forEach(function(b){ b.setAttribute("aria-pressed", String(b.dataset.b === k)); });
+  document.querySelectorAll(".plainOnly").forEach(function(e){ e.hidden = k !== "plain"; }); $("attr").hidden = k === "plain";
+  $("attr").textContent = k === "sat" ? "Esri, Maxar, Earthstar Geographics" : "Esri, TomTom, Garmin, OpenStreetMap contributors";
+  if (why !== undefined){ $("baseNote").textContent = why; $("baseNote").hidden = !why; }
+  draw(); }
+function cat(g, v){ if (v == null) return "na"; var lv = LV.stations[g.id] || {}, fl = lv.flood_levels_ft || {}, c = fl.action == null && fl.minor == null ? "open" : "none";
+  ["action","minor","moderate","major"].forEach(function(k){ if (fl[k] != null && v >= fl[k]) c = k; }); return c; }
+function topCat(g){ var lv = LV.stations[g.id], a = lv && (lv[T.mode] || lv.f), hi = null; if (!a) return "na"; for (var i = 0; i < a.length; i++) if (a[i] != null && (hi == null || a[i] > hi)) hi = a[i]; return cat(g, hi); }
 function draw(){
   if (!S || !A) return;
   var s = V.s, ox = V.ox, oy = V.oy, w = R.w, h = R.h, i, k, e, b;
   ctx.setTransform(DPR, 0, 0, DPR, 0, 0); ctx.fillStyle = C.land; ctx.fillRect(0, 0, w, h);
+  var plain = R.base === "plain";
+  drawBase(BASE[R.base], s, ox, oy, w, h);
   drawRaster(s, ox, oy, w, h);
+  drawBase(REF[R.base], s, ox, oy, w, h);
   var x0 = (0 - ox) / s, y0 = (0 - oy) / s, x1 = (w - ox) / s, y1 = (h - oy) / s, mpx = s / S.unit_m; // px per metre
   ctx.lineCap = "round"; ctx.lineJoin = "round";
   // road network: edges then surfaces when zoomed in; a thin dark network when zoomed out
@@ -533,7 +605,7 @@ function draw(){
     [[0, C["road-edge"], 0.6, false], [1, C["road-edge"], 1.1, false], [2, C["road-edge"], 1.5, false], [-1, C.bridge, 1.2, true]] :
     [[0, C["road-edge"], 7.5 * mpx + 1.4, false], [1, C["road-edge"], 11 * mpx + 1.6, false], [2, C["road-edge"], 14 * mpx + 1.8, false],
      [0, C.road, 7.5 * mpx, false], [1, C.major, 11 * mpx, false], [2, C.major, 14 * mpx, false], [-1, C.bridge, Math.max(1.5, 6 * mpx), true]];
-  passes.forEach(function(p){ ctx.beginPath();
+  if (plain) passes.forEach(function(p){ ctx.beginPath();
     for (i = 0; i < S.roads.n; i++){ var cls = R.rcls[i], br = cls >= 4; if (p[3] ? !br : (br || (cls & 3) !== p[0])) continue;
       b = 4 * i; if (R.rbox[b] > x1 || R.rbox[b+2] < x0 || R.rbox[b+1] > y1 || R.rbox[b+3] < y0) continue;
       k = R.rstart[i]; e = R.rstart[i+1]; ctx.moveTo(R.rxy[2*k] * s + ox, R.rxy[2*k+1] * s + oy);
@@ -541,7 +613,7 @@ function draw(){
     ctx.strokeStyle = p[1]; ctx.lineWidth = p[2]; ctx.stroke(); });
   // buildings
   var B = S.buildings, big = mpx > 0.45;
-  if (big){ ctx.beginPath();
+  if (big && plain){ ctx.beginPath();
     for (i = 0; i < B.n; i++){ if (R.bstate[i]) continue; b = 4 * i; if (R.bbox[b] > x1 || R.bbox[b+2] < x0 || R.bbox[b+1] > y1 || R.bbox[b+3] < y0) continue;
       k = R.bstart[i]; e = R.bstart[i+1]; ctx.moveTo(R.bxy[2*k] * s + ox, R.bxy[2*k+1] * s + oy); for (k++; k < e; k++) ctx.lineTo(R.bxy[2*k] * s + ox, R.bxy[2*k+1] * s + oy); ctx.closePath(); }
     ctx.fillStyle = C.bldg; ctx.fill(); }
@@ -557,19 +629,13 @@ function draw(){
     if (big){ k = R.bstart[i]; e = R.bstart[i+1]; ctx.moveTo(R.bxy[2*k] * s + ox, R.bxy[2*k+1] * s + oy); for (k++; k < e; k++) ctx.lineTo(R.bxy[2*k] * s + ox, R.bxy[2*k+1] * s + oy); ctx.closePath(); }
     else ctx.rect((R.bbox[b] + R.bbox[b+2]) / 2 * s + ox - 1.1, (R.bbox[b+1] + R.bbox[b+3]) / 2 * s + oy - 1.1, 2.2, 2.2); }
   ctx.fillStyle = C.building; ctx.fill();
-  if (mpx > 1.1){ // name the red ones once there is room; skip a label that would sit on another
-    ctx.font = "600 11px " + tok("--body"); ctx.textBaseline = "middle"; ctx.textAlign = "center"; var tw = ctx.measureText("Flooded Building").width / 2 + 3, placed = [];
-    for (i = 0; i < B.n && placed.length < 400; i++){ if (!R.bstate[i]) continue; b = 4 * i; if (R.bbox[b] > x1 || R.bbox[b+2] < x0 || R.bbox[b+1] > y1 || R.bbox[b+3] < y0) continue;
-      var lx = (R.bbox[b] + R.bbox[b+2]) / 2 * s + ox, ly = (R.bbox[b+1] + R.bbox[b+3]) / 2 * s + oy, hit = false;
-      for (k = 0; k < placed.length; k++) if (Math.abs(placed[k][0] - lx) < 2 * tw && Math.abs(placed[k][1] - ly) < 18){ hit = true; break; }
-      if (hit) continue; placed.push([lx, ly]);
-      ctx.lineWidth = 3.5; ctx.strokeStyle = C.halo; ctx.strokeText("Flooded Building", lx, ly); ctx.fillStyle = C.label; ctx.fillText("Flooded Building", lx, ly); }
-    ctx.textAlign = "start"; }
   // gauges
   ctx.font = "600 12px " + tok("--body"); ctx.textBaseline = "middle";
   S.stations.forEach(function(g, si){ if (!g.inside) return; var gx = g.x * s + ox, gy = g.y * s + oy; if (gx < -40 || gx > w + 40 || gy < -20 || gy > h + 20) return;
-    ctx.beginPath(); ctx.arc(gx, gy, 5.5, 0, 6.2832); ctx.fillStyle = C.gauge; ctx.fill(); ctx.lineWidth = 2; ctx.strokeStyle = C.halo; ctx.stroke();
-    var lv = R.L[si], t = g.id + (lv > -32000 ? " " + (lv / 100).toFixed(1) + " ft" : "");
+    var lv = R.L[si], now = cat(g, lv > -32000 ? lv / 100 : null), hi = T.view === "fc" && !T.obs ? topCat(g) : null;
+    if (hi && CAT_RANK[hi] > 0){ ctx.beginPath(); ctx.arc(gx, gy, 10, 0, 6.2832); ctx.lineWidth = 3.5; ctx.strokeStyle = CAT[hi]; ctx.stroke(); }
+    ctx.beginPath(); ctx.arc(gx, gy, 6, 0, 6.2832); ctx.fillStyle = CAT[now]; ctx.fill(); ctx.lineWidth = 1.8; ctx.strokeStyle = "#ffffff"; ctx.stroke();
+    var t = g.id + (lv > -32000 ? " " + (lv / 100).toFixed(1) + " ft" : "");
     ctx.lineWidth = 3.5; ctx.strokeStyle = C.halo; ctx.strokeText(t, gx + 9, gy); ctx.fillStyle = C.label; ctx.fillText(t, gx + 9, gy); });
   // a past flood's surveyed marks: diamonds (high water marks) and triangles (storm-tide sensor peaks)
   if (T.view === "hist" && A.ev.marks){ markSetup(A.ev); var put = [], lab = mpx > 0.05; ctx.font = "600 11px " + tok("--body"); ctx.textBaseline = "middle"; ctx.lineJoin = "miter";
@@ -616,7 +682,7 @@ function popup(px, py){ var hit = pick(px, py), p = $("pop"); if (!hit){ p.hidde
     p.style.left = Math.max(8, ml) + "px"; p.style.top = Math.max(8, mt) + "px"; return; }
   var NO = S.no_level, g, c, si, name, first, pd = S.ponded_ft, fd = S.flooded_ft, scen = T.view === "scen", hist = T.view === "hist";
   if (hit.kind === "p"){ g = R.pg[hit.i] / 100; c = R.pc[hit.i] / 100; si = R.pst[hit.i]; name = S.roads.names[R.rname[R.proad[hit.i]]] || "Unnamed road"; first = Math.max(g + pd, c); }
-  else { g = R.bg[hit.i] / 100; c = R.bc[hit.i] / 100; si = R.bst[hit.i]; name = R.bstate[hit.i] ? "Flooded Building" : "Building"; first = Math.max(g + fd, c); }
+  else { g = R.bg[hit.i] / 100; c = R.bc[hit.i] / 100; si = R.bst[hit.i]; name = R.bstate[hit.i] ? "Flood Affected Structure" : "Building"; first = Math.max(g + fd, c); }
   var lv = R.L[si] / 100, d = lv >= c ? Math.max(0, lv - g) : 0, st = S.stations[si], never = (hit.kind === "p" ? R.pc : R.bc)[hit.i] === NO;
   var via = (hit.kind === "p" ? R.pvia : R.bvia), v = hit.kind === "b" ? R.val : null, h = "<b>" + name + "</b>";
   if (v && v.use[hit.i] !== 255) h += " <span class='u'>" + S.values.uses[v.use[hit.i]] + "</span>";

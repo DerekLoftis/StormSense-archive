@@ -721,3 +721,20 @@ def test_fema_outlines_fill_in_where_vgin_has_no_footprint(monkeypatch):
     monkeypatch.setattr(vgin, "count", down)
     said = []
     assert len(vgin.buildings("51133", said.append)) == 2 and "WARNING" in said[-1]
+
+
+def test_the_pages_carry_what_derek_asked_of_the_maps():
+    here = os.path.join(os.path.dirname(__file__), "..", "inundation", "templates")
+    with open(os.path.join(here, "map.html")) as fh:
+        page = fh.read()
+    with open(os.path.join(here, "statewide.html")) as fh:
+        state = fh.read()
+    for html in (page, state):
+        assert "Flooded Building" not in html and "Flood Affected Structure" in html       # the name in the popup, no labels
+        assert all(k in html for k in ('action:"#ffe600"', 'minor:"#ff9900"', 'moderate:"#e60000"', 'major:"#c800e6"'))
+        assert "World_Imagery" in html and "World_Street_Map" in html
+    assert 'data-b="plain"' in page and "function drawBase" in page and "function lonlat" in page
+    assert "function selectGauge" in state and "fitBounds" in state and "function declutter" in state
+    from inundation import tether
+    sts = tether.stations()
+    assert {"navd88_above_mllw_ft", "noaa"} <= set(sts[0]) and any(s["noaa"] for s in sts) and not all(s["noaa"] for s in sts)

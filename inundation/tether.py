@@ -28,7 +28,9 @@ def stations(path=STATIONS):
         for r in csv.DictReader(fh):
             if not r["lat"] or not r["lon"] or r.get("alias_of") or r.get("suspect_obs"):
                 continue
-            out.append({"station": r["station"], "name": r["name"], "lat": float(r["lat"]), "lon": float(r["lon"])})
+            out.append({"station": r["station"], "name": r["name"], "lat": float(r["lat"]), "lon": float(r["lon"]),
+                        "navd88_above_mllw_ft": float(r["navd88_above_mllw_ft"]) if r.get("navd88_above_mllw_ft") else None,
+                        "noaa": "coops:" in (r.get("obs") or "")})
     return out
 
 
