@@ -238,6 +238,7 @@ def main(argv=None):
     ring = np.asarray((loc["geometry"]["coordinates"][0] if loc["geometry"]["type"] == "Polygon"
                        else loc["geometry"]["coordinates"][0][0]), float)
     epsg = utm_epsg(ring[:, 0].mean())
+    write_outline(f"{a.out}/{a.name}_outline.geojson", loc)
     fwd = Transformer.from_crs(4326, epsg, always_xy=True).transform
     inv = Transformer.from_crs(epsg, 4326, always_xy=True).transform
     bounds = bounds_of(loc, fwd)
@@ -412,6 +413,15 @@ def main(argv=None):
                                                           "why": "no StormSense gauge stands for this water (tether_overrides.csv)"},
                    "prepared_utc": time.strftime("%Y-%m-%dT%H:%MZ", time.gmtime())}, fh, indent=1)
     log("wrote", a.out)
+
+
+def write_outline(path, loc, tol_deg=0.0003):
+    """The locality's boundary, thinned to about 30 m, for the map of all areas (inundation.site)."""
+    import shapely
+    from shapely.geometry import mapping, shape
+    g = shapely.simplify(shapely.force_2d(shape(loc["geometry"])), tol_deg)
+    with open(path, "w") as fh:
+        json.dump({"type": "Feature", "properties": {"name": loc["properties"].get("NAMELSAD")}, "geometry": mapping(g)}, fh)
 
 
 def write_layers(path, pieces, road_cols, bgeoms, bldg_cols, epsg):

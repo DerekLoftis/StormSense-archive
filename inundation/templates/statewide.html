@@ -1,0 +1,443 @@
+<title>StormSense Inundation Virginia</title>
+<style>__LEAFLET_CSS__</style>
+<style>
+/* StormSense inundation map. Layout: masthead, time controls, the counts (and the damage estimate where values are known), then the map beside the 72-hour timeline and the gauge table. Tokens follow StormSense CREST. */
+:root{
+  --bg:#f3f6f8; --panel:#ffffff; --ink:#0f2230; --muted:#566a78; --line:#d6e0e7; --soft:#e9f0f4;
+  --navy:#0b3954; --accent:#00a9b5; --cyan:#00E5EE;
+  --flooded:#f57c00; --ponded:#f2c500; --building:#d32f2f;
+  --map-land:#eef1ee; --map-water:#d3dfe6; --map-flood:#2f8fd8; --map-road:#ffffff; --map-road-edge:#c3ccd2;
+  --map-major:#fbe9b7; --map-bridge:#aebbc6; --map-bldg:#d5d0c8; --map-casing:#3b2a12; --map-gauge:#0b3954; --map-label:#0f2230; --map-halo:#ffffff;
+  --display:"Segoe UI Semibold","Segoe UI",-apple-system,"Helvetica Neue",Arial,sans-serif;
+  --body:"Segoe UI",-apple-system,"Helvetica Neue",Arial,sans-serif;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#0c1820; --panel:#132430; --ink:#e3edf2; --muted:#93a8b6; --line:#253b4a; --soft:#1a2f3c;
+  --navy:#8fd3f0; --accent:#2fd6df;
+  --flooded:#ff9a2e; --ponded:#ffd93b; --building:#ff5a52;
+  --map-land:#1b2a33; --map-water:#243843; --map-flood:#3aa0ee; --map-road:#3c4f5b; --map-road-edge:#2a3a45;
+  --map-major:#5b5330; --map-bridge:#55687a; --map-bldg:#4a5560; --map-casing:#0a0f13; --map-gauge:#8fd3f0; --map-label:#e3edf2; --map-halo:#0c1820;
+  color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0c1820; --panel:#132430; --ink:#e3edf2; --muted:#93a8b6; --line:#253b4a; --soft:#1a2f3c;
+  --navy:#8fd3f0; --accent:#2fd6df;
+  --flooded:#ff9a2e; --ponded:#ffd93b; --building:#ff5a52;
+  --map-land:#1b2a33; --map-water:#243843; --map-flood:#3aa0ee; --map-road:#3c4f5b; --map-road-edge:#2a3a45;
+  --map-major:#5b5330; --map-bridge:#55687a; --map-bldg:#4a5560; --map-casing:#0a0f13; --map-gauge:#8fd3f0; --map-label:#e3edf2; --map-halo:#0c1820;
+  color-scheme:dark}
+[hidden]{display:none!important}
+body{background:var(--bg);color:var(--ink);font-family:var(--body);font-size:14.5px;line-height:1.45;margin:0}
+.wrap{max-width:1320px;margin:0 auto;padding-block:14px 36px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));display:flex;flex-direction:column;gap:12px}
+h1,h2,h3{font-family:var(--display);margin:0;text-wrap:balance}
+h1{font-size:23px;font-weight:600;color:var(--navy)}
+h2{font-size:16px;font-weight:600}
+a{color:var(--accent)}
+.mast{display:flex;align-items:center;gap:16px;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:10px 16px;flex-wrap:wrap}
+.mast img{height:60px;width:auto;max-width:100%}
+.mast .logo{display:block;line-height:0;border-radius:6px}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .mast .ccrm img{background:#fff;border-radius:6px;padding:4px 8px}}
+:root[data-theme="dark"] .mast .ccrm img{background:#fff;border-radius:6px;padding:4px 8px}
+.mast .mid{flex:1;min-width:220px;text-align:center}
+.sub{color:var(--muted);font-size:13px;margin:3px 0 0}
+body.embed .mast{display:none}
+.controls{display:flex;flex-wrap:wrap;gap:8px 14px;align-items:center}
+.lbl{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-right:6px}
+.seg{display:inline-flex;flex-wrap:wrap;max-width:100%;border:1px solid var(--line);border-radius:7px;overflow:hidden;vertical-align:middle}
+.seg button{border:0;border-radius:0;padding:5px 12px}
+.seg button[aria-pressed="true"]{background:var(--navy);color:var(--panel)}
+button{font:inherit;font-size:13.5px;color:var(--ink);background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:5px 11px;cursor:pointer}
+button:focus-visible,input:focus-visible,canvas:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.when{font:600 15px var(--display);color:var(--navy)}
+.when small{font:400 12.5px var(--body);color:var(--muted);margin-left:6px}
+.strip{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px}
+.tile{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:9px 12px;display:flex;flex-direction:column;gap:2px;min-width:0}
+.tile .k{font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);display:flex;align-items:center;gap:7px}
+.tile .v{font:600 24px var(--display)}
+.tile .v small{font:400 13px var(--body);color:var(--muted);margin-left:4px}
+.tile .d{font-size:12.5px;color:var(--muted)}
+.sw{display:inline-block;width:18px;height:5px;border-radius:3px;flex:none}
+.sw.box{width:11px;height:11px;border-radius:2px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:12px 14px;min-width:0;display:flex;flex-direction:column;gap:8px}
+.cols{display:grid;grid-template-columns:minmax(0,1.55fr) minmax(0,1fr);gap:12px;align-items:start}
+.side{display:flex;flex-direction:column;gap:12px;min-width:0}
+@media (max-width:980px){.cols{grid-template-columns:minmax(0,1fr)}}
+@media (max-width:520px){.seg button{padding:6px 9px;white-space:nowrap}}
+.mapbox{position:relative;border-radius:6px;overflow:hidden;border:1px solid var(--line);background:var(--map-land)}
+#map{width:100%;height:min(74vh,780px);min-height:340px;background:var(--map-land)}
+.zoom{position:absolute;top:10px;right:10px;display:flex;flex-direction:column;gap:4px}
+.zoom button{width:32px;height:32px;padding:0;font-size:17px;line-height:1}
+.pop{position:absolute;max-width:310px;background:var(--panel);border:1px solid var(--line);border-radius:7px;padding:8px 10px;font-size:12.5px;box-shadow:0 4px 14px rgba(0,0,0,.18);pointer-events:none}
+.pop b{font-family:var(--display);font-size:13.5px}
+.pop .u{color:var(--muted)}
+.pop .f{display:block;margin-top:3px}
+.pop .f i{font-style:normal;color:var(--muted)}
+.hint{position:absolute;left:10px;bottom:10px;background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:3px 8px;font-size:12px;color:var(--muted)}
+.chips{display:flex;flex-wrap:wrap;gap:6px 16px;font-size:12.5px;color:var(--muted)}
+.chips span{display:inline-flex;align-items:center;gap:6px}
+.note{color:var(--muted);font-size:12.5px;margin:0}
+.chart{position:relative}
+.chart svg{display:block;width:100%;height:auto;overflow:visible;cursor:crosshair;touch-action:pan-y}
+.chart text{font-family:var(--body);font-size:11px;fill:var(--muted);font-variant-numeric:tabular-nums}
+.tip{position:absolute;top:0;background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:5px 8px;font-size:12px;pointer-events:none;white-space:nowrap;box-shadow:0 3px 10px rgba(0,0,0,.14)}
+#time{width:calc(100% - 30px);margin:0 4px 0 26px}
+.scroll{overflow-x:auto}
+table{border-collapse:collapse;width:100%;font-size:13px}
+th{font-weight:600;color:var(--muted);text-align:right;padding:5px 7px;border-bottom:1px solid var(--line);font-size:11px;text-transform:uppercase;letter-spacing:.04em;white-space:nowrap}
+td{padding:5px 7px;border-bottom:1px solid var(--soft);text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+th:first-child,td:first-child{text-align:left;white-space:normal;min-width:150px}
+td .nm{display:block;color:var(--muted);font-size:11.5px}
+.pill{display:inline-block;border:1px solid var(--line);border-radius:999px;padding:0 8px;font-size:11.5px;color:var(--ink);background:var(--soft)}
+.pill.none{color:var(--muted);background:transparent}
+ul.plain{margin:0;padding-left:18px;color:var(--muted);font-size:13px;max-width:75ch}
+ul.plain li{margin:2px 0}
+.disc{font-size:12px;color:var(--muted);margin:0}
+.err{border-left:4px solid var(--building)}
+select{font:inherit;font-size:13.5px;color:var(--ink);background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:5px 8px;max-width:100%}
+.bar{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:8px 12px}
+.bar .note{flex:1;min-width:240px;max-width:110ch}
+.plotsub{margin:-5px 0 0;font:600 13.5px var(--display);color:var(--muted)}
+.sw.dash{background:none;border-top:2px dashed var(--navy);height:0;border-radius:0}
+.ramp{display:flex;flex-wrap:wrap;align-items:flex-end;gap:2px;font-size:11px;color:var(--muted);font-variant-numeric:tabular-nums}
+.ramp b{font-weight:600;margin-right:8px;font-size:12.5px;align-self:center}
+.ramp span{display:flex;flex-direction:column;align-items:center;gap:2px;min-width:27px}
+.ramp i{display:block;width:100%;height:11px;border-radius:2px}
+@media (prefers-reduced-motion:reduce){*{scroll-behavior:auto}}
+
+.leaflet-container{font:inherit;font-size:12.5px}
+.leaflet-container a{color:var(--accent)}
+.glabel{background:rgba(255,255,255,.92);border:0;border-radius:4px;box-shadow:0 1px 4px rgba(0,0,0,.35);color:#0f2230;font:600 11.5px var(--body);padding:1px 5px;white-space:nowrap}
+.glabel:before{display:none}
+.leaflet-popup-content{margin:10px 12px;font-size:12.5px;line-height:1.4}
+.leaflet-popup-content b{font-family:var(--display);font-size:14px}
+.leaflet-popup-content .f{display:block;margin-top:2px}
+.leaflet-popup-content a.go{display:inline-block;margin-top:6px;font-weight:600}
+.base{position:absolute;right:10px;top:10px;z-index:800;box-shadow:0 1px 5px rgba(0,0,0,.3)}
+.leaflet-control-attribution{font-size:10.5px;max-width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.base button{padding:4px 10px;font-size:12.5px}
+td a{color:inherit;font-weight:600;text-decoration-color:var(--accent)}
+</style>
+
+<div class="wrap">
+  <div class="mast">
+    <a class="logo" href="https://www.vims.edu/people/loftis_jd/StormSense/" target="_blank" rel="noopener"><img src="stormsense_logo.png" alt="StormSense: forecasting flooding from storm surge, rain, and tides"></a>
+    <div class="mid">
+      <h1>StormSense Inundation · Virginia Coastal Zone</h1>
+      <p class="sub">Roads and buildings under water, from the gauges and the 72-hour storm tide forecast · pilot</p>
+    </div>
+    <a class="logo ccrm" href="https://www.vims.edu/ccrm/research/modeling/" target="_blank" rel="noopener"><img src="ccrm_logo.png" alt="William &amp; Mary VIMS, Batten School of Coastal &amp; Marine Sciences, Center for Coastal Resources Management"></a>
+  </div>
+
+  <div class="card err" id="error" hidden></div>
+
+  <div class="controls">
+    <span class="when" id="when">Loading the forecast…</span>
+    <span class="seg" role="group" aria-label="What the map shows">
+      <button id="bNow" type="button">Now</button>
+      <button id="bPeak" type="button">Forecast peak</button>
+      <button id="bObs" type="button" aria-pressed="false">Last observed</button>
+      <button id="bScen" type="button" aria-pressed="false">Scenario</button>
+    </span>
+    <button id="bPlay" type="button" aria-pressed="false">▶ Play 72 hours</button>
+    <span id="modeBox"><span class="lbl">Forecast</span><span class="seg" id="mode" role="group" aria-label="Forecast line">
+      <button type="button" data-v="p10" aria-pressed="false">Low (10%)</button>
+      <button type="button" data-v="f" aria-pressed="true">Forecast</button>
+      <button type="button" data-v="p90" aria-pressed="false">High (90%)</button></span></span>
+  </div>
+  <div class="controls bar" id="scenBar" hidden>
+    <p class="note">Scenario: drag the slider or the plot to set one water level for every gauge, from -2 to 10 ft NAVD88 in 0.25 ft steps. No forecast is involved: the depths, the roads and the buildings follow the level you set.</p>
+  </div>
+
+  <div class="strip">
+    <div class="tile"><span class="k"><span class="sw" style="background:var(--flooded)"></span>Roads flooded</span><span class="v" id="vFlood">–</span><span class="d">more than 0.5 ft of water</span></div>
+    <div class="tile"><span class="k"><span class="sw" style="background:var(--ponded)"></span>Roads ponded</span><span class="v" id="vPond">–</span><span class="d">0.25 to 0.5 ft of water</span></div>
+    <div class="tile"><span class="k"><span class="sw box" style="background:var(--building)"></span>Buildings flooded</span><span class="v" id="vBldg">–</span><span class="d">more than 0.5 ft over the ground at the building</span></div>
+    <div class="tile"><span class="k"><span class="sw box" style="background:var(--building)"></span>Est. damage to homes</span><span class="v" id="vDmg">–</span><span class="d" id="dDmg">structure only, where assessed values are public</span></div>
+  </div>
+
+  <div class="cols">
+    <div class="card">
+      <div class="mapbox">
+        <div id="map" aria-label="Map of water depth over the ground at the selected time, for every locality prepared so far. Click a locality for its counts and its detailed map."></div>
+        <span class="seg base" role="group" aria-label="Basemap">
+          <button type="button" data-b="sat" aria-pressed="true">Satellite</button>
+          <button type="button" data-b="streets" aria-pressed="false">Streets</button>
+        </span>
+      </div>
+      <div class="ramp" id="ramp" aria-label="Water depth in feet, by color"></div>
+      <p class="note">Click a locality for its counts and its own map, where every flooded road and building can be opened and past floods replayed.</p>
+    </div>
+
+    <div class="side">
+      <div class="card">
+        <h2 id="plotTitle">StormSense Prediction Plot</h2>
+        <p class="plotsub" id="plotSub">Anticipated Impacts in the Next 72 Hours</p>
+        <div class="chips" id="plotKey"></div>
+        <div class="chart" id="cPlot"></div>
+        <input type="range" id="time" min="0" max="1" step="1" value="0" aria-label="Time in the forecast">
+        <p class="note" id="lvlNote"></p>
+        <p class="note" id="runNote"></p>
+      </div>
+      <div class="card">
+        <h2>How to read this</h2>
+        <ul class="plain">
+          <li>The blues show how deep the water stands over the ground, in 5 m cells: each gauge's level at the selected time minus the ground, where the water can reach from tidal water. Every cell follows its nearest StormSense gauge.</li>
+          <li>Road centerlines from VGIN are cut into 5 m pieces: a piece counts as ponded once the water over it is 0.25 ft deep and as flooded once it is more than 0.5 ft deep. A VGIN building footprint counts once the water stands more than 0.5 ft over the ground at the building. Counts between two quarter-foot levels are read off a straight line.</li>
+          <li>Damage is estimated for homes only, from the assessed building value and the USACE depth-damage curves, in localities that publish assessed values.</li>
+          <li>This is a pilot. Rain and waves are not in it, bridges and tunnels are not evaluated, and it has not yet been checked against observed flooding.</li>
+        </ul>
+        <p class="disc" id="disc"></p>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Localities</h2>
+    <p class="note" id="areaNote"></p>
+    <div class="scroll"><table id="areas"></table></div>
+  </div>
+</div>
+
+<script>__LEAFLET__</script>
+<script>
+(function(){
+"use strict";
+var $ = function(id){ return document.getElementById(id); };
+var G, LV, A = null, R = {src:{}, tick:0, tl:{}}, T = {i:0, mode:"f", obs:false, view:"fc", playing:null}, C = {};
+var map, depthLayer, marks = {}, shapes = [];
+// water depth classes, feet: up to 0.5, 1, 2 ... 10 (Derek's ramp, light blue to navy)
+var DEPTH = ["#bfe6f5","#a6d5ef","#8cc3e9","#73b0e2","#5c9bd9","#4885cf","#386fc2","#2b59b2","#20449f","#172f8a","#0f1c73"];
+var DEPTH_LABEL = ["0.5","1","2","3","4","5","6","7","8","9","10"];
+var MAX_SRC = Math.min(window.innerWidth, window.innerHeight) < 700 ? 14 : 40;      // full-detail data tiles kept decoded
+var ESRI = "https://server.arcgisonline.com/ArcGIS/rest/services/";
+var TZ = "America/New_York";
+var fTime = new Intl.DateTimeFormat("en-US", {timeZone:TZ, weekday:"short", month:"short", day:"numeric", hour:"numeric", minute:"2-digit", timeZoneName:"short"});
+var fDay = new Intl.DateTimeFormat("en-US", {timeZone:TZ, weekday:"short", day:"numeric"});
+var fShort = new Intl.DateTimeFormat("en-US", {timeZone:TZ, weekday:"short", hour:"numeric", minute:"2-digit"});
+
+function fail(msg){ var e = $("error"); e.hidden = false; e.textContent = msg; $("when").textContent = "Not loaded"; }
+function tok(n){ return getComputedStyle(document.documentElement).getPropertyValue(n).trim(); }
+function rgb(hex){ hex = hex.replace("#",""); var v = parseInt(hex,16); return [(v>>16)&255,(v>>8)&255,v&255]; }
+function u32(hex, a){ var c = rgb(hex); return ((a << 24) | (c[2] << 16) | (c[1] << 8) | c[0]) >>> 0; }
+function readColors(){ ["flooded","ponded","building","ink","muted","line","panel","navy"].forEach(function(k){ C[k] = tok("--" + k); }); R.colDepth = DEPTH.map(function(h){ return u32(h, 225); }); }
+function getJSON(u){ return fetch(u, {cache:"no-store"}).then(function(r){ if (!r.ok) throw new Error(u + " " + r.status); return r.json(); }); }
+function getImage(u){ return new Promise(function(ok, no){ var im = new Image(); im.onload = function(){ ok(im); }; im.onerror = function(){ no(new Error(u)); }; im.src = u; }); }
+function fmtMi(v){ return v >= 10 ? v.toFixed(1) : v.toFixed(2); }
+function fmtBig(v){ return v >= 1e9 ? "$" + (v / 1e9).toFixed(2) + " billion" : v >= 1e6 ? "$" + (v / 1e6).toFixed(v >= 1e7 ? 0 : 1) + " million" : v >= 1e4 ? "$" + Math.round(v / 1e3) + " thousand" : "$" + Math.round(v).toLocaleString("en-US"); }
+function tAt(i){ return new Date(A.t0ms + i * A.step_min * 60000); }
+function utc(d){ return d.toISOString().slice(11,16) + " UTC"; }
+function scenLevel(i){ return Math.round((G.levels.start + i * G.levels.step) * 100) / 100; }
+function mllw(v){ var g = G.mllw_ref; return g && g.navd88_above_mllw_ft != null ? (v + g.navd88_above_mllw_ft).toFixed(2) + " ft above MLLW" : ""; }
+function stepLabel(i){ return T.view === "scen" ? scenLevel(i).toFixed(2) + " ft NAVD88" : fShort.format(tAt(i)); }
+
+// Longitude and latitude to UTM (GRS80, Krueger's series to n^3: good to a millimetre); the areas' grids are in UTM
+function utm(lon, lat, epsg){ var zone = epsg % 100, lon0 = zone * 6 - 183, a = 6378137, f = 1 / 298.257222101, n = f / (2 - f), n2 = n * n, n3 = n2 * n;
+  var Ar = a / (1 + n) * (1 + n2 / 4 + n2 * n2 / 64), al = [n / 2 - 2 / 3 * n2 + 5 / 16 * n3, 13 / 48 * n2 - 3 / 5 * n3, 61 / 240 * n3];
+  var phi = lat * Math.PI / 180, lam = (lon - lon0) * Math.PI / 180, q = 2 * Math.sqrt(n) / (1 + n);
+  var t = Math.sinh(Math.atanh(Math.sin(phi)) - q * Math.atanh(q * Math.sin(phi))), xi = Math.atan2(t, Math.cos(lam)), eta = Math.atanh(Math.sin(lam) / Math.sqrt(1 + t * t)), E = eta, N = xi;
+  for (var j = 1; j <= 3; j++){ N += al[j-1] * Math.sin(2 * j * xi) * Math.cosh(2 * j * eta); E += al[j-1] * Math.cos(2 * j * xi) * Math.sinh(2 * j * eta); }
+  return [500000 + 0.9996 * Ar * E, 0.9996 * Ar * N]; }
+window.__utm = utm;
+
+Promise.all([getJSON("areas.json"), getJSON("levels.json")]).then(function(r){ G = r[0]; LV = r[1]; setup(); })
+  .catch(function(e){ fail("The map data did not load (" + e.message + "). Reload the page to try again."); });
+
+/* ---------- levels and counts ---------- */
+function level(id){ if (T.view === "scen") return scenLevel(T.i); var s = LV.stations[id]; if (!s) return null;
+  if (T.obs) return s.obs_ft == null ? null : s.obs_ft; var v = s[T.mode] && s[T.mode][T.i]; return v == null ? (s.f[T.i] == null ? null : s.f[T.i]) : v; }
+function at(c, v){ if (v == null) return 0; var k = (v - G.levels.start) / G.levels.step, n = c.length; if (k <= 0) return k < 0 ? 0 : c[0]; if (k >= n - 1) return c[n - 1]; var i = Math.floor(k); return c[i] + (c[i + 1] - c[i]) * (k - i); }
+function counts(a, lv){ var o = {f:0, p:0, b:0, d:0}; for (var id in a.curves){ var c = a.curves[id], v = lv(id); o.f += at(c.f, v); o.p += at(c.p, v); o.b += at(c.b, v); if (c.d) o.d += at(c.d, v); } return o; }
+function totals(lv){ var o = {f:0, p:0, b:0, d:0}; G.areas.forEach(function(a){ var c = counts(a, lv); o.f += c.f; o.p += c.p; o.b += c.b; o.d += c.d; }); return o; }
+function timeline(){ var n = A.n, key = T.view + T.mode; if (R.tl[key]){ R.tlF = R.tl[key][0]; R.tlP = R.tl[key][1]; R.tlB = R.tl[key][2]; return; }
+  var F = new Float32Array(n), P = new Float32Array(n), B = new Float32Array(n), keep = T.i, obs = T.obs; T.obs = false;
+  for (var i = 0; i < n; i++){ T.i = i; var o = totals(level); F[i] = o.f; P[i] = o.p; B[i] = o.b; }
+  T.i = keep; T.obs = obs; R.tl[key] = [F, P, B]; R.tlF = F; R.tlP = P; R.tlB = B; }
+function use(view){ T.view = view; if (view === "scen") A = {kind:"scen", n:G.levels.n};
+  else { A = {kind:"fc", n:LV.n, t0ms:Date.parse(LV.t0), step_min:LV.step_min}; var p = LV.stations[G.plot_gauge.id]; R.plot = p || null; }
+  $("time").max = A.n - 1; R.ticks = ticks(); timeline(); }
+function peakIndex(){ var f = R.plot ? R.plot.f : null, best = 0, k = 0; if (!f) return 0; for (var i = 0; i < f.length; i++) if (f[i] != null && (f[k] == null || f[i] > f[k])) k = i; return k || best; }
+function nowIndex(){ return Math.max(0, Math.min(A.n - 1, Math.round((Date.now() - A.t0ms) / (A.step_min * 60000)))); }
+
+function setup(){
+  readColors();
+  $("disc").textContent = G.disclaimer;
+  $("ramp").innerHTML = "<b>Water depth (ft)</b>" + DEPTH.map(function(h, i){ return '<span><i style="background:' + h + '"></i>' + (i === 0 ? "≤" : "") + DEPTH_LABEL[i] + "</span>"; }).join("");
+  $("areaNote").textContent = G.areas.length + " localities are prepared so far; more are added region by region. Counts are for the time or level selected above.";
+  initMap(); use("fc"); T.i = peakIndex(); bind(); update(); plotChart(); cursors();
+}
+
+function update(){
+  G.areas.forEach(function(a){ a.L = []; a.K = []; a.stations.forEach(function(id){ var v = level(id); a.L.push(v == null ? -32000 : Math.round(v * 100)); a.K.push(v == null ? -1 : Math.floor((v - G.levels.start) / G.levels.step + 1e-9)); }); });
+  var o = totals(level);
+  $("vFlood").innerHTML = fmtMi(o.f) + " <small>miles</small>"; $("vPond").innerHTML = fmtMi(o.p) + " <small>miles</small>";
+  $("vBldg").textContent = Math.round(o.b).toLocaleString(); $("vDmg").textContent = fmtBig(o.d);
+  chrome(); table(); labels(); repaint(); $("time").value = T.i; cursors();
+}
+function chrome(){ var v = T.view, pg = G.plot_gauge, lv = level(pg.id);
+  $("bObs").setAttribute("aria-pressed", String(v === "fc" && T.obs)); $("bScen").setAttribute("aria-pressed", String(v === "scen"));
+  $("modeBox").hidden = v !== "fc"; $("scenBar").hidden = v !== "scen"; $("bPlay").textContent = T.playing ? "❚❚ Pause" : v === "scen" ? "▶ Play the levels" : "▶ Play 72 hours";
+  $("plotTitle").textContent = v === "scen" ? "StormSense Scenario Builder" : "StormSense Prediction Plot";
+  $("plotSub").textContent = v === "scen" ? "Impacts at Each Water Level, -2 to 10 ft NAVD88" : "Anticipated Impacts in the Next 72 Hours";
+  $("time").setAttribute("aria-label", v === "scen" ? "Water level" : "Time in the forecast");
+  if (v === "scen"){ $("when").innerHTML = "Water at " + scenLevel(T.i).toFixed(2) + " ft NAVD88 <small>" + mllw(scenLevel(T.i)) + " at Sewells Point · the same level at every gauge</small>"; $("lvlNote").textContent = "Drag the slider or the plot to change the water level."; $("runNote").textContent = ""; }
+  else if (T.obs){ var s = LV.stations[pg.id], ot = s && s.obs_time ? new Date(s.obs_time) : null; $("when").innerHTML = "Last observed <small>" + (ot ? fTime.format(ot) : "") + "</small>";
+    $("lvlNote").textContent = lv == null ? "" : pg.name + " last read " + lv.toFixed(2) + " ft NAVD88 (" + mllw(lv) + ")."; }
+  else { var t = tAt(T.i), dh = (t - Date.now()) / 3600000; $("when").innerHTML = fTime.format(t) + " <small>" + utc(t) + " · " + (Math.abs(dh) < 0.05 ? "now" : dh > 0 ? "in " + dh.toFixed(1) + " h" : (-dh).toFixed(1) + " h ago") + "</small>";
+    $("lvlNote").textContent = lv == null ? "" : pg.name + " at the selected time: " + lv.toFixed(2) + " ft NAVD88 (" + mllw(lv) + ")."; }
+  if (v !== "scen"){ var p = LV.stations[pg.id]; $("runNote").textContent = "Forecast: StormSense fore72" + (p && p.updated ? ", updated " + p.updated : "") + ". Drag the slider or the plot to move through it. Times are Eastern."; }
+  $("plotKey").innerHTML = (v === "scen" ? "" : '<span><span class="sw" style="background:var(--navy)"></span>StormSense forecast at ' + pg.name + " (ft NAVD88, left axis)</span>") +
+    '<span><span class="sw" style="background:var(--flooded)"></span>Road miles flooded</span><span><span class="sw" style="background:var(--ponded)"></span>Road miles ponded</span><span><span class="sw box" style="background:var(--building)"></span>Buildings flooded (' + (v === "scen" ? "right" : "far right") + " axis)</span>";
+}
+function table(){ var rows = G.areas.map(function(a){ return {a:a, c:counts(a, level)}; }).sort(function(p, q){ return q.c.b - p.c.b || q.c.f - p.c.f; });
+  $("areas").innerHTML = "<tr><th>Locality</th><th>Roads flooded (mi)</th><th>Roads ponded (mi)</th><th>Buildings flooded</th><th>Est. damage to homes</th></tr>" + rows.map(function(r){
+    return '<tr><td><a href="' + r.a.name + '/">' + r.a.title + '</a><span class="nm">' + r.a.region + "</span></td><td>" + fmtMi(r.c.f) + "</td><td>" + fmtMi(r.c.p) + "</td><td>" + Math.round(r.c.b).toLocaleString() + "</td><td>" + (r.a.values ? fmtBig(r.c.d) : '<span class="pill none">no public values</span>') + "</td></tr>"; }).join(""); }
+
+/* ---------- plot ---------- */
+function nice(max){ if (max <= 0) return 1; var p = Math.pow(10, Math.floor(Math.log10(max))), m = max / p; return (m <= 1 ? 1 : m <= 2 ? 2 : m <= 5 ? 5 : 10) * p; }
+function num(v){ return v >= 10 || v === 0 || v === Math.round(v) ? Math.round(v).toLocaleString() : v.toFixed(1); }
+function ticks(){ var out = [], i;
+  if (A.kind === "scen"){ for (i = 0; i < A.n; i++){ var lv = scenLevel(i); if (lv === Math.round(lv) && Math.round(lv) % 2 === 0) out.push({i:i, label:lv + " ft"}); } return out; }
+  var f = new Intl.DateTimeFormat("en-US", {timeZone:TZ, hour:"numeric", minute:"numeric", hourCycle:"h23"});
+  for (i = 1; i < A.n - 1; i++){ var p = f.formatToParts(tAt(i)), hr = 0, mn = 0; p.forEach(function(q){ if (q.type === "hour") hr = +q.value; if (q.type === "minute") mn = +q.value; });
+    if (mn === 0 && hr % 12 === 0) out.push({i:i, label: hr === 0 ? fDay.format(tAt(i)) : "noon"}); }
+  return out; }
+function plotChart(){
+  var el = $("cPlot"), n = A.n, scen = A.kind === "scen", lvl = scen || !R.plot ? null : (R.plot[T.mode] || R.plot.f);
+  var band = lvl && R.plot.p10 && R.plot.p90 ? [R.plot.p10, R.plot.p90] : null;
+  var W = Math.max(280, el.clientWidth), H = 250, m = {l:36, r:lvl ? 96 : 52, t:20, b:22}, pw = W - m.l - m.r, ph = H - m.t - m.b, i;
+  var maxMi = 0, maxB = 0; for (i = 0; i < n; i++){ if (R.tlF[i] > maxMi) maxMi = R.tlF[i]; if (R.tlP[i] > maxMi) maxMi = R.tlP[i]; if (R.tlB[i] > maxB) maxB = R.tlB[i]; }
+  maxMi = nice(maxMi); maxB = nice(maxB);
+  var lo = Infinity, hi = -Infinity;
+  (lvl ? [lvl].concat(band || []) : []).forEach(function(a){ for (var q = 0; q < n; q++){ var v = a[q]; if (v != null){ if (v < lo) lo = v; if (v > hi) hi = v; } } });
+  if (!isFinite(lo)){ lo = 0; hi = 1; } var st = hi - lo > 6 ? 2 : 1; lo = Math.floor(lo / st) * st; hi = Math.ceil(hi / st) * st; if (hi === lo) hi += st;
+  var x = function(q){ return m.l + pw * q / (n - 1); }, yL = function(v){ return m.t + ph * (1 - (v - lo) / (hi - lo)); },
+      yM = function(v){ return m.t + ph * (1 - v / maxMi); }, yB = function(v){ return m.t + ph * (1 - v / maxB); };
+  var svg = '<svg viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="' + $("plotTitle").textContent + ": " + $("plotSub").textContent + '">', xr = W - m.r, g, v;
+  if (lvl){ for (v = lo; v <= hi + 1e-9; v += st){ g = yL(v); svg += '<line x1="' + m.l + '" x2="' + xr + '" y1="' + g + '" y2="' + g + '" stroke="' + C.line + '"/><text x="' + (m.l - 6) + '" y="' + (g + 3.5) + '" text-anchor="end">' + v + '</text>'; }
+    svg += '<text x="' + (m.l - 30) + '" y="10">ft NAVD88</text><text x="' + (xr + 6) + '" y="10">miles</text><text x="' + (W - 1) + '" y="10" text-anchor="end">buildings</text>';
+    [0, 0.5, 1].forEach(function(f){ g = m.t + ph * (1 - f); svg += '<line x1="' + xr + '" x2="' + (xr + 4) + '" y1="' + g + '" y2="' + g + '" stroke="' + C.line + '"/><text x="' + (xr + 6) + '" y="' + (g + 3.5) + '">' + num(maxMi * f) + '</text><text x="' + (W - 1) + '" y="' + (g + 3.5) + '" text-anchor="end">' + num(maxB * f) + '</text>'; });
+    var fl = R.plot.flood_levels_ft || {}; ["action","minor","moderate","major"].forEach(function(k){ if (fl[k] == null || fl[k] < lo || fl[k] > hi) return; g = yL(fl[k]);
+      svg += '<line x1="' + m.l + '" x2="' + xr + '" y1="' + g + '" y2="' + g + '" stroke="' + C.muted + '" stroke-dasharray="3 4" stroke-width="1"/><text x="' + (xr - 4) + '" y="' + (g - 3) + '" text-anchor="end">' + k[0].toUpperCase() + k.slice(1) + " " + fl[k].toFixed(1) + '</text>'; }); }
+  else { [0, 0.5, 1].forEach(function(f){ g = m.t + ph * (1 - f); svg += '<line x1="' + m.l + '" x2="' + xr + '" y1="' + g + '" y2="' + g + '" stroke="' + C.line + '"/><text x="' + (m.l - 6) + '" y="' + (g + 3.5) + '" text-anchor="end">' + num(maxMi * f) + '</text><text x="' + (W - 1) + '" y="' + (g + 3.5) + '" text-anchor="end">' + num(maxB * f) + '</text>'; });
+    svg += '<text x="' + (m.l - 30) + '" y="10">miles</text><text x="' + (W - 1) + '" y="10" text-anchor="end">buildings</text>'; }
+  var placed = [];
+  [false, true].forEach(function(noon){ R.ticks.forEach(function(t){ var xx = x(t.i); if ((t.label === "noon") !== noon) return;
+    if (!noon) svg += '<line x1="' + xx + '" x2="' + xx + '" y1="' + (m.t + ph) + '" y2="' + (m.t + ph + 4) + '" stroke="' + C.line + '"/>';
+    if (xx < m.l + 12 || xx > xr - 12 || placed.some(function(q){ return Math.abs(q - xx) < 46; })) return;
+    if (noon) svg += '<line x1="' + xx + '" x2="' + xx + '" y1="' + (m.t + ph) + '" y2="' + (m.t + ph + 4) + '" stroke="' + C.line + '"/>';
+    svg += '<text x="' + xx + '" y="' + (H - 4) + '" text-anchor="middle">' + t.label + '</text>'; placed.push(xx); }); });
+  function path(a, y, close){ var p = "", pen = false; for (var q = 0; q < n; q++){ if (a[q] == null){ pen = false; continue; } p += (pen ? "L" : "M") + x(q).toFixed(1) + "," + y(a[q]).toFixed(1); pen = true; }
+    return close ? p + "L" + x(n - 1) + "," + (m.t + ph) + "L" + x(0) + "," + (m.t + ph) + "Z" : p; }
+  if (band){ var up = "", dn = ""; for (i = 0; i < n; i++) if (band[0][i] != null && band[1][i] != null){ up += (up ? "L" : "M") + x(i).toFixed(1) + "," + yL(band[1][i]).toFixed(1); dn = "L" + x(i).toFixed(1) + "," + yL(band[0][i]).toFixed(1) + dn; }
+    if (up) svg += '<path d="' + up + dn + 'Z" fill="' + C.navy + '" fill-opacity="0.13"/>'; }
+  var ser = [{name:"Roads flooded", v:R.tlF, c:C.flooded, y:yM, unit:"mi", fill:true}, {name:"Roads ponded", v:R.tlP, c:C.ponded, y:yM, unit:"mi"}, {name:"Buildings flooded", v:R.tlB, c:C.building, y:yB, unit:"n"}];
+  ser.forEach(function(s){ if (s.fill) svg += '<path d="' + path(s.v, s.y, true) + '" fill="' + s.c + '" fill-opacity="0.12"/>';
+    svg += '<path d="' + path(s.v, s.y) + '" fill="none" stroke="' + s.c + '" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>'; });
+  if (lvl){ svg += '<path d="' + path(lvl, yL) + '" fill="none" stroke="' + C.navy + '" stroke-width="2.6" stroke-linejoin="round" stroke-linecap="round"/>'; ser.unshift({name:G.plot_gauge.name, v:lvl, c:C.navy, y:yL, unit:"ft"}); }
+  svg += '<g class="cur"><line y1="' + m.t + '" y2="' + (m.t + ph) + '" stroke="' + C.ink + '" stroke-width="1"/>' + ser.map(function(s){ return '<circle r="4.5" fill="' + s.c + '" stroke="' + C.panel + '" stroke-width="2"/>'; }).join("") + '</g></svg><div class="tip" hidden></div>';
+  el.innerHTML = svg; el._g = {W:W, m:m, pw:pw, n:n, x:x, series:ser};
+  if (!el._bound){ el._bound = true; var down = false;
+    var idx = function(e){ var q = el._g, r = el.firstChild.getBoundingClientRect(), f = ((e.clientX - r.left) / r.width * q.W - q.m.l) / q.pw; return Math.max(0, Math.min(q.n - 1, Math.round(f * (q.n - 1)))); };
+    var show = function(e){ var q = el._g, k = idx(e), r = el.getBoundingClientRect(), tip = el.lastChild;
+      tip.innerHTML = "<b>" + stepLabel(k) + "</b><br>" + q.series.map(function(s){ var val = s.v[k]; return '<span class="sw" style="background:' + s.c + ';vertical-align:middle;margin-right:5px"></span>' + s.name + ": " + (val == null ? "–" : s.unit === "mi" ? fmtMi(val) + " mi" : s.unit === "ft" ? val.toFixed(2) + " ft NAVD88" : Math.round(val).toLocaleString()); }).join("<br>");
+      tip.hidden = false; var tx = e.clientX - r.left + 12; if (tx + tip.offsetWidth > r.width) tx = e.clientX - r.left - tip.offsetWidth - 12; tip.style.left = Math.max(0, tx) + "px"; };
+    var set = function(e){ T.obs = false; T.i = idx(e); stop(); update(); };
+    el.addEventListener("pointermove", function(e){ show(e); if (down) set(e); });
+    el.addEventListener("pointerdown", function(e){ down = true; set(e); show(e); });
+    window.addEventListener("pointerup", function(){ down = false; });
+    el.addEventListener("pointerleave", function(){ el.lastChild.hidden = true; }); }
+}
+function cursors(){ var el = $("cPlot"), g = el._g; if (!g) return; var cur = el.querySelector(".cur"); cur.style.display = T.obs ? "none" : "";
+  var cx = g.x(T.i), ln = cur.firstChild; ln.setAttribute("x1", cx); ln.setAttribute("x2", cx);
+  g.series.forEach(function(s, k){ var c = cur.childNodes[k + 1], v = s.v[T.i]; c.style.display = v == null ? "none" : ""; if (v != null){ c.setAttribute("cx", cx); c.setAttribute("cy", s.y(v)); } }); }
+
+/* ---------- map ---------- */
+// Each area's flood picture is a grid in UTM (a small and a full overview, then 1024-pixel tiles; red: the level that
+// reaches the cell, green: its gauge, blue: its ground). A map tile is painted by finding, for each of its pixels, the
+// grid cell under it: the tile's corners are turned into UTM and the pixels between them read off a straight line.
+function source(key, url){ var s = R.src[key]; if (s){ s.used = ++R.tick; return s.p; } s = R.src[key] = {used:++R.tick, big:/\/t_\d+_\d+\.png$/.test(url)};
+  s.p = getImage(url).then(function(img){ var w = img.naturalWidth, h = img.naturalHeight, c = document.createElement("canvas"); c.width = w; c.height = h; var x = c.getContext("2d", {willReadFrequently:true});
+    x.drawImage(img, 0, 0); var px = x.getImageData(0, 0, w, h).data, n = w * h; s.w = w; s.h = h; s.lev = new Uint8Array(n); s.zone = new Uint8Array(n); s.gnd = new Uint8Array(n);
+    for (var i = 0, j = 0; i < n; i++, j += 4){ s.lev[i] = px[j]; s.zone[i] = px[j+1]; s.gnd[i] = px[j+2]; } c.width = c.height = 0; return s; }).catch(function(){ delete R.src[key]; return null; });
+  var big = Object.keys(R.src).filter(function(k){ return R.src[k].big; });
+  if (big.length > MAX_SRC) big.sort(function(p, q){ return R.src[p].used - R.src[q].used; }).slice(0, big.length - MAX_SRC).forEach(function(k){ delete R.src[k]; });
+  return s.p; }
+function corners(coords, epsg){ var z = coords.z, p = L.point(coords.x * 256, coords.y * 256), out = [];
+  [[0,0],[256,0],[0,256],[256,256]].forEach(function(d){ var ll = map.unproject(p.add(d), z); out.push(utm(ll.lng, ll.lat, epsg)); }); return out; }
+function wanted(a, coords, cs){ // the grids of area a that a map tile needs: {f: cells per grid cell, get(col,row) -> source or null}
+  var ra = a.raster, c = corners(coords, a.epsg), ll = map.unproject(L.point(coords.x * 256 + 128, coords.y * 256 + 128), coords.z);
+  var mpp = 40075016.686 * Math.cos(ll.lat * Math.PI / 180) / Math.pow(2, coords.z + 8), base = a.name + "/";
+  var one = mpp >= ra.cell_m * ra.small.factor * 0.7 ? ra.small : mpp >= ra.cell_m * ra.overview.factor * 0.7 || ra.overview.factor === 1 ? ra.overview : null;
+  if (one) return source(base + one.file, base + one.file).then(function(s){ return {c:c, f:one.factor, w:one.width, h:one.height, one:s}; });
+  var es = c.map(function(q){ return q[0]; }), ns = c.map(function(q){ return q[1]; }), ts = ra.tile, cell = ra.cell_m;
+  var c0 = Math.max(0, Math.floor((Math.min.apply(null, es) - a.x0) / cell / ts)), c1 = Math.min(ra.cols - 1, Math.floor((Math.max.apply(null, es) - a.x0) / cell / ts)),
+      r0 = Math.max(0, Math.floor((a.ytop - Math.max.apply(null, ns)) / cell / ts)), r1 = Math.min(ra.rows - 1, Math.floor((a.ytop - Math.min.apply(null, ns)) / cell / ts)), jobs = [];
+  if (c1 < c0 || r1 < r0) return Promise.resolve(null);
+  for (var r = r0; r <= r1; r++) for (var q = c0; q <= c1; q++){ var u = base + ra.dir + "/t_" + r + "_" + q + ".png"; jobs.push(source(u, u)); }
+  return Promise.all(jobs).then(function(list){ return {c:c, f:1, w:ra.width, h:ra.height, ts:ts, r0:r0, c0:c0, nc:c1 - c0 + 1, nr:r1 - r0 + 1, list:list}; }); }
+var tmp = document.createElement("canvas"); tmp.width = tmp.height = 256; var tctx = tmp.getContext("2d"), tim = tctx.createImageData(256, 256), t32 = new Uint32Array(tim.data.buffer);
+function paintArea(ctx, a, S, coords){ if (!S || !a.L) return;
+  var c = S.c, cs = a.raster.cell_m * S.f, K = a.K, Lv = a.L, D = R.colDepth, NZ = a.raster.no_zone, g0 = a.raster.ground0_ft * 100, gs = a.raster.ground_step_ft * 100, any = false, one = S.one;
+  if (S.one === null) return; t32.fill(0);
+  for (var py = 0; py < 256; py++){ var v = (py + 0.5) / 256, e0 = c[0][0] + (c[2][0] - c[0][0]) * v, n0 = c[0][1] + (c[2][1] - c[0][1]) * v, e1 = c[1][0] + (c[3][0] - c[1][0]) * v, n1 = c[1][1] + (c[3][1] - c[1][1]) * v;
+    for (var px = 0; px < 256; px++){ var u = (px + 0.5) / 256, col = Math.floor((e0 + (e1 - e0) * u - a.x0) / cs), row = Math.floor((a.ytop - (n0 + (n1 - n0) * u)) / cs);
+      if (col < 0 || row < 0 || col >= S.w || row >= S.h) continue; var s = one, i;
+      if (s) i = row * s.w + col; else { var tr = Math.floor(row / S.ts) - S.r0, tc = Math.floor(col / S.ts) - S.c0; if (tr < 0 || tc < 0 || tr >= S.nr || tc >= S.nc) continue; s = S.list[tr * S.nc + tc]; if (!s) continue; i = (row - (tr + S.r0) * S.ts) * s.w + (col - (tc + S.c0) * S.ts); }
+      var gi = s.gnd[i]; if (gi === 0) continue; var z = s.zone[i]; if (z === NZ || z >= K.length || s.lev[i] > K[z]) continue;
+      var d = Lv[z] - (g0 + (gi - 1) * gs); t32[py * 256 + px] = D[d <= 50 ? 0 : d <= 100 ? 1 : d >= 1000 ? 10 : Math.ceil(d / 100)]; any = true; } }
+  if (!any) return; tctx.putImageData(tim, 0, 0); ctx.save(); var p0 = L.point(coords.x * 256, coords.y * 256); ctx.beginPath();
+  a.outline.forEach(function(ring){ ring.forEach(function(q, k){ var p = map.project([q[1], q[0]], coords.z); if (k) ctx.lineTo(p.x - p0.x, p.y - p0.y); else ctx.moveTo(p.x - p0.x, p.y - p0.y); }); ctx.closePath(); });
+  ctx.clip(); ctx.drawImage(tmp, 0, 0); ctx.restore(); }
+function render(cv, coords){ var z = coords.z, p = L.point(coords.x * 256, coords.y * 256), nw = map.unproject(p, z), se = map.unproject(p.add([256, 256]), z);
+  var need = G.areas.filter(function(a){ return !(a.bbox[0] > se.lng || a.bbox[2] < nw.lng || a.bbox[1] > nw.lat || a.bbox[3] < se.lat); });
+  var ctx = cv.getContext("2d"); if (!need.length){ ctx.clearRect(0, 0, 256, 256); return Promise.resolve(); }
+  var job = cv._job = (cv._job || 0) + 1;
+  return Promise.all(need.map(function(a){ return wanted(a, coords); })).then(function(list){ if (cv._job !== job) return; ctx.clearRect(0, 0, 256, 256); list.forEach(function(S, k){ paintArea(ctx, need[k], S, coords); }); }); }
+function repaint(){ if (!depthLayer || R.raf) return; R.raf = requestAnimationFrame(function(){ R.raf = 0; var t = depthLayer._tiles; for (var k in t) render(t[k].el, t[k].coords); }); }
+function labels(){ for (var id in marks){ var v = level(id), m = marks[id]; m.setTooltipContent(id + (v == null ? "" : " " + v.toFixed(1) + " ft")); } }
+function inRing(ring, x, y){ var inside = false; for (var i = 0, j = ring.length - 1; i < ring.length; j = i++){ var a = ring[i], b = ring[j]; if ((a[1] > y) !== (b[1] > y) && x < (b[0] - a[0]) * (y - a[1]) / (b[1] - a[1]) + a[0]) inside = !inside; } return inside; }
+function areaPopup(a){ var c = counts(a, level); return "<b>" + a.title + "</b>" +
+  '<span class="f">Roads flooded: ' + fmtMi(c.f) + " mi of " + Math.round(a.roads_total_mi).toLocaleString() + '</span><span class="f">Roads ponded: ' + fmtMi(c.p) + ' mi</span><span class="f">Buildings flooded: ' + Math.round(c.b).toLocaleString() + " of " + a.buildings_total.toLocaleString() + "</span>" +
+  (a.values ? '<span class="f">Est. damage to homes: ' + fmtBig(c.d) + "</span>" : "") + '<a class="go" href="' + a.name + '/">Open the ' + a.title + " map</a>"; }
+function initMap(){
+  map = L.map("map", {minZoom:7, maxZoom:18, zoomSnap:0.5, attributionControl:true}).setView([36.9467, -76.33], 11);       // opens on Sewells Point
+  map.attributionControl.setPrefix(false); window.__map = map;
+  map.createPane("depth").style.zIndex = 300; map.createPane("ref").style.zIndex = 350; map.getPane("ref").style.pointerEvents = "none";
+  var att = "Esri, Maxar, Earthstar Geographics | StormSense depth on NOAA/USGS CoNED";
+  var base = {sat: L.layerGroup([L.tileLayer(ESRI + "World_Imagery/MapServer/tile/{z}/{y}/{x}", {maxNativeZoom:19, maxZoom:18, attribution:att}),
+                                 L.tileLayer(ESRI + "Reference/World_Transportation/MapServer/tile/{z}/{y}/{x}", {pane:"ref", maxZoom:18}),
+                                 L.tileLayer(ESRI + "Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}", {pane:"ref", maxZoom:18})]),
+              streets: L.tileLayer(ESRI + "World_Street_Map/MapServer/tile/{z}/{y}/{x}", {maxZoom:18, attribution:att})};
+  base.sat.addTo(map);
+  Array.prototype.forEach.call(document.querySelectorAll(".base button"), function(b){ b.addEventListener("click", function(){ var k = b.getAttribute("data-b");
+    for (var q in base){ if (q === k) base[q].addTo(map); else map.removeLayer(base[q]); }
+    Array.prototype.forEach.call(document.querySelectorAll(".base button"), function(o){ o.setAttribute("aria-pressed", String(o === b)); });
+    shapes.forEach(function(s){ s.setStyle({color: k === "sat" ? "#ffffff" : "#0b3954"}); }); }); });
+  var Depth = L.GridLayer.extend({createTile: function(coords, done){ var c = document.createElement("canvas"); c.width = c.height = 256; render(c, coords).then(function(){ done(null, c); }, function(e){ done(e, c); }); return c; }});
+  depthLayer = new Depth({pane:"depth", updateWhenZooming:false, keepBuffer:1}).addTo(map);
+  G.areas.forEach(function(a){ var s = L.polygon(a.outline.map(function(r){ return r.map(function(q){ return [q[1], q[0]]; }); }), {color:"#ffffff", weight:1.2, opacity:0.85, dashArray:"4 4", fillOpacity:0}).addTo(map);
+    s.bindPopup(function(){ return areaPopup(a); }, {maxWidth:280}); shapes.push(s); });
+  for (var id in G.stations){ var g = G.stations[id], m = L.circleMarker([g.lat, g.lon], {radius:5, color:"#ffffff", weight:1.5, fillColor:"#0b3954", fillOpacity:1}).addTo(map);
+    m.bindTooltip(id, {permanent:true, direction:"right", offset:[7, 0], className:"glabel"}); m.bindPopup("<b>" + g.name + "</b>"); marks[id] = m; }
+  var show = function(){ var on = map.getZoom() >= 10.5; for (var id in marks){ var t = marks[id].getTooltip(); if (t && t.getElement()) t.getElement().style.display = on ? "" : "none"; } };
+  map.on("zoomend", show); show();
+}
+
+/* ---------- controls ---------- */
+function stop(){ if (T.playing){ clearInterval(T.playing); T.playing = null; $("bPlay").setAttribute("aria-pressed", "false"); } }
+function go(view){ if (T.view !== view){ use(view); plotChart(); } stop(); }
+function bind(){
+  $("bNow").addEventListener("click", function(){ go("fc"); T.obs = false; T.i = nowIndex(); update(); });
+  $("bPeak").addEventListener("click", function(){ go("fc"); T.obs = false; T.i = peakIndex(); update(); });
+  $("bObs").addEventListener("click", function(){ go("fc"); T.obs = true; update(); });
+  $("bScen").addEventListener("click", function(){ go("scen"); T.obs = false; T.i = Math.round((5.5 - G.levels.start) / G.levels.step); update(); });
+  $("time").addEventListener("input", function(){ T.obs = false; T.i = +this.value; stop(); update(); });
+  $("bPlay").addEventListener("click", function(){ if (T.playing){ stop(); chrome(); return; } T.obs = false; var step = T.view === "scen" ? 1 : Math.max(1, Math.round(30 / A.step_min));
+    if (T.i >= A.n - 1) T.i = 0; T.playing = setInterval(function(){ T.i = Math.min(A.n - 1, T.i + step); update(); if (T.i >= A.n - 1){ stop(); chrome(); } }, 260); $("bPlay").setAttribute("aria-pressed", "true"); chrome(); });
+  Array.prototype.forEach.call(document.querySelectorAll("#mode button"), function(b){ b.addEventListener("click", function(){ T.mode = b.getAttribute("data-v");
+    Array.prototype.forEach.call(document.querySelectorAll("#mode button"), function(o){ o.setAttribute("aria-pressed", String(o === b)); }); T.obs = false; timeline(); plotChart(); update(); }); });
+  var rs; window.addEventListener("resize", function(){ clearTimeout(rs); rs = setTimeout(function(){ plotChart(); cursors(); }, 150); });
+  var mq = window.matchMedia("(prefers-color-scheme: dark)"), re = function(){ readColors(); plotChart(); cursors(); repaint(); };
+  if (mq.addEventListener) mq.addEventListener("change", re); new MutationObserver(re).observe(document.documentElement, {attributes:true, attributeFilter:["data-theme"]});
+}
+})();
+</script>

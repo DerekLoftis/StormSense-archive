@@ -395,3 +395,49 @@ def test_page_coordinates_fit_a_long_county():
     unit = page.unit_for((0, 0, 36915, 42325))
     far = page.units([42000.0], 0, unit)
     assert far[0] == 42000 and far[0] < 65535
+
+
+def test_statewide_curves_count_each_gauges_roads_and_buildings_at_every_level():
+    from inundation import site
+    roads = {"station": np.array(["AAAA", "AAAA", "AAAA", "ZZZZ"], dtype=object), "bridge": np.array([0, 0, 1, 0.0]),
+             "ground_ft": np.array([3.0, 3.0, 3.0, 1.0]), "connect_ft": np.array([3.0, 5.0, 3.0, 1.0]),
+             "length_m": np.array([site.M_PER_MILE, site.M_PER_MILE / 2, 50.0, site.M_PER_MILE / 4])}
+    bldgs = {"station": np.array(["AAAA", "AAAA"], dtype=object), "over_water": np.array([0, 1.0]),
+             "ground_ft": np.array([4.0, 0.0]), "connect_ft": np.array([4.0, 0.0])}
+    c = site.curves(roads, bldgs, {})
+    lv = list(depth.LEVELS_FT)
+    assert sorted(c) == ["AAAA", "ZZZZ"] and all(len(c["AAAA"][k]) == len(lv) == 49 for k in "fpb") and "d" not in c["AAAA"]
+    at = lambda st, k, ft: c[st][k][lv.index(ft)]                      # noqa: E731
+    assert at("AAAA", "f", 3.0) == 0 and at("AAAA", "p", 3.25) == 1.0 and at("AAAA", "p", 3.5) == 1.0
+    assert at("AAAA", "f", 3.75) == 1.0 and at("AAAA", "p", 3.75) == 0      # the bridge is never counted
+    assert at("AAAA", "f", 4.75) == 1.0 and at("AAAA", "f", 5.0) == 1.5     # the cut-off piece floods when water gets to it
+    assert at("AAAA", "b", 4.5) == 0 and at("AAAA", "b", 4.75) == 1 and at("AAAA", "b", 10.0) == 1
+    assert at("ZZZZ", "f", 1.75) == 0.25 and c["ZZZZ"]["b"] == [0] * 49
+
+
+def test_the_list_of_areas_names_each_locality_once_and_the_workflow_reads_it():
+    from inundation import site
+    rows = site.areas()
+    assert len({r["name"] for r in rows}) == len({r["fips"] for r in rows}) == len(rows) >= 18
+    assert all(r["fips"].startswith("51") and len(r["fips"]) == 5 and r["title"] and r["region"] for r in rows)
+    assert all(r["name"] == r["name"].lower() and " " not in r["name"] for r in rows)       # a folder and a URL
+    assert {"norfolk", "poquoson", "gloucester", "york"} <= {r["name"] for r in rows}
+    with open(os.path.join(os.path.dirname(site.__file__), "templates", "statewide.html")) as fh:
+        html = fh.read()
+    assert "__LEAFLET__" in html and "__LEAFLET_CSS__" in html and "areas.json" in html
+
+
+def test_statewide_map_gets_a_small_far_view_of_an_area(tmp_path):
+    Image = pytest.importorskip("PIL.Image")
+    from inundation import site
+    os.makedirs(tmp_path / "tiles")
+    a = np.zeros((900, 1500, 3), np.uint8)
+    a[::3, ::3] = (7, 1, 40)
+    Image.fromarray(a, "RGB").save(tmp_path / "tiles" / "z0.png")
+    raster = {"dir": "tiles", "overview": {"file": "tiles/z0.png", "factor": 4, "width": 1500, "height": 900}}
+    small = site.small_overview(str(tmp_path), raster)
+    assert small == {"file": "tiles/z1.png", "factor": 12, "width": 500, "height": 300}
+    b = np.asarray(Image.open(tmp_path / "tiles" / "z1.png"))
+    assert b.shape == (300, 500, 3) and (b == a[1::3, 1::3]).all()          # cells are picked, never averaged
+    raster["overview"].update(width=400, height=300)
+    assert site.small_overview(str(tmp_path), raster) == raster["overview"]

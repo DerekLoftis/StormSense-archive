@@ -158,6 +158,32 @@ python -m inundation.status --prepared prepared --name norfolk --site <StormSens
   its 10-90% band and NWS stages on the left axis, road miles and buildings on two right axes (Derek's layout,
   2026-11-27).
 
+## The site and the map of all localities
+
+`areas.csv` lists the localities (FIPS, the short name used in file names and URLs, the title, the region):
+Hampton Roads and the Middle Peninsula so far. Add a row to add a locality.
+
+    python -m inundation.site --prepared <folder of <name>/ folders> --latest <Latest site> --out site/inundation
+
+writes one site: `<name>/` is each prepared locality's own map page (its tables under `<name>/data/`) and
+`index.html` is the map of all of them (`templates/statewide.html`). That map opens on Sewells Point over a
+satellite basemap with roads and place names, or a street map (Esri's World Imagery, its two reference layers and
+World Street Map, drawn with Leaflet from `crest/jslib`). The water is drawn from the localities' own depth tiles:
+they are in each locality's UTM zone, so the page reprojects them as it draws (a far view from `tiles/z1.png`,
+`tiles/z0.png` closer, the 1024-pixel tiles from zoom 14), cut to the locality's outline (`<name>_outline.geojson`,
+written by `prep`) so neighbours do not paint over each other. Roads, buildings and damage are counted from
+`areas.json`'s `curves`: for each locality and gauge, the totals at each of the 49 levels, read off at the gauge's
+water level, so the page never loads the road and building tables. The plot is Sewells Point's forecast. A locality's
+outline opens its own map.
+
+`.github/workflows/inundation.yml` runs it after every StormSense run and publishes to GitHub Pages at
+https://derekloftis.github.io/StormSense-archive/inundation/ (and to release `inundation-pages`). GitHub Pages
+holds one site per repository, so this workflow and `crest.yml` each unpack the other's newest site zip beside their
+own before deploying. A locality is prepared on Actions too, once: run the workflow by hand with `prepare` set to
+names from `areas.csv`, `missing` or `all` (one job per locality, four at a time); the result is kept on release
+`inundation-prepared` as `<name>_prepared.tar` and `<name>_inundation_gdb.zip`. Prepare a locality again after its
+sources or the method change. A pull request prepares Poquoson and keeps its site as an artifact.
+
 ## Historical floods
 
 `events/events.json` lists the storms; each has `events/<id>/event.json` (peak, window, every gauge with its highest
@@ -248,4 +274,5 @@ the page says which watersheds are missing. A gauge there (or a Currituck Sound 
 - `chance` uses the 10-90% band at the forecast's peak; the run's own error trajectories would be better.
 - "Now" is the last observation at the forecast run; a lighter, more frequent job could refresh it.
 - Statewide, 5 m pieces are tens of millions of features: decide the packaging (per locality or HUC-12) first.
-- Publishing: hosted layers in the AGOL folder "StormSense CREST" and the page on Pages are not wired yet.
+- Publishing: the hosted layers in the AGOL folder "StormSense CREST" are not wired yet (Pages is: see "The site").
+- The map of all localities shows water and totals; a flagged road or building is on its locality's own map.

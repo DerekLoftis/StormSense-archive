@@ -28,6 +28,7 @@ project's shared folder (skill code, baselines, notes, station sheet, disclosure
 | Harmonic tide refit | `harmonics.yml` here, commits `harmonics/<ST>.json` | 2nd of month |
 | Verified obs + rescoring (`archiver/verified.py`) | `verified.yml` here, release `verified-YYYY-MM` (final vs preliminary readings, every change > 0.1 ft, the month's runs rescored); `data/verified/status.csv`, `cadence.csv` | 10th monthly 05:30 (Derek 2026-11-27); each month rechecked until NOAA verifies / USGS approves all of it |
 | CREST review pages (`python -m crest.build`) | `crest.yml` here; releases `crest-data` (finished months), `crest-pages` (site zip); Pages at /StormSense-archive/crest/ once var `CREST_PAGES=true` | daily 13:40 via cron-job.org (GitHub cron 14:40 fallback) |
+| Inundation maps (`python -m inundation.site`) | `inundation.yml` here; releases `inundation-prepared` (each locality, prepared once), `inundation-pages` (site zip); Pages at /StormSense-archive/inundation/ | after every StormSense run |
 
 - Publishing: the run force-pushes each site as one commit to the public repo's `site` branch and sends a
   `publish` repository_dispatch; the public repo's `deploy.yml` (on main) deploys that branch to Pages
@@ -190,8 +191,16 @@ project's shared folder (skill code, baselines, notes, station sheet, disclosure
   have `observed_ft` interpolated straight across a gauge's outage: `history.unbridged` takes those lines out. A gauge
   without its own record through the peak follows the nearest one that has it. Add a storm as a row in `events/events.json` and run
   `python -m inundation.history noaa --event <id>`.
-- Not wired yet: a workflow, Pages hosting and the push to the AGOL folder "StormSense CREST". Each area's prepared
-  tables and file geodatabase are in the project's shared folder under `inundation/<area>/`.
+- Site (2026-11-27): `inundation/areas.csv` lists the localities (Hampton Roads and the Middle Peninsula so far; add
+  a row to add one). `python -m inundation.site --prepared <dir of <name>/> --latest <Latest site> --out site/inundation`
+  writes each locality's page under `<name>/` and `index.html`, the map of all of them (`templates/statewide.html`:
+  Leaflet, Esri satellite hybrid or street basemap, opens on Sewells Point, water reprojected from the localities' UTM
+  depth tiles, totals from `areas.json` `curves`). `inundation.yml` runs it after every StormSense run and deploys to
+  Pages at /StormSense-archive/inundation/ (release `inundation-pages`); Pages is one site per repo, so it and
+  `crest.yml` each unpack the other's zip before deploying. Localities are prepared on Actions, once each (manual run,
+  `prepare` = names, `missing` or `all`; release `inundation-prepared`), because a session cannot upload release assets.
+- Not wired yet: the push to the AGOL folder "StormSense CREST". Each area's prepared tables and file geodatabase are
+  also in the project's shared folder under `inundation/<area>/`.
 
 ## Station sources that are not Tidewatch
 
