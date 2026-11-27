@@ -243,7 +243,7 @@ def write_static(out, name, title, bounds, epsg, pieces, road_cols, roads_raw, f
             tol *= 2
             s = simplify(ring, tol)
         bcount.append(len(s)); bxy.append(np.column_stack([ux(s[:, 0]), uy(s[:, 1])]))
-    b = {"n": len(bkeep), "count": b64(bcount, "u1"), "xy": b64(np.vstack(bxy), "<u2"),
+    b = {"n": len(bkeep), "count": b64(bcount, "u1"), "xy": b64(np.vstack(bxy) if bxy else np.zeros((0, 2)), "<u2"),   # an inland town may have no building 10 ft of water reaches
          "ground": b64(hundredths(np.asarray(bc["ground_ft"])[bkeep]), "<i2"),
          "connect": b64(hundredths(np.asarray(bc["connect_ft"])[bkeep]), "<i2"),
          "station": b64([order[s] for s in np.asarray(bc["station"])[bkeep]], "u1"), "id": b64(bkeep, "<u4")}
