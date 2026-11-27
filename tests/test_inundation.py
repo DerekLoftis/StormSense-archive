@@ -588,3 +588,46 @@ def test_a_layer_its_city_took_down_comes_from_the_saved_copy(monkeypatch):
         assert "404" in str(e)
     else:
         raise AssertionError("a layer that cannot be read and has no copy must fail")
+
+
+def test_open_water_as_one_node_gives_the_same_answer():
+    pytest.importorskip("scipy")
+    pytest.importorskip("numba")
+    from inundation import spread
+    rng = np.random.default_rng(11)
+    for trial in range(4):
+        dem = rng.uniform(-3, 12, (200, 260)).astype(np.float32)
+        dem = (dem + np.roll(dem, 1, 0) + np.roll(dem, 1, 1) + np.roll(dem, (1, 1), (0, 1))) / 4
+        dem[:, :100] = -8.0                                  # the bay
+        dem[:, 100:103] = rng.uniform(-3, 6, (200, 3))       # a ragged shore
+        dem[60:150, 150:240] = -5.0                          # a deep lake behind higher ground ...
+        dem[55:60, 150:240] = dem[150:155, 150:240] = dem[55:155, 145:150] = dem[55:155, 240:245] = 4.0 + trial
+        dem[100, 103:150] = [1.0, 3.0, 5.0, 11.0][trial]     # ... and a ditch to it that fills at some level, or never
+        dem[(rng.random(dem.shape) < 0.01) & (dem > -4)] = np.nan            # holes in the data, on land
+        n = 80
+        links = (rng.integers(0, 200, n), rng.integers(0, 260, n), rng.integers(0, 12, n))
+        wall = (np.arange(20, 180), np.full(160, 125)) if trial % 2 else None
+        g = spread.own_level(dem, depth.LEVELS_FT, wall)
+        lab, bodies, cells = spread.open_sea(g, keep=(links[0], links[1]))
+        assert bodies >= 2 and cells > 20000 and (g == spread.SEA).sum() == cells
+        assert not (g[links[0], links[1]] == spread.SEA).any()               # an opening keeps its own node
+        a = depth.connect_index(dem, links=links, blocked=wall, method="label")
+        b = depth.connect_index(dem, links=links, blocked=wall, method="spread")
+        assert (a[0] == b[0]).all() and (a[1] == b[1]).all()
+        assert (depth.connect_index(dem, blocked=wall, method="label") == depth.connect_index(dem, blocked=wall, method="spread")).all()
+    # the lake is water from the start, but the sea reaches it only over its 7 ft bank in the last trial (ditch at 11 ft)
+    assert depth.LEVELS_FT[b[0][100, 200]] == 7.0 and b[0][100, 50] == 0
+
+
+def test_the_frame_is_cut_back_to_the_roads_and_buildings():
+    from inundation import prep
+    county = (0, 0, 90000, 60000)                              # far out into the bay and the ocean
+    x, y = np.array([30000.0, 70000.0, np.nan]), np.array([5000.0, 58000.0, 100.0])
+    assert prep.land_bounds(county, x, y) == (28500, 3500, 71500, 59500)
+    assert prep.land_bounds(county, x, y, margin=40000) == county            # never larger than the county's own
+    assert prep.land_bounds(county, [], []) == county
+    feats = [{"geometry": {"type": "Polygon", "coordinates": [[[1.0, 2.0], [1.1, 2.0], [1.1, 2.1], [1.0, 2.0]]]}},
+             {"geometry": {"type": "MultiPolygon", "coordinates": [[[[3.0, 4.0], [3.1, 4.0], [3.1, 4.1], [3.0, 4.0]]]]}},
+             {"geometry": None}]
+    bx, by = prep.first_points(feats, lambda lon, lat: (lon * 10, lat * 10))
+    assert list(bx) == [10.0, 30.0] and list(by) == [20.0, 40.0]

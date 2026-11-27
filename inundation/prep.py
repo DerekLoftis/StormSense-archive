@@ -63,6 +63,38 @@ def bounds_of(feature, transform, buffer=BUFFER_M):
             int(np.ceil(xs.max() + buffer)), int(np.ceil(ys.max() + buffer)))
 
 
+LAND_MARGIN_M = 1500
+
+
+def land_bounds(bounds, xs, ys, margin=LAND_MARGIN_M):
+    """The frame cut back to the roads and buildings plus a margin, never larger than `bounds`. A county's boundary
+    runs far out into the bay and the ocean (Accomack's to the Maryland line in the Chesapeake and three miles off
+    the beach), and open water that far from anything mapped only costs memory and disk."""
+    xs, ys = np.asarray(xs, float), np.asarray(ys, float)
+    ok = np.isfinite(xs) & np.isfinite(ys)
+    if not ok.any():
+        return bounds
+    xs, ys = xs[ok], ys[ok]
+    return (max(bounds[0], int(np.floor(xs.min() - margin))), max(bounds[1], int(np.floor(ys.min() - margin))),
+            min(bounds[2], int(np.ceil(xs.max() + margin))), min(bounds[3], int(np.ceil(ys.max() + margin))))
+
+
+def first_points(features, transform):
+    """One corner of each building's outline, in map coordinates: enough to know how far the buildings reach."""
+    lon, lat = [], []
+    for f in features:
+        c = (f.get("geometry") or {}).get("coordinates") or []
+        while c and isinstance(c[0], (list, tuple)):
+            if not isinstance(c[0][0], (list, tuple)):
+                lon.append(c[0][0]); lat.append(c[0][1])
+                break
+            c = c[0]
+    if not lon:
+        return np.zeros(0), np.zeros(0)
+    x, y = transform(np.asarray(lon, float), np.asarray(lat, float))
+    return np.asarray(x), np.asarray(y)
+
+
 def middle(a):
     """Row-wise median treating NaN as 'never' (+inf): NaN when most of the row never floods."""
     m = np.median(np.where(np.isfinite(a), a, np.inf), axis=1)
@@ -249,6 +281,12 @@ def main(argv=None):
     log(len(roads), "road segments,", len(bldgs), "buildings (VGIN)")
     pieces = segments.split(roads, fwd)
     log(len(pieces["road"]), f"pieces of at most {PIECE_M:g} m,", round(pieces["length_m"].sum() / 1000, 1), "km")
+    bx, by = first_points(bldgs, fwd)
+    whole = bounds
+    bounds = land_bounds(bounds, np.concatenate([pieces["xm"], bx]), np.concatenate([pieces["ym"], by]))
+    if bounds != whole:
+        cut = 1 - (bounds[2] - bounds[0]) * (bounds[3] - bounds[1]) / ((whole[2] - whole[0]) * (whole[3] - whole[1]))
+        log(f"frame cut back to the roads and buildings plus {LAND_MARGIN_M} m: {bounds} ({cut:.0%} smaller)")
 
     dem_path, cidx_path = f"{a.work}/dem_ft.npy", f"{a.work}/cidx.npy"
     origin = (bounds[0], bounds[3])
