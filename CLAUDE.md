@@ -195,7 +195,8 @@ project's shared folder (skill code, baselines, notes, station sheet, disclosure
   a row to add one). `python -m inundation.site --prepared <dir of <name>/> --latest <Latest site> --out site/inundation`
   writes each locality's page under `<name>/` and `index.html`, the map of all of them (`templates/statewide.html`:
   Leaflet, Esri satellite hybrid or street basemap, opens on Sewells Point, water reprojected from the localities' UTM
-  depth tiles, totals from `areas.json` `curves`). `inundation.yml` runs it after every StormSense run and deploys to
+  depth tiles, totals from `areas.json` `curves`, each flagged road piece and building from zoom 15 in, read from the
+  locality's own `static.json`). `inundation.yml` runs it after every StormSense run and deploys to
   Pages at /StormSense-archive/inundation/ (release `inundation-pages`); Pages is one site per repo, so it and
   `crest.yml` each unpack the other's zip before deploying. Localities are prepared on Actions, once each (manual run,
   `prepare` = names, `missing` or `all`; release `inundation-prepared`), because a session cannot upload release assets.

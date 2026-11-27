@@ -173,8 +173,10 @@ they are in each locality's UTM zone, so the page reprojects them as it draws (a
 `tiles/z0.png` closer, the 1024-pixel tiles from zoom 14), cut to the locality's outline (`<name>_outline.geojson`,
 written by `prep`) so neighbours do not paint over each other. Roads, buildings and damage are counted from
 `areas.json`'s `curves`: for each locality and gauge, the totals at each of the 49 levels, read off at the gauge's
-water level, so the page never loads the road and building tables. The plot is Sewells Point's forecast. A locality's
-outline opens its own map.
+water level, so the far view never loads the road and building tables. From zoom 15 in, the page reads the
+`static.json` of each locality in view (its own page's data) and draws every flooded or ponded road piece and
+flooded building on the water; a click on one gives its depth, ground and gauge, a click elsewhere in a locality its
+counts and the link to its own map. The plot is Sewells Point's forecast.
 
 `.github/workflows/inundation.yml` runs it after every StormSense run and publishes to GitHub Pages at
 https://derekloftis.github.io/StormSense-archive/inundation/ (and to release `inundation-pages`). GitHub Pages
@@ -275,4 +277,3 @@ the page says which watersheds are missing. A gauge there (or a Currituck Sound 
 - "Now" is the last observation at the forecast run; a lighter, more frequent job could refresh it.
 - Statewide, 5 m pieces are tens of millions of features: decide the packaging (per locality or HUC-12) first.
 - Publishing: the hosted layers in the AGOL folder "StormSense CREST" are not wired yet (Pages is: see "The site").
-- The map of all localities shows water and totals; a flagged road or building is on its locality's own map.

@@ -103,6 +103,10 @@ select{font:inherit;font-size:13.5px;color:var(--ink);background:var(--panel);bo
 .ramp i{display:block;width:100%;height:11px;border-radius:2px}
 @media (prefers-reduced-motion:reduce){*{scroll-behavior:auto}}
 
+.keys{display:flex;flex-wrap:wrap;gap:4px 16px;margin-top:8px;font-size:12.5px;color:var(--muted)}
+.keys span{display:inline-flex;align-items:center;gap:6px}
+.keys .sw{display:inline-block;width:18px;height:4px;border-radius:2px}
+.keys .sw.sq{width:11px;height:11px}
 .leaflet-container{font:inherit;font-size:12.5px}
 .leaflet-container a{color:var(--accent)}
 .glabel{background:rgba(255,255,255,.92);border:0;border-radius:4px;box-shadow:0 1px 4px rgba(0,0,0,.35);color:#0f2230;font:600 11.5px var(--body);padding:1px 5px;white-space:nowrap}
@@ -164,7 +168,8 @@ td a{color:inherit;font-weight:600;text-decoration-color:var(--accent)}
         </span>
       </div>
       <div class="ramp" id="ramp" aria-label="Water depth in feet, by color"></div>
-      <p class="note">Click a locality for its counts and its own map, where every flooded road and building can be opened and past floods replayed.</p>
+      <div class="keys"><span><i class="sw" style="background:var(--flooded)"></i>Road flooded, over 0.5 ft</span><span><i class="sw" style="background:var(--ponded)"></i>Road ponded, 0.25 to 0.5 ft</span><span><i class="sw sq" style="background:var(--building)"></i>Flooded Building, over 0.5 ft</span></div>
+      <p class="note"><span id="detailNote">Zoom in to street level to see each flooded road and building.</span> Click a locality for its counts and its own map, where past floods can be replayed and every building's value and estimated damage opened.</p>
     </div>
 
     <div class="side">
@@ -238,7 +243,7 @@ function utm(lon, lat, epsg){ var zone = epsg % 100, lon0 = zone * 6 - 183, a = 
   return [500000 + 0.9996 * Ar * E, 0.9996 * Ar * N]; }
 window.__utm = utm;
 
-Promise.all([getJSON("areas.json"), getJSON("levels.json")]).then(function(r){ G = r[0]; LV = r[1]; setup(); })
+Promise.all([getJSON("areas.json"), getJSON("levels.json")]).then(function(r){ G = r[0]; LV = r[1]; window.__areas = G.areas; setup(); })
   .catch(function(e){ fail("The map data did not load (" + e.message + "). Reload the page to try again."); });
 
 /* ---------- levels and counts ---------- */
@@ -270,7 +275,7 @@ function update(){
   var o = totals(level);
   $("vFlood").innerHTML = fmtMi(o.f) + " <small>miles</small>"; $("vPond").innerHTML = fmtMi(o.p) + " <small>miles</small>";
   $("vBldg").textContent = Math.round(o.b).toLocaleString(); $("vDmg").textContent = fmtBig(o.d);
-  chrome(); table(); labels(); repaint(); $("time").value = T.i; cursors();
+  G.areas.forEach(flag); chrome(); table(); labels(); repaint(); $("time").value = T.i; cursors();
 }
 function chrome(){ var v = T.view, pg = G.plot_gauge, lv = level(pg.id);
   $("bObs").setAttribute("aria-pressed", String(v === "fc" && T.obs)); $("bScen").setAttribute("aria-pressed", String(v === "scen"));
@@ -391,8 +396,66 @@ function render(cv, coords){ var z = coords.z, p = L.point(coords.x * 256, coord
   var need = G.areas.filter(function(a){ return !(a.bbox[0] > se.lng || a.bbox[2] < nw.lng || a.bbox[1] > nw.lat || a.bbox[3] < se.lat); });
   var ctx = cv.getContext("2d"); if (!need.length){ ctx.clearRect(0, 0, 256, 256); return Promise.resolve(); }
   var job = cv._job = (cv._job || 0) + 1;
-  return Promise.all(need.map(function(a){ return wanted(a, coords); })).then(function(list){ if (cv._job !== job) return; ctx.clearRect(0, 0, 256, 256); list.forEach(function(S, k){ paintArea(ctx, need[k], S, coords); }); }); }
+  return Promise.all(need.map(function(a){ return wanted(a, coords); })).then(function(list){ if (cv._job !== job) return; ctx.clearRect(0, 0, 256, 256); list.forEach(function(S, k){ paintArea(ctx, need[k], S, coords); });
+    if (z >= DETAIL_Z) need.forEach(function(a){ if (a.D) drawDetail(ctx, a, coords); else if (!a.Dfail && touches(a, nw.lng, se.lat, se.lng, nw.lat)) detail(a); }); }); }
 function repaint(){ if (!depthLayer || R.raf) return; R.raf = requestAnimationFrame(function(){ R.raf = 0; var t = depthLayer._tiles; for (var k in t) render(t[k].el, t[k].coords); }); }
+/* ---------- each flagged road piece and building, from street level in ---------- */
+var DETAIL_Z = 15, MAX_DETAIL = Math.min(window.innerWidth, window.innerHeight) < 700 ? 2 : 4;
+function bytes(b){ var t = atob(b), n = t.length, a = new Uint8Array(n); for (var i = 0; i < n; i++) a[i] = t.charCodeAt(i); return a; }
+function arr(b, Type){ var a = bytes(b); return new Type(a.buffer, 0, a.byteLength / Type.BYTES_PER_ELEMENT); }
+function touches(a, w, s, e, n){ // does the locality itself (not only its frame) reach into the box?
+  if (a.bbox[0] > e || a.bbox[2] < w || a.bbox[1] > n || a.bbox[3] < s) return false; var pts = [[w, s], [e, s], [w, n], [e, n], [(w + e) / 2, (s + n) / 2]];
+  return a.outline.some(function(r){ return pts.some(function(q){ return inRing(r, q[0], q[1]); }) || r.some(function(q){ return q[0] >= w && q[0] <= e && q[1] >= s && q[1] <= n; }); }); }
+function inView(a){ var b = map.getBounds(); return touches(a, b.getWest(), b.getSouth(), b.getEast(), b.getNorth()); }
+function detail(a){ // the area's road pieces and building outlines (its own page's static.json), read once the map is close enough to draw them
+  if (a.D || a.Dp) return;
+  a.Dp = getJSON(a.name + "/static.json").then(function(S){ var P = S.pieces, B = S.buildings, RD = S.roads, i, k;
+    var D = {unit:S.unit_m || 0.5, NO:S.no_level, pd:Math.round(S.ponded_ft * 100), fd:Math.round(S.flooded_ft * 100), n:P.n, pxy:arr(P.xy, Uint16Array), pg:arr(P.ground, Int16Array), pc:arr(P.connect, Int16Array), pst:bytes(P.station),
+             proad:arr(P.road, P.road_bytes === 4 ? Uint32Array : Uint16Array), names:RD.names, rname:arr(RD.name_of, Uint16Array),
+             bn:B.n, bxy:arr(B.xy, Uint16Array), bg:arr(B.ground, Int16Array), bc:arr(B.connect, Int16Array), bst:bytes(B.station), bstart:new Uint32Array(B.n + 1), fp:[], fb:[]};
+    var bcount = bytes(B.count); for (i = 0, k = 0; i < B.n; i++){ D.bstart[i] = k; k += bcount[i]; } D.bstart[B.n] = k;
+    a.D = D; a.Dp = null; var have = G.areas.filter(function(o){ return o.D; });
+    if (have.length > MAX_DETAIL) have.filter(function(o){ return o !== a && !inView(o); }).slice(0, have.length - MAX_DETAIL).forEach(function(o){ o.D = null; });
+    flag(a); repaint(); detailNote(); }).catch(function(){ a.Dp = null; a.Dfail = true; detailNote(); }); detailNote(); }
+function flag(a){ var D = a.D; if (!D || !a.L) return; var Lv = a.L, NO = D.NO, fp = [], fb = [], i, lv, d;      // ponded pieces are kept as ~index
+  for (i = 0; i < D.n; i++){ lv = Lv[D.pst[i]]; if (D.pc[i] === NO || lv < D.pc[i]) continue; d = lv - D.pg[i]; if (d >= D.pd) fp.push(d > D.fd ? i : ~i); }
+  for (i = 0; i < D.bn; i++){ lv = Lv[D.bst[i]]; if (D.bc[i] !== NO && lv >= D.bc[i] && lv - D.bg[i] > D.fd) fb.push(i); }
+  D.fp = fp; D.fb = fb; }
+function drawDetail(ctx, a, coords){ var D = a.D; if (!D || (!D.fp.length && !D.fb.length)) return;
+  // UTM to this tile's pixels: a tile is small enough for a straight fit through three of its corners
+  var c = corners(coords, a.epsg), ax = (c[1][0] - c[0][0]) / 256, ay = (c[1][1] - c[0][1]) / 256, bx = (c[2][0] - c[0][0]) / 256, by = (c[2][1] - c[0][1]) / 256, det = ax * by - bx * ay;
+  var u = D.unit, e0 = a.x0 - c[0][0], n0 = a.ytop - c[0][1], es = c.map(function(q){ return q[0]; }), ns = c.map(function(q){ return q[1]; }), m = 12 * Math.abs(ax);
+  var u0 = (Math.min.apply(null, es) - m - a.x0) / u, u1 = (Math.max.apply(null, es) + m - a.x0) / u, v0 = (a.ytop - Math.max.apply(null, ns) - m) / u, v1 = (a.ytop - Math.min.apply(null, ns) + m) / u;
+  function X(x, y){ return ((e0 + x * u) * by - (n0 - y * u) * bx) / det; } function Y(x, y){ return ((n0 - y * u) * ax - (e0 + x * u) * ay) / det; }
+  var xy = D.pxy, fp = D.fp, z = coords.z, lw = z >= 17 ? 5 : z >= 16 ? 4 : 3, k, i, q, paths = [new Path2D(), new Path2D()], any = [false, false];
+  for (k = 0; k < fp.length; k++){ i = fp[k]; var st = i < 0 ? 0 : 1; if (i < 0) i = ~i; q = 4 * i; if (xy[q] < u0 || xy[q] > u1 || xy[q+1] < v0 || xy[q+1] > v1) continue;
+    paths[st].moveTo(X(xy[q], xy[q+1]), Y(xy[q], xy[q+1])); paths[st].lineTo(X(xy[q+2], xy[q+3]), Y(xy[q+2], xy[q+3])); any[st] = true; }
+  ctx.lineCap = "round"; ctx.lineJoin = "round";
+  if (any[0] || any[1]){ ctx.strokeStyle = "rgba(10,20,30,.75)"; ctx.lineWidth = lw + 2.5; if (any[0]) ctx.stroke(paths[0]); if (any[1]) ctx.stroke(paths[1]); }
+  ctx.lineWidth = lw; if (any[0]){ ctx.strokeStyle = C.ponded; ctx.stroke(paths[0]); } if (any[1]){ ctx.strokeStyle = C.flooded; ctx.stroke(paths[1]); }
+  var bp = new Path2D(), b = D.bxy, fb = D.fb, some = false, e;
+  for (k = 0; k < fb.length; k++){ i = fb[k]; q = D.bstart[i]; e = D.bstart[i+1]; if (e <= q || b[2*q] < u0 || b[2*q] > u1 || b[2*q+1] < v0 || b[2*q+1] > v1) continue;
+    bp.moveTo(X(b[2*q], b[2*q+1]), Y(b[2*q], b[2*q+1])); for (q++; q < e; q++) bp.lineTo(X(b[2*q], b[2*q+1]), Y(b[2*q], b[2*q+1])); bp.closePath(); some = true; }
+  if (some){ ctx.fillStyle = C.building; ctx.globalAlpha = 0.9; ctx.fill(bp); ctx.globalAlpha = 1; ctx.strokeStyle = "#ffffff"; ctx.lineWidth = 1; ctx.stroke(bp); } }
+function hit(ll){ // the flagged building under a click, else the nearest flagged road piece within 10 pixels: its popup, or null
+  if (map.getZoom() < DETAIL_Z) return null;
+  var mpp = 40075016.686 * Math.cos(ll.lat * Math.PI / 180) / Math.pow(2, map.getZoom() + 8), out = null;
+  G.areas.forEach(function(a){ var D = a.D; if (out || !D || ll.lng < a.bbox[0] || ll.lng > a.bbox[2] || ll.lat < a.bbox[1] || ll.lat > a.bbox[3]) return;
+    var en = utm(ll.lng, ll.lat, a.epsg), ux = (en[0] - a.x0) / D.unit, uy = (a.ytop - en[1]) / D.unit, b = D.bxy, k, i, q, e, kind = null, at = -1;
+    for (k = 0; k < D.fb.length && at < 0; k++){ i = D.fb[k]; q = D.bstart[i]; e = D.bstart[i+1]; if (e <= q || Math.abs(b[2*q] - ux) > 400 / D.unit || Math.abs(b[2*q+1] - uy) > 400 / D.unit) continue;
+      var inside = false; for (var p = q, o = e - 1; p < e; o = p++){ var xa = b[2*p], ya = b[2*p+1], xc = b[2*o], yc = b[2*o+1]; if ((ya > uy) !== (yc > uy) && ux < (xc - xa) * (uy - ya) / (yc - ya) + xa) inside = !inside; }
+      if (inside){ at = i; kind = "b"; } }
+    if (at < 0){ var bd = Math.pow(10 * mpp / D.unit, 2), xy = D.pxy; for (k = 0; k < D.fp.length; k++){ i = D.fp[k]; if (i < 0) i = ~i; q = 4 * i; var mx = (xy[q] + xy[q+2]) / 2 - ux, my = (xy[q+1] + xy[q+3]) / 2 - uy, d2 = mx * mx + my * my; if (d2 < bd){ bd = d2; at = i; kind = "p"; } } }
+    if (at < 0) return;
+    var g = (kind === "b" ? D.bg : D.pg)[at], si = (kind === "b" ? D.bst : D.pst)[at], lv = a.L[si], d = (lv - g) / 100, scen = T.view === "scen";
+    out = "<b>" + (kind === "b" ? "Flooded Building" : (D.names[D.rname[D.proad[at]]] || "Unnamed road")) + "</b>" +
+      '<span class="f">' + (kind === "b" ? "" : d > D.fd / 100 ? "Road flooded: " : "Road ponded: ") + d.toFixed(2) + " ft of water " + (scen ? "at this level" : T.obs ? "at the last observation" : "at the selected time") + "</span>" +
+      '<span class="f">Ground ' + (g / 100).toFixed(2) + " ft NAVD88 · " + (scen ? "water" : a.stations[si]) + " at " + (lv / 100).toFixed(2) + ' ft</span><a class="go" href="' + a.name + '/">Open the ' + a.title + " map</a>"; });
+  return out; }
+function detailNote(){ var el = $("detailNote"); if (!el || !map) return; var near = map.getZoom() >= DETAIL_Z, here = G.areas.filter(inView);
+  el.textContent = !near ? "Zoom in to street level to see each flooded road and building." : !here.length ? "No prepared locality here yet." :
+    here.some(function(a){ return a.Dp; }) ? "Loading the roads and buildings here…" : here.some(function(a){ return a.Dfail && !a.D; }) ? "The roads and buildings here did not load; the water is still drawn." :
+    "Each flooded road piece and building is drawn; click one for its depth."; }
 function labels(){ for (var id in marks){ var v = level(id), m = marks[id]; m.setTooltipContent(id + (v == null ? "" : " " + v.toFixed(1) + " ft")); } }
 function inRing(ring, x, y){ var inside = false; for (var i = 0, j = ring.length - 1; i < ring.length; j = i++){ var a = ring[i], b = ring[j]; if ((a[1] > y) !== (b[1] > y) && x < (b[0] - a[0]) * (y - a[1]) / (b[1] - a[1]) + a[0]) inside = !inside; } return inside; }
 function areaPopup(a){ var c = counts(a, level); return "<b>" + a.title + "</b>" +
@@ -415,11 +478,12 @@ function initMap(){
   var Depth = L.GridLayer.extend({createTile: function(coords, done){ var c = document.createElement("canvas"); c.width = c.height = 256; render(c, coords).then(function(){ done(null, c); }, function(e){ done(e, c); }); return c; }});
   depthLayer = new Depth({pane:"depth", updateWhenZooming:false, keepBuffer:1}).addTo(map);
   G.areas.forEach(function(a){ var s = L.polygon(a.outline.map(function(r){ return r.map(function(q){ return [q[1], q[0]]; }); }), {color:"#ffffff", weight:1.2, opacity:0.85, dashArray:"4 4", fillOpacity:0}).addTo(map);
-    s.bindPopup(function(){ return areaPopup(a); }, {maxWidth:280}); shapes.push(s); });
+    s.on("click", function(e){ L.popup({maxWidth:280}).setLatLng(e.latlng).setContent(hit(e.latlng) || areaPopup(a)).openOn(map); }); shapes.push(s); });
   for (var id in G.stations){ var g = G.stations[id], m = L.circleMarker([g.lat, g.lon], {radius:5, color:"#ffffff", weight:1.5, fillColor:"#0b3954", fillOpacity:1}).addTo(map);
     m.bindTooltip(id, {permanent:true, direction:"right", offset:[7, 0], className:"glabel"}); m.bindPopup("<b>" + g.name + "</b>"); marks[id] = m; }
   var show = function(){ var on = map.getZoom() >= 10.5; for (var id in marks){ var t = marks[id].getTooltip(); if (t && t.getElement()) t.getElement().style.display = on ? "" : "none"; } };
   map.on("zoomend", show); show();
+  map.on("moveend zoomend", detailNote); detailNote();
 }
 
 /* ---------- controls ---------- */
