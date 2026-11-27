@@ -109,6 +109,13 @@ def test_nearest_gauge_and_huc12_override():
     assert list(st) == ["", "EAST", "WEST"] and np.isnan(km[0]) and np.isclose(km[1], 1)
     assert tether.rule("0301A", {"0301*": "-"}) == "" and tether.rule("0208C", {"0301*": "-"}) is None
     assert tether.overrides()["03010205*"] == "-"            # Back Bay and the North Landing River
+    # several gauges in a rule: the nearest of those, whatever else is nearer
+    far = sts + [{"station": "NORTH", "name": "", "lon": 1000.0, "lat": 100.0}]       # nearest to the first point
+    st, km = tether.nearest(x, y, far, flat, huc, {"0301A": "WEST|EAST", "0208C": "EAST|NORTH"})
+    assert list(st) == ["WEST", "EAST", "NORTH"] and np.isclose(km[0], 1)
+    assert tether.group("WACH|CHIV") == ["WACH", "CHIV"] and tether.group("") == [] and tether.group(None) == []
+    ok = {s["station"] for s in tether.stations()}
+    assert all(set(tether.group(v)) <= ok for v in tether.overrides().values() if v != "-")
     assert all(s["lat"] and not s["station"].startswith(("NN", "VB")) for s in tether.stations())
 
 

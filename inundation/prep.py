@@ -366,7 +366,7 @@ def main(argv=None):
         fh.write("huc12,huc12_name,station,station_name,road_pieces,buildings,farthest_km,forced\n")
         for (hh, ss), r in sorted(rows.items()):
             fh.write(f"{hh},{names.get(hh, '')},{ss},\"{stn.get(ss, '') if ss else 'no gauge: left out'}\",{r['road_pieces']},{r['buildings']},"
-                     f"{r['max_km']:.1f},{'yes' if tether.rule(hh, forced) == ss else ''}\n")
+                     f"{r['max_km']:.1f},{'yes' if ss in tether.group(tether.rule(hh, forced)) else ''}\n")
     ungauged = sorted({names.get(hh, hh) for (hh, ss) in rows if ss == ""})
     n_ungauged = {k: sum(r[k] for (hh, ss), r in rows.items() if ss == "") for k in ("road_pieces", "buildings")}
     if ungauged:
