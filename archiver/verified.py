@@ -187,6 +187,8 @@ def preliminary(days, work):
 def compare(pre, fin):
     """(merged frame, changes frame): every time either has, with change = final - preliminary."""
     m = pd.concat([pre.rename("preliminary_ft"), fin["final_ft"], fin["status"]], axis=1, sort=True)
+    if not isinstance(m.index, pd.DatetimeIndex):  # a gauge with no readings either way
+        m.index = pd.DatetimeIndex(m.index, tz="UTC")
     m["status"] = m["status"].fillna("-")
     m["change_ft"] = m["final_ft"] - m["preliminary_ft"]
     kind = np.where(m["preliminary_ft"].notna() & m["final_ft"].isna() & (m["status"] != "-"), "removed",
@@ -354,7 +356,11 @@ def main(argv=None):
                 except Exception as e:
                     print(f"  {st}: {type(e).__name__}: {str(e)[:120]}")
                     continue
-                m, ch = compare(pre.get(st, pd.Series(dtype=float)), fin)
+                try:
+                    m, ch = compare(pre.get(st, pd.Series(dtype=float)), fin)
+                except Exception as e:
+                    print(f"  {st}: compare failed: {type(e).__name__}: {str(e)[:120]}")
+                    continue
                 inm = (m.index >= m0) & (m.index < m1)
                 n = int(m.loc[inm, "final_ft"].notna().sum())
                 nf = int(m.loc[inm, "status"].isin(["v", "a"]).sum())
