@@ -52,6 +52,8 @@ project's shared folder (skill code, baselines, notes, station sheet, disclosure
   `nwis:<site>` param 62620 NAVD88, `nwps:<LID>` stage via datum, `thredds`, `floodvision`, `greenstream`);
   `stage_datum`/`stage_to_mllw_ft` convert NWPS stages; `petss_point` (P-ETSS csv point, proxies for
   stations without one); `tidewatch_id` (the Tidewatch f36 member); `alias_of`; `suspect_obs`.
+  A source whose newest reading is >2 h old is filled in after it by the next source in the chain
+  (`obs._fill_stale`); USSF has `nwps:NMDV2` behind USGS (MLLW = stage - 0.112, Nov 2026 storm outage).
   GS01/GS02 have no keyless source (GreenStream API needs Derek's key). USAR = CRSM and USNR = USSF are
   the same USGS sites. Datums ft above MLLW in `data/datums/<ST>.json` (NOAA or VDatum).
 - `observe.py`/`obs.py`: 40 days of every gauge's own record, QC'd, 6-minute, ft MLLW. No web4.

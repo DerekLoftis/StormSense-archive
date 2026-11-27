@@ -349,11 +349,36 @@ def fetch_raw(st, a, b, info=None, used=None):
             errors.append(f"{src}:{sid}: {str(e)[:120]}")
             continue
         if len(t):
+            name = f"{src}:{sid}"
+            t, v, name = _fill_stale(st, info, (src, sid), t, v, b, name)
             if used is not None:
-                used[st] = f"{src}:{sid}"
+                used[st] = name
             return t, v
         errors.append(f"{src}:{sid}: no readings")
     raise RuntimeError("; ".join(errors))
+
+
+# A source whose newest reading is older than this is stale: the later sources in the chain fill in
+# after it (Nansemond at Suffolk, Nov 2026: USGS stopped at the storm's peak while NWPS kept reporting).
+STALE = timedelta(hours=2)
+
+
+def _fill_stale(st, info, first, t, v, b, name):
+    """t, v (and the source name) with the readings of the station's later sources appended after the
+    last reading of the first source, when the first source has gone stale before b."""
+    if t[-1] >= b - STALE:
+        return t, v, name
+    chain = info["chain"]
+    for src, sid in chain[chain.index(first) + 1:]:
+        try:
+            t2, v2 = read_source(st, info, src, sid, t[-1], b)
+        except Exception:
+            continue
+        keep = np.array([x > t[-1] for x in t2], bool) if len(t2) else np.zeros(0, bool)
+        if keep.any():
+            return (np.concatenate([t, np.asarray(t2)[keep]]), np.concatenate([v, np.asarray(v2)[keep]]),
+                    f"{name} to {t[-1].strftime('%Y-%m-%dT%H:%MZ')}, then {src}:{sid}")
+    return t, v, name
 
 
 def fetch(st, a, b, info=None, used=None):
