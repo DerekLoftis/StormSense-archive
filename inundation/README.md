@@ -183,8 +183,9 @@ python -m inundation.status --prepared prepared --name norfolk --site <StormSens
 
 ## The site and the map of all localities
 
-`areas.csv` lists the localities (FIPS, the short name used in file names and URLs, the title, the region):
-Hampton Roads and the Middle Peninsula so far. Add a row to add a locality.
+`areas.csv` lists the localities (FIPS, the short name used in file names and URLs, the title, the region, and a
+`box` for a part of a locality, see "Counties that are mostly water"): Hampton Roads, the Middle Peninsula, the
+Northern Neck and the Eastern Shore so far. Add a row to add a locality.
 
     python -m inundation.site --prepared <folder of <name>/ folders> --latest <Latest site> --out site/inundation
 
@@ -312,11 +313,48 @@ At each gauge's forecast peak (most between 4.9 and 6.1 ft NAVD88, about 14:30Z 
 - Not yet checked against observed flooding (Norfolk publishes flooded-street reports:
   `Storm/Storm_Data/MapServer/26` on orfmaps.norfolk.gov).
 
+## Gauges by water body
+
+The nearest gauge in a straight line is often on other water: Wachapreague (seaside) is the nearest gauge to much of
+the Eastern Shore's bay shore, Dahlgren (Potomac) to northern Essex on the Rappahannock, West Point (York) to
+Middlesex's Rappahannock shore. A row of `tether_overrides.csv` can name several gauges joined by `|`, and the
+watersheds it covers (a code ending in `*` covers every HUC-12 that starts with it) take the nearest of those:
+
+| Watersheds | Water | Gauges |
+|---|---|---|
+| `0204030*` | Eastern Shore, sea side (Chincoteague Bay and the lagoons) | CHIV, WACH, CCHV |
+| `0208011*` | Eastern Shore, bay side, Tangier and Pocomoke Sounds | KIPT, ONAV, SAXV, PRTV, CRSM |
+| `02070011*` | lower Potomac | LEWI, SGSM, LENM, DAHL, CNRC, LSPV, IHDM |
+| `02080104*` | tidal Rappahannock | WMPT, RAPV, FEDV |
+| `0208010201*` | the Northern Neck's bay shore | LEWI, WMPT |
+| `02080105*` | Mattaponi | WSPV |
+| `02080106*` | Pamunkey | GS02, WSPV |
+| `0208010202*` | Dragon Swamp | WCKV |
+| `0208010203*` | Piankatank and Milford Haven | WCKV, WMPT |
+
+The seaside gauges ran far above the bay on 26 Nov 2026: Wachapreague reached 8.44 ft NAVD88 (NOAA preliminary) and
+Oyster 6.55 ft before its record stopped, against 4.93 ft at Kiptopeke and 5.21 ft at Chincoteague, so which side
+of the peninsula a road is tied to decides whether it floods.
+
+## Counties that are mostly water
+
+A county's boundary runs far out into the bay and the ocean, and the frame is 1 m cells:
+
+- `prep.land_bounds` cuts the frame back to the roads and buildings plus 1.5 km (Northampton 25% smaller).
+- `spread.open_sea` gives every body of open water one node of the union-find: 8 m squares that are wholly below
+  the lowest level and joined in bodies of 64 squares or more (Northampton: 1.29 of 2.19 billion cells in 44
+  bodies). The answer is the same as cell by cell; only the time and the memory change.
+- A locality whose frame is still too large is prepared in parts: `areas.csv` has a `box` column (west south east
+  north, degrees) and `prep --box` keeps the roads and buildings that start inside and clips the outline. Accomack's
+  cut frame is 4.30 billion cells, more than the union-find's 32-bit nodes and about 26 GB of grids, so it is three
+  areas: `accomack_north` and `accomack_south` (split at 37.75 N, between Onancock and Parksley) and `tangier`.
+
 ## Watersheds without a gauge
 
 A HUC-12 whose water level no StormSense gauge measures is left out rather than tied to the nearest gauge:
 `tether_overrides.csv` takes `-` as the station, and a code ending in `*` covers every HUC-12 that starts with it.
-The one rule so far is `03010205*`: Back Bay, the North Landing River and the Northwest River (the south of Virginia
+The first rule was `03010205*` (the Blackwater and Nottoway, `03010202*` and `03010201*`, which run to Albemarle
+Sound, followed): Back Bay, the North Landing River and the Northwest River (the south of Virginia
 Beach and Chesapeake) drain to Currituck Sound, are driven by wind rather than tide, and are shut off from the
 Elizabeth River by the Great Bridge lock. Tied to Lake Rudee they showed 66 road miles flooded on a day when nothing
 there was. That leaves out 239,164 road pieces and 78,804 buildings in Virginia Beach and 173,410 pieces and 41,189 buildings in

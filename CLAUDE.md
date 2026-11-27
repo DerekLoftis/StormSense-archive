@@ -199,8 +199,8 @@ project's shared folder (skill code, baselines, notes, station sheet, disclosure
   (geodesy.noaa.gov/api/ncat; -0.82 ft at Sewells Point, not the -1 ft of thumb). The viewer has no Virginia marks for
   Nor'Ida or Matthew. The pages draw them in the Historical Floods view with the difference from the map's highest
   water (Norfolk in Isabel: 21 marks, median 0.03 ft below the map).
-- Site (2026-11-27): `inundation/areas.csv` lists the localities (Hampton Roads and the Middle Peninsula so far; add
-  a row to add one). `python -m inundation.site --prepared <dir of <name>/> --latest <Latest site> --out site/inundation`
+- Site (2026-11-27): `inundation/areas.csv` lists the localities (Hampton Roads, the Middle Peninsula, the Northern
+  Neck and the Eastern Shore so far; add a row to add one). `python -m inundation.site --prepared <dir of <name>/> --latest <Latest site> --out site/inundation`
   writes each locality's page under `<name>/` and `index.html`, the map of all of them (`templates/statewide.html`:
   Leaflet, Esri satellite hybrid or street basemap, opens on Sewells Point, water reprojected from the localities' UTM
   depth tiles, totals from `areas.json` `curves`, each flagged road piece and building from zoom 15 in, read from the
@@ -220,6 +220,15 @@ project's shared folder (skill code, baselines, notes, station sheet, disclosure
   were land), except one leaving inside a watershed without a gauge (`prep.sea_cells`). `spread.sparse` keeps the
   union-find's untouched pages out of memory (King and Queen's frame is 2.96 billion cells). VGIN has no footprints
   for King and Queen: FEMA USA Structures outlines stand in (`vgin.buildings`).
+- Gauges by water (2026-11-27): a `tether_overrides.csv` row can name several gauges joined by `|`, and its
+  watersheds take the nearest of those (Eastern Shore sea side CHIV|WACH|CCHV and bay side KIPT|ONAV|SAXV|PRTV|CRSM,
+  the lower Potomac, the Rappahannock, the Mattaponi, Pamunkey, Dragon and Piankatank; table in the README). Before
+  that Wachapreague was the nearest gauge to much of the bay shore, and it read 8.44 ft NAVD88 on 26 Nov against
+  4.93 at Kiptopeke.
+- Counties that are mostly water: `prep.land_bounds` cuts the frame to the roads and buildings plus 1.5 km,
+  `spread.open_sea` gives each body of open water one union-find node (same answer), and a locality still too large
+  is several rows of areas.csv with a `box` (west south east north; `prep --box`): Accomack (4.30 billion cells, over
+  the 32-bit node limit) is `accomack_north`, `accomack_south` and `tangier`.
 - A gauge without a forecast in a run (BRDH on 27 Nov 2026) follows the nearest gauge that has one
   (`status.read_levels`; `stations_following` in the summary, `follows` in levels.json, named on the pages).
 - Not wired yet: the push to the AGOL folder "StormSense CREST". Each area's prepared tables and file geodatabase are
