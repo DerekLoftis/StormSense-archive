@@ -17,8 +17,9 @@ install). The first run adds each CSV to that folder and publishes it as a hoste
 (points from the lon/lat columns); later runs replace the CSV and publish again with overwrite, which
 keeps the layer's item and URL. Every column is published with its type from crest/schema.py: left to
 itself ArcGIS guesses from the first rows and took numbers with blank leading cells for text (if ArcGIS
-refuses those types, the layer is published with its own guesses and a warning says so). Layers are
-read-only (editing off), which ArcGIS requires before a layer can be shared publicly.
+refuses those types, the layer is published with its own guesses and a warning says so). A publish that
+ArcGIS has not finished in WAIT_MIN minutes is reported and left to finish there: it is not sent again.
+Layers are read-only (editing off), which ArcGIS requires before a layer can be shared publicly.
 Daily Skill is time-enabled on its "date" field so a map's time slider can replay a period.
 Sharing stays as the owner sets it; a notice lists the items when they are not all shared alike,
 because the dashboard only works for people who can see the dashboard, its map and every layer.
@@ -36,6 +37,11 @@ TAGS = "StormSense, CREST, VIMS, storm tide, forecast skill"
 SNIPPET = "StormSense CREST: archived storm tide forecasts scored against the gauges (VIMS)."
 BIG = 5 * 2 ** 20     # a file larger than this has a second way up, in parts (put_file)
 PART = 50 * 2 ** 20   # the size of a part; ArcGIS wants every part but the last to be 5 MB or more
+WAIT_MIN = 20         # how long one publish or upload job may take (a 2,000-row layer once took 7 minutes)
+
+
+class Slow(RuntimeError):
+    """ArcGIS has not finished a job in the time allowed. The job may still finish there, so it is not sent again."""
 
 
 class Portal:
@@ -104,14 +110,14 @@ def connect():
 def wait(p, item, job=None):
     """Wait for a publish job, or without a job for the item itself (a file sent in parts being put together)."""
     what = "publish" if job else "upload"
-    for _ in range(120):
+    for _ in range(WAIT_MIN * 12):
         d = p.call("GET", f"{p.content}/items/{item}/status", **({"jobId": job, "jobType": "publish"} if job else {}))
         if d.get("status") == "completed":
             return
         if d.get("status") == "failed":
             raise RuntimeError(f"{what} failed: {d.get('statusMessage')}")
         time.sleep(5)
-    raise RuntimeError(f"{what} did not finish in 10 minutes")
+    raise Slow(f"ArcGIS had not finished the {what} after {WAIT_MIN} minutes; the layer is left for it to finish")
 
 
 def put_file(p, folder, cid, path, name, **props):
@@ -196,6 +202,8 @@ def push(p, folder, have, key, path):
     what = "overwritten" if svc else "published"
     try:
         res = publish(typed(copy.deepcopy(pp), key), bool(svc))
+    except Slow:             # slow is not refused: publishing again would start a second job on the same layer
+        raise
     except Exception as e:   # keep the layer updating with ArcGIS's own field types rather than not at all
         print(f"::warning title=ArcGIS {title}::CREST's field types were refused ({e}); published with ArcGIS's own")
         again = bool(svc) or any(i["title"] == title and i["type"] == "Feature Service" for i in p.items(folder))
@@ -297,6 +305,8 @@ def sharing(p, folder, ids):
 
 
 def main(feeds):
+    if hasattr(sys.stdout, "reconfigure"):
+        sys.stdout.reconfigure(line_buffering=True)   # each line as it happens, so the job log times every layer
     try:
         p = connect()
     except Exception as e:
@@ -319,15 +329,16 @@ def main(feeds):
         if not os.path.exists(path):
             print(f"{title}: {name} missing, skipped")
             continue
+        began = time.monotonic()
         try:
             item, url, what = push(p, folder, have, key, path)
             layers[key] = {"item": item, "url": url}
-            print(f"{title}: {what}, item {item} {url}")
+            print(f"{title}: {what} in {time.monotonic() - began:.0f} s, item {item} {url}")
             if key == "daily" and url:
                 time_enable(p, url)
         except Exception as e:
             failed += 1
-            print(f"::warning title=ArcGIS {title}::{e}")
+            print(f"::warning title=ArcGIS {title}::{e} (after {time.monotonic() - began:.0f} s)")
     ids = {v["item"] for v in layers.values()}
     try:
         res = dashboard_items(p, folder, have, layers, feeds)

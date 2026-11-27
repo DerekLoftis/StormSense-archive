@@ -79,7 +79,7 @@ function legend(){
 function popup(s){
   var m = state.member, rows = ["primary","stormsense","petss","nws","tidewatch"].filter(function(x){ return s.S[x] != null; }).map(function(x){ return "<tr><td class='t'>" + sw(x) + esc(NET.names[x] || x) + "</td><td>" + pill(s.S[x]) + "</td></tr>"; }).join("");
   return "<strong>" + esc(s.id) + "</strong> · " + esc(s.name) + "<table style='margin-top:6px'>" + rows + "</table>" +
-    "<div class='note' style='margin-top:4px'>Best: " + esc(s.best ? NET.names[s.best] : "–") + " · gauge " + (s.cov != null ? s.cov.toFixed(0) + "%" : "–") + (s.events ? " · " + s.events + " flood(s), last " + s.last_event : "") + "</div>" +
+    "<div class='note' style='margin-top:4px'>Best: " + esc(s.best ? NET.names[s.best] : "–") + " · gauge " + (s.cov != null ? s.cov.toFixed(0) + "%" : "–") + (s.events ? " · " + s.events + " flood(s), last " + s.last_event + (s.last_event_ongoing ? " (in progress)" : "") : "") + "</div>" +
     (s.suspect ? "<div class='note' style='color:#b3261e'>Suspect gauge: scores not trusted.</div>" : "") +
     "<a class='btn' href='crest_" + s.id.toLowerCase() + ".html?period=" + NET.period.id + "'>Open the " + esc(s.id) + " review</a>";
 }

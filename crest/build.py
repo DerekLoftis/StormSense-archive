@@ -29,6 +29,9 @@ from . import feeds, inputs, page, stats
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 ARCHIVE_START = pd.Timestamp("2026-10-16", tz="UTC")  # first scored ensemble run
+# A month is saved for good (crest-data) only once its last forecasts have had their 72 hours and the gauges'
+# observations of them are in; until then each run builds it again.
+SETTLED = pd.Timedelta(days=3, hours=12)
 
 
 def period_of(pid, now):
@@ -78,7 +81,7 @@ def main(argv=None):
     ap.add_argument("--offline", action="store_true", help="flood levels from the saved table, no NWPS")
     ap.add_argument("--months-from", nargs="*", default=[], help="folders of month data built earlier")
     ap.add_argument("--default", default="30d", help="the period a page opens on")
-    ap.add_argument("--bundle", default="", help="also write each finished month's data to BUNDLE/crest_month_<m>/ (for crest-data)")
+    ap.add_argument("--bundle", default="", help="also write each finished month's data to BUNDLE/crest_month_<m>/ (for crest-data), once its last forecasts are verified")
     a = ap.parse_args(argv)
 
     now = pd.Timestamp(a.now, tz="UTC") if a.now else pd.Timestamp.now(tz="UTC")
@@ -161,7 +164,11 @@ def main(argv=None):
         json.dump(net, open(os.path.join(a.out, "data", f"network_{p['id']}.json"), "w"), separators=(",", ":"), allow_nan=False)
         manifest["periods"].append({"id": p["id"], "label": p["label"], "stations": [d["station"] for d in docs]})
         print(f"{p['id']}: {len(docs)} stations")
-        if a.bundle and not p["id"].endswith("d") and "so far" not in p["label"] and docs:
+        month_over = not p["id"].endswith("d") and "so far" not in p["label"]
+        if a.bundle and month_over and docs and now < p["end_t"] + SETTLED:
+            print(f"{p['id']}: its last forecasts are still being verified, so it is built again by the next runs and "
+                  f"saved to the month archive from {(p['end_t'] + SETTLED):%Y-%m-%d %H:%MZ}")
+        elif a.bundle and month_over and docs:
             bd = os.path.join(a.bundle, f"crest_month_{p['id']}")
             os.makedirs(os.path.join(bd, "data"), exist_ok=True)
             for f in glob.glob(os.path.join(a.out, "data", f"*_{p['id']}.json")):
