@@ -219,7 +219,13 @@ project's shared folder (skill code, baselines, notes, station sheet, disclosure
   frame's edge (`depth.tidal_seeds`; before that the Piankatank side of Gloucester and the York side of James City
   were land), except one leaving inside a watershed without a gauge (`prep.sea_cells`). `spread.sparse` keeps the
   union-find's untouched pages out of memory (King and Queen's frame is 2.96 billion cells). VGIN has no footprints
-  for King and Queen: FEMA USA Structures outlines stand in (`vgin.buildings`).
+  for King and Queen: FEMA USA Structures outlines stand in (`vgin.buildings`). Since 2026-11-27 the FEMA outlines
+  that come within 3 m of no VGIN footprint are added everywhere (VGIN has 4,056 footprints in Northumberland where
+  FEMA maps 14,101 structures, and lacks about 6,000 in King William and Gloucester and 5,000 in Mathews; table in
+  the README; `outline` column, `buildings_fema` in prep.json).
+- Water under a deck or a pier (`bridge` 1, `over_water`) is ground below 1 ft NAVD88 or below the gauge's mean
+  higher high water where that is lower (`prep.over_water_ft`; 0.52 ft at Tangier, whose lanes lie at 0.7 to 1.5 ft
+  and were all bridges under the 1 ft rule).
 - Gauges by water (2026-11-27): a `tether_overrides.csv` row can name several gauges joined by `|`, and its
   watersheds take the nearest of those (Eastern Shore sea side CHIV|WACH|CCHV and bay side KIPT|ONAV|SAXV|PRTV|CRSM,
   the lower Potomac, the Rappahannock, the Mattaponi, Pamunkey, Dragon and Piankatank; table in the README). Before

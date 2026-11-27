@@ -119,16 +119,42 @@ floor is 3 ft).
 
 ## Building footprints
 
-VGIN's statewide footprints, by locality FIPS. VGIN publishes none for King and Queen County (November 2026): there
-the outlines of FEMA's USA Structures (Oak Ridge National Laboratory, traced from imagery) stand in
-(`vgin.buildings`), and the page's sources say so.
+VGIN's statewide footprints, by locality FIPS, plus the outlines of FEMA's USA Structures (Oak Ridge National
+Laboratory, traced from imagery, 450 square feet and larger) that come within 3 m of no VGIN footprint
+(`vgin.buildings`; the building table's `outline` says VGIN or FEMA, `<name>_prep.json` counts them as
+`buildings_fema`, and the page's sources say so). VGIN's layer has gaps:
+
+| County | VGIN footprints | FEMA structures | FEMA structures away from any footprint |
+|---|---|---|---|
+| King and Queen | 0 | all of them stand in | |
+| Northumberland | 4,056 | 14,101 | 11,825 |
+| King William | 11,227 | 12,904 | 6,246 |
+| Gloucester | 19,101 | 20,962 | 6,142 |
+| Mathews | 6,362 | 9,044 | 5,001 |
+| Lancaster | 12,943 | 10,038 | 1,670 |
+| Essex | 12,726 | 9,246 | 1,130 |
+| Accomack | 44,084 | 28,815 | 1,129 |
+| Northampton | 15,804 | 10,874 | 1,096 |
+| Richmond | 10,042 | 6,480 | 972 |
+| Poquoson | 6,459 | 6,050 | 698 |
+| Middlesex | 12,610 | 10,785 | 665 |
+
+They are other buildings, not the same ones drawn to one side: in Mathews the median distance from such a structure
+to the nearest VGIN footprint is 28 m, and only 137 have a VGIN footprint of like size within 15 m that FEMA lacks.
+VGIN keeps the sheds FEMA leaves out, which is why it has more where it is complete. If FEMA's service cannot be
+read, VGIN's footprints stand alone and the log warns. A locality prepared before 27 Nov 2026 has VGIN's only until
+it is prepared again.
 
 ## Bridges, piers
 
 The bare-earth DEM has no bridge decks. Road pieces are kept in the table but never flagged when `bridge` > 0:
-1 the DEM shows water or a cut under the piece (ground below 1 ft NAVD88), 2 VGIN codes the segment as a
-bridge (`SEG_TYPE` 2), 3 the same street within 60 m of a 1. Buildings standing in the water (`over_water`) are
-never flagged either. VGIN's own bridge coding is incomplete (most bridges are `SEG_TYPE` 99), so a proper
+1 the DEM shows water or a cut under the piece, 2 VGIN codes the segment as a bridge (`SEG_TYPE` 2), 3 the same
+street within 60 m of a 1. Buildings standing in the water (`over_water`) are never flagged either. Water is
+ground below 1 ft NAVD88, or below the gauge's mean higher high water where that is lower (`prep.over_water_ft`,
+from the datum sheets in `stormsense/data/datums`): 1.15 ft at Sewells Point, but 0.52 ft at Tangier, 0.21 at
+Windmill Point, 0.68 at Lewisetta. Tangier Island's lanes and yards lie at 0.7 to 1.5 ft, and with 1 ft everywhere
+1,219 of its 1,381 road pieces were bridges and 459 of its 581 buildings piers. Elsewhere the change is a handful
+of pieces (11 in Mathews, 8 in Lancaster, none in Norfolk). VGIN's own bridge coding is incomplete (most bridges are `SEG_TYPE` 99), so a proper
 bridge layer (VDOT structures) would be better.
 
 ## Files
