@@ -255,3 +255,58 @@ def test_qc_step_check_leaves_fast_real_water_alone():
     keep[60:80] = False
     _, _, f = obs.qc_flags(t[keep], v[keep])
     assert not (f == 4).any()
+
+
+def _six_minutes(hours, t0=None):
+    t0 = t0 or datetime(2026, 11, 26, 0, 0, tzinfo=timezone.utc)
+    return np.array([t0 + timedelta(minutes=6 * k) for k in range(int(hours * 10) + 1)])
+
+
+def test_an_outage_is_a_gap_on_the_runs_grid_not_a_line():
+    """CBBT was down from 08:36Z to 19:00Z on 26 Nov 2026, through the storm's peak: the run's observed
+    column drew a straight line across it, and the charts, the scores and the corrector took it for the gauge."""
+    from stormsense import station as STN
+    t = _six_minutes(24)
+    v = 2 + 2 * np.sin(np.arange(len(t)) / 20.0)
+    keep = (t <= t[86]) | (t >= t[190])                    # silent for 10.4 hours
+    obs = (t[keep], v[keep])
+    gap = STN.obs_gap(obs, t[-1])
+    assert gap == timedelta(minutes=30)
+    on = STN.on_grid(obs, t, gap)
+    assert np.isnan(on[87:190]).all() and not np.isnan(on[[86, 190]]).any()
+    assert not np.isnan(STN.on_grid(obs, t)[87:190]).any()   # the members' lines are still drawn through
+    short = (t <= t[100]) | (t >= t[104])                  # 24 minutes: within the gauge's own filling
+    assert not np.isnan(STN.on_grid((t[short], v[short]), t, gap)).any()
+    hourly = (t[::10], v[::10])                            # a gauge that reports every hour is not out in between
+    assert STN.obs_gap(hourly, t[-1]) == timedelta(hours=2)
+    assert not np.isnan(STN.on_grid(hourly, t, STN.obs_gap(hourly, t[-1]))).any()
+
+
+def test_chart_points_break_the_line_at_an_outage():
+    from stormsense import charts as C
+    t = _six_minutes(3)
+    v = np.linspace(1, 2, len(t))
+    v[10:20] = np.nan
+    plain = C.pts(t, v)
+    assert len(plain) == len(t) - 10 and all(p[1] is not None for p in plain)
+    broken = C.pts(t, v, timedelta(minutes=9))
+    assert len(broken) == len(plain) + 1
+    k = [i for i, p in enumerate(broken) if p[1] is None]
+    assert k == [10] and broken[9][0] < broken[10][0] < broken[11][0]
+
+
+def test_archived_runs_lose_the_line_they_drew_across_an_outage():
+    from stormsense.obs import without_bridges
+    rng = np.random.default_rng(3)
+    v = np.round(2 + 2 * np.sin(np.arange(400) / 20.0) + rng.normal(0, 0.02, 400), 3)
+    real = v.copy()
+    v[100:204] = np.round(np.linspace(v[100], v[203], 104), 3)      # the line across the outage, ends real
+    out = without_bridges(v)
+    assert np.isnan(out[101:203]).all() and out[100] == v[100] and out[203] == v[203]
+    assert np.array_equal(out[:100], real[:100]) and np.array_equal(out[204:], real[204:])
+    assert np.array_equal(without_bridges(real), real)             # a gauge's own readings are left alone
+    start = np.concatenate([np.round(np.linspace(1.0, 1.5, 40), 3), real[:100]])   # the window opens inside a line
+    assert np.isnan(without_bridges(start)[:39]).all()
+    with_gap = real.copy()
+    with_gap[50:60] = np.nan
+    assert np.array_equal(np.isnan(without_bridges(with_gap)), np.isnan(with_gap))

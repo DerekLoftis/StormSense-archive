@@ -5,3 +5,4 @@ date,label,detail
 2026-11-06,Gauge alignment fix,"Each guidance aligned to the gauge (PR #11), ending the 0.6-0.9 ft high bias since 27 Oct"
 2026-11-20,Corrector 0-12 h only,"The site predictor-corrector applies over 0-12 h only (PR #13)"
 2026-11-27,Step check on gauge readings,"Readings that jump away from the water level and back (like YRCG 26 Nov on web4 and NWPS) are dropped before the forecast uses them"
+2026-11-27,Outages left open,"A gauge's outage is a gap in the observed line, no longer a straight line across it; the lines older runs drew are dropped from scoring"

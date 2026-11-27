@@ -182,7 +182,7 @@ before and after the highest water at Sewells Point (NOAA 8638610, on record sin
 - `python -m inundation.history stormsense --event 2026-thanksgiving-noreaster --runs ensemble_*.tar.gz`: StormSense's
   own gauges from the archived runs' `observed_ft`, plus every run's published forecast (`forecasts.csv.gz`: `cycle,
   station, date_time_z, forecast_ft_navd88, p10_ft, p90_ft`). `complete` is false until the 36 hours after the peak are
-  archived: run it again then. An ens72 table draws its `observed_ft` straight across a gauge's outage; twelve or more
+  archived: run it again then. An ens72 table made before 27 Nov 2026 draws its `observed_ft` straight across a gauge's outage; twelve or more
   readings in one line are taken as such a bridge and left out (`bridged_readings_left_out`: the Bay Bridge Tunnel
   gauge was down from 3:36 AM to 2 PM EST on 26 Nov, through the peak).
 - On a page (`status --page` writes `events.json`), each of the area's gauges uses its own record where it has one

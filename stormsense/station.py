@@ -19,6 +19,7 @@ from datetime import timedelta
 import numpy as np
 
 from . import petss, surge as SURGE
+from .obs import MAX_GAP
 
 HOURS = 72
 STEP = timedelta(minutes=6)
@@ -53,13 +54,25 @@ def sec(times):
     return np.array([t.timestamp() for t in times])
 
 
-def on_grid(series, grid):
-    """Linear interpolation onto grid, NaN outside the series' own span."""
+def on_grid(series, grid, max_gap=None):
+    """Linear interpolation onto grid, NaN outside the series' own span. With max_gap (a timedelta), also NaN
+    between two values further apart than that: a gauge's outage is a gap, not a straight line across it."""
     t, v = series
     s, g = sec(t), sec(grid)
     out = np.interp(g, s, v)
     out[(g < s[0]) | (g > s[-1])] = np.nan
+    if max_gap is not None and len(s) > 1:
+        j = np.clip(np.searchsorted(s, g), 1, len(s) - 1)
+        out[~np.isin(g, s) & (s[j] - s[j - 1] > max_gap.total_seconds())] = np.nan
     return out
+
+
+def obs_gap(obs, t_end):
+    """The longest silence still drawn through: obs.MAX_GAP, or twice the gauge's own reporting step over the
+    last day when that is longer (a gauge that reports hourly is not out between its readings)."""
+    s = sec(obs[0][obs[0] > t_end - timedelta(hours=24)])
+    step = float(np.median(np.diff(s))) if len(s) > 2 else 0.0
+    return max(MAX_GAP, timedelta(seconds=2 * step))
 
 
 def alignment(obs, series, t_end):
@@ -86,7 +99,7 @@ def build(obs, tide_fn, raw, pet, pet_cycle, etss_surge=None, tw=None):
     station dict; etss_surge: (times, surge ft); tw: Tidewatch (times, ft)."""
     t0 = obs[0][-1]
     grid = grid_for(t0)
-    cols = {"observed": on_grid(obs, grid)}
+    cols = {"observed": on_grid(obs, grid, obs_gap(obs, t0))}
     cols["observed"][grid > t0] = np.nan
     tide = tide_fn(grid)
     cols["astro_tide"] = tide

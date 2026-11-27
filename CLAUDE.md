@@ -62,6 +62,11 @@ project's shared folder (skill code, baselines, notes, station sheet, disclosure
   at the record's end; `_step_ok`, added after YRCG's 26 Nov 2026 15.4 ft NAVD plateau on web4/NWPS, which
   CO-OPS's own feed never had), stuck runs.
   `STORMSENSE_OBS_DIR` reads local `<ST>.csv` instead (testing).
+- An outage is a gap, never a line (Derek, 2026-11-27): the run's `observed` column (`station.on_grid` with
+  `obs_gap`: 30 minutes, or twice the gauge's own reporting step) is blank where the gauge was silent, the charts
+  break their Observed and Residual lines there (`charts.pts` with `gap`), and the readers of archived runs
+  (`skill.read_run`, `archive.read_run`, `crest/inputs.py`) drop the lines older runs drew (`obs.without_bridges`:
+  12 or more readings in one straight line).
 - `tide.py`: UTide, 27 constituents no Sa/Ssa (13 under ~6 months), stored fits `harmonics/<ST>.json`
   or fitted per run from 40 days (>=29 d). m30 lock: tide shifted so its mean over the last 30 days of
   observations equals m30 (only when >=15 days observed). m30 drawn on fore72 as a VIMS-teal line.
@@ -181,9 +186,9 @@ project's shared folder (skill code, baselines, notes, station sheet, disclosure
   redraws a prepared area's picture.
 - Historical floods (`history.py`, `events/<id>/`): the 72 hours around the highest water at Sewells Point for the 2026
   Thanksgiving Day Nor'easter (from the archived runs, with every forecast), the 1933 Hurricane, Isabel 2003, Nor'Ida
-  2009, Irene 2011 and Matthew 2016 (NOAA CO-OPS, USGS since 2007; ft NAVD88). The run tarballs' `observed_ft` is
-  interpolated straight across a gauge's outage (no gap limit in `station.py`): `history.unbridged` takes those lines out. A gauge without its own record through
-  the peak follows the nearest one that has it. Add a storm as a row in `events/events.json` and run
+  2009, Irene 2011 and Matthew 2016 (NOAA CO-OPS, USGS since 2007; ft NAVD88). Run tarballs made before 2026-11-27
+  have `observed_ft` interpolated straight across a gauge's outage: `history.unbridged` takes those lines out. A gauge
+  without its own record through the peak follows the nearest one that has it. Add a storm as a row in `events/events.json` and run
   `python -m inundation.history noaa --event <id>`.
 - Not wired yet: a workflow, Pages hosting and the push to the AGOL folder "StormSense CREST". Each area's prepared
   tables and file geodatabase are in the project's shared folder under `inundation/<area>/`.

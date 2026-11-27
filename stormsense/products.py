@@ -21,6 +21,7 @@ FORE72_HEAD = ["date_time_z", "astro_tide_ft", "surge_ft", "bias_ft", "residual_
                "SSforecast_p10_ft", "SSforecast_p90_ft", "surge_p10_ft", "surge_p90_ft", "m30_ft"]
 HC_HEAD = ["date_time_z", "water_level_ft", "astro_tide_ft", "residual_ft"]
 LEVELS = {"astro_tide_ft", "SSforecast_ft", "SSforecast_p10_ft", "SSforecast_p90_ft", "m30_ft", "water_level_ft"}
+GRID_GAP = 1.5 * STN.STEP     # observations on the run's six-minute grid: a missing step is the gauge's outage
 DESCRIPTION = {"fore72": "72-hour storm tide forecast", "7day": "7-day observed water level hindcast",
                "30day": "30-day observed water level hindcast"}
 # ens72 columns: water levels, then the P-ETSS and ETSS surges the StormSense model uses on our tide
@@ -116,10 +117,10 @@ def fore72(site, st, info, d, grid, t0, cols, prim, cone, chances, m30, levels_m
         past = (lead >= -24) & (lead <= 0)
         tide_all = cols["astro_tide"]
         series = [
-            {"data": C.pts(grid[past], cols["observed"][past] + sh), "type": "line", "color": "red", "name": "Observed",
+            {"data": C.pts(grid[past], cols["observed"][past] + sh, GRID_GAP), "type": "line", "color": "red", "name": "Observed",
              "lineWidth": 2, "zIndex": 4},
             {"data": C.pts(grid[past], tide_all[past] + sh), "type": "line", "color": "blue", "name": "Astronomic Tide"},
-            {"data": C.pts(grid[past], cols["observed"][past] - tide_all[past]), "type": "line", "color": C.RESIDUAL,
+            {"data": C.pts(grid[past], cols["observed"][past] - tide_all[past], GRID_GAP), "type": "line", "color": C.RESIDUAL,
              "name": "Residual"},
             {"data": [[C.ms(t), round(float(a + sh), 3), round(float(b + sh), 3)]
                       for t, a, b in zip(grid[fut], p10[fut], p90[fut]) if not (np.isnan(a) or np.isnan(b))],
@@ -147,15 +148,16 @@ def hindcast(site, prod, days, st, info, d, obs, tide_fn, levels_mllw, updated, 
     if not len(t):
         return False
     tide = tide_fn(t)
+    gap = STN.obs_gap(obs, t_last)        # the charts leave a gauge's outage open
     for datum in datums_for(info, d):
         sh = shift_of(datum, info["navd88"])
         rows = [[iso(a), fmt(b + sh), fmt(c + sh), fmt(b - c)] for a, b, c in zip(t, v, tide)]
         base = os.path.join(site, prod, f"{st}_{prod}_{datum}")
         write_csv(base + ".csv", HC_HEAD, rows)
         write_json(base + ".json", HC_HEAD, rows, header(st, prod, datum, updated, source))
-        series = [{"data": C.pts(t, v + sh), "type": "line", "color": "red", "name": "Observed", "zIndex": 3},
+        series = [{"data": C.pts(t, v + sh, gap), "type": "line", "color": "red", "name": "Observed", "zIndex": 3},
                   {"data": C.pts(t, tide + sh), "type": "line", "color": "blue", "name": "Astronomic Tide"},
-                  {"data": C.pts(t, v - tide), "type": "line", "color": C.RESIDUAL, "name": "Residual"}]
+                  {"data": C.pts(t, v - tide, gap), "type": "line", "color": C.RESIDUAL, "name": "Residual"}]
         lines, hat, hk = C.datum_lines(d, datum, info["navd88"], levels_mllw)
         C.page(base + ".html", f"{days} Day StormSense Observations for {st}", t_last, datum, series, lines, hat, hk,
                guidance=f"Observations: {source}")
@@ -170,7 +172,7 @@ def ens_series(grid, cols, sh, t0):
     def col(k):
         return cols[k][keep] + sh
 
-    s = [{"data": C.pts(g, col("observed")), "type": "line", "color": "red", "name": "Observed", "lineWidth": 3,
+    s = [{"data": C.pts(g, col("observed"), GRID_GAP), "type": "line", "color": "red", "name": "Observed", "lineWidth": 3,
           "zIndex": 5},
          {"data": C.pts(g, col("astro_tide")), "type": "line", "color": "blue", "name": "Astronomic Tide",
           "lineWidth": 1, "dashStyle": "Dot"}]
