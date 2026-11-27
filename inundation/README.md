@@ -207,15 +207,17 @@ sources or the method change. A pull request prepares Poquoson and keeps its sit
 `events/events.json` lists the storms; each has `events/<id>/event.json` (peak, window, every gauge with its highest
 water, datum note) and `observations.csv.gz` (`gauge, date_time_z, water_level_ft_navd88`). The window is the 36 hours
 before and after the highest water at Sewells Point (NOAA 8638610, on record since 1927) within the storm's dates.
+The pages' Historical Floods menu lists them newest first (`history.events`).
 
 | Storm | Highest water at Sewells Point | Gauges with a record |
 |---|---|---|
-| 1933 Hurricane | 6.41 ft NAVD88 (8.02 ft MLLW), 1933-08-23 14:00Z | 2 |
-| 2003 Hurricane Isabel | 6.28 ft NAVD88 (7.89 ft MLLW), 2003-09-18 21:00Z | 13 (4 on an estimated NAVD88) |
-| 2009 Nor'Ida | 6.13 ft NAVD88 (7.74 ft MLLW), 2009-11-12 23:24Z | 17 (3 USGS, 4 on an estimated NAVD88) |
-| 2011 Hurricane Irene | 5.94 ft NAVD88 (7.55 ft MLLW), 2011-08-27 23:54Z | 17 (3 USGS, 5 on an estimated NAVD88) |
-| 2016 Hurricane Matthew | 4.25 ft NAVD88 (5.86 ft MLLW), 2016-10-09 06:54Z | 28 (16 USGS, 2 on an estimated NAVD88) |
 | 2026 Thanksgiving Day Nor'easter | 5.99 ft NAVD88 (7.60 ft MLLW), 2026-11-26 15:18Z | 68 (so far, through 2026-11-27T12:12Z, with 15 forecast runs) |
+| 2016 Hurricane Matthew | 4.25 ft NAVD88 (5.86 ft MLLW), 2016-10-09 06:54Z | 28 (16 USGS, 2 on an estimated NAVD88) |
+| 2012 Hurricane Sandy | 5.20 ft NAVD88 (6.81 ft MLLW), 2012-10-29 13:18Z | 14 (3 USGS, 2 on an estimated NAVD88) |
+| 2011 Hurricane Irene | 5.94 ft NAVD88 (7.55 ft MLLW), 2011-08-27 23:54Z | 17 (3 USGS, 5 on an estimated NAVD88) |
+| 2009 Nor'Ida | 6.13 ft NAVD88 (7.74 ft MLLW), 2009-11-12 23:24Z | 17 (3 USGS, 4 on an estimated NAVD88) |
+| 2003 Hurricane Isabel | 6.28 ft NAVD88 (7.89 ft MLLW), 2003-09-18 21:00Z | 13 (4 on an estimated NAVD88) |
+| 1933 Hurricane | 6.41 ft NAVD88 (8.02 ft MLLW), 1933-08-23 14:00Z | 2 |
 
 - `python -m inundation.history noaa --all` (or `--event <id>`): NOAA CO-OPS verified water levels for every Virginia
   station, active or historic, plus StormSense's own NOAA gauges (6-minute, else hourly heights), and USGS tide gauges
@@ -233,6 +235,31 @@ before and after the highest water at Sewells Point (NOAA 8638610, on record sin
   through the peak (more than 70% of the readings within 1.5 hours of it, and 60% of the window anyone recorded);
   otherwise the nearest gauge that does. In 1933 that is Sewells Point for every place. The ground, roads and
   buildings are today's.
+- `python -m inundation.history marks --all` (or `--event <id>`): the U.S. Geological Survey's surveyed high water
+  marks and storm-tide sensor peaks in Virginia for the storms with a `"marks"` entry in `events.json`, written to
+  `events/<id>/marks.csv` (`id`, `kind` hwm or sensor, `lat, lon, elev_ft_navd88, elev_ft, datum, quality, within_ft, type,
+  environment, wave, county, waterbody, place, time_z, source`). Two sources, merged: the Flood Event Viewer's
+  Short-Term Network service (`fev_event`; since 2026 at api.waterdata.usgs.gov/stnservices, where stn.wim.usgs.gov
+  forwards to) and the tables of the Survey's open-file reports (`reports`: the report's own mark ids, its
+  wave-affected column, and the peaks of its temporary storm-tide sensors). A report's mark and the viewer's mark
+  within 60 m at the same height to 0.1 ft are one mark. Isabel's marks were surveyed in NGVD29 and are moved to
+  NAVD88 at each mark's own place with NOAA NGS's VERTCON (geodesy.noaa.gov/api/ncat; -0.77 to -1.23 ft across
+  tidewater Virginia, -0.82 ft at Sewells Point). Needs openpyxl for the report tables.
+
+  | Storm | High water marks with an elevation | Sensor peaks | Sources |
+  |---|---|---|---|
+  | 2012 Hurricane Sandy | 26 (16 noted as wave-affected) | 10 | Open-File Report 2013-1043 tables 3 and 6; Flood Event Viewer event 24 |
+  | 2011 Hurricane Irene | 19 (2 on rivers) | 11 | Open-File Report 2012-1022 tables 2 and 5; Flood Event Viewer event 23 |
+  | 2003 Hurricane Isabel | 99 (59 more have no surveyed elevation; 19 noted as wave run-up) | none | Flood Event Viewer event 133 |
+
+  The viewer has no Virginia marks for Nor'Ida (9 water-level sensors were out, no peaks are published) or Matthew
+  (Open-File Report 2017-1122 covers Florida to North Carolina), and nothing for 1933.
+- On a page the marks inside the frame are drawn in the Historical Floods view: diamonds for high water marks
+  (hollow where wave-affected), triangles for sensor peaks. A tap gives the mark, its quality and place, and the map's
+  highest water there (the highest reading of the gauge that the nearest road piece within 1.5 km follows), and the
+  flood's note gives the median difference of the marks not noted as wave-affected. A river's marks and marks more
+  than 6 ft above every gauge's highest water are left off (`marks_left_off`). First check, Norfolk in Isabel: 21
+  marks stand a median 0.03 ft below the map's highest water (Sewells Point, 6.28 ft).
 
 ## Numbers (run of 2026-11-26 00Z, a forecast major flood)
 
@@ -246,6 +273,18 @@ At each gauge's forecast peak (most between 4.9 and 6.1 ft NAVD88, about 14:30Z 
 | Portsmouth (no pipes published) | 6.0 | – | 1.2 | 424 | 211 | $0.79M | 7.5 / 525 |
 | Hampton (no assessed values found) | 26.3 | 1.3 | 6.0 | 2,090 | – | – | 33.3 / 2,649 |
 | Chesapeake (north of the Great Bridge lock; pipe lines only) | 23.6 | 2.9 | 8.1 | 1,332 | 516 | $0.99M | 32.8 / 1,794 |
+| Suffolk (north of the Blackwater watershed; no pipes or values found) | 0.6 | – | 0.1 | 60 | – | – | 0.7 / 66 |
+| Isle of Wight County (no pipes found) | 1.4 | – | 0.3 | 18 | 5 | $0.09M | 1.6 / 25 |
+| Poquoson (no pipes or values found) | 23.0 | – | 2.9 | 1,752 | – | – | 26.2 / 2,122 |
+| York County (no pipes found) | 10.5 | – | 2.4 | 1,013 | 457 | $0.99M | 12.9 / 1,274 |
+| James City County | 2.8 | 0.0 | 0.5 | 205 | 103 | $0.33M | 3.4 / 253 |
+| Williamsburg | 0.0 | – | 0.0 | 0 | 0 | $0 | 0.0 / 0 |
+| Gloucester County (no pipes found) | 44.5 | – | 4.4 | 719 | 325 | $1.68M | 49.0 / 858 |
+| Mathews County (no pipes or values found) | 37.7 | – | 6.0 | 957 | – | – | 44.2 / 1,152 |
+| Middlesex County (no pipes or values found) | 1.9 | – | 0.4 | 78 | – | – | 2.4 / 110 |
+| King and Queen County (no pipes or values found; FEMA USA Structures outlines) | 2.6 | – | 0.5 | 24 | – | – | 3.2 / 34 |
+| King William County (no pipes or values found) | 2.2 | – | 0.3 | 112 | – | – | 2.6 / 126 |
+| Essex County (no pipes or values found) | 3.1 | – | 0.6 | 55 | – | – | 3.8 / 89 |
 
 - Norfolk: 360,651 pieces (1,765 km), 93,969 buildings, 9 gauges; 32,598 pipes, 4,956 ditches and 38,352 structures
   in 2,441 networks; one floodwall system. Before the pipes and the floodwall: 34.8 miles and 1,958 buildings.
@@ -253,6 +292,8 @@ At each gauge's forecast peak (most between 4.9 and 6.1 ft NAVD88, about 14:30Z 
   Norfolk, $16.8M in Chesapeake, $6.5M in Portsmouth, $4.1M in Virginia Beach and $3.8M in Newport News. Elevation
   certificates replace the assumed floor for 786 Norfolk buildings, 608 in Chesapeake, 235 in Virginia Beach, 66 in
   Portsmouth and 5 in Newport News.
+- The rural counties' totals are small beside Gloucester's and Mathews's because their shores are bluffs and marsh:
+  the low, built-up ground is on Mobjack Bay (Guinea, Gwynn's Island, the Mathews necks) and in Poquoson.
 - Newport News: the pipes add almost nothing at this level because nearly all the low ground is already joined to
   tidal water over the surface. Hampton: half of the total is the Back River gauge's (BRDH) area.
 - Gauge levels: the flags are only as good as each gauge's NAVD88 reference, and a 0.25 ft step shows it. Over the
@@ -283,9 +324,11 @@ the page says which watersheds are missing. A gauge there (or a Currituck Sound 
 - The water picture on the page is drawn at 5 m (roads and buildings use the 1 m DEM); the tiles would carry 1 m.
 - Historical floods use the tide gauges only (no high water marks, no rain), on today's ground. Chesapeake Bay
   Bridge Tunnel's old station (8638863) and other historic stations are on an estimated NAVD88.
-- Hampton Roads: Suffolk, Poquoson, York, James City, Gloucester and Mathews are not configured yet (no pipes found
-  for Suffolk or Poquoson; HRPDC's regional parcels carry values for Williamsburg, Gloucester, Isle of Wight, James
-  City, York and Franklin too, but not for Hampton, Poquoson or Suffolk). Homes are picked by zoning patterns outside
+- No storm drain layers were found for Suffolk, Poquoson, Isle of Wight, York, Gloucester, Mathews, Middlesex, King
+  and Queen, King William or Essex, so their water travels over the surface only. HRPDC's regional parcels carry
+  values for Williamsburg, Gloucester, Isle of Wight, James City, York and Franklin, but not for Hampton, Poquoson or
+  Suffolk, and nothing was found for the Middle Peninsula counties north of Gloucester: no damage estimate there.
+  Homes are picked by zoning patterns outside
   Norfolk and Chesapeake: an assumption per city until the cities' use codes are in. The year of each city's first
   FIRM is only set for Norfolk (1979, unverified), so the 4 ft post-FIRM floor is not applied elsewhere.
 - Derek's Newport News first floor survey (several thousand houses) goes in the way `ffe.py` adds the certificates.

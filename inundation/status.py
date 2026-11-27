@@ -354,10 +354,12 @@ def main(argv=None):
         w.writerows(timeline(roads, bldgs, levels, rskip, bskip))
     if a.page:
         from . import history, page, tether
-        plot, also = None, {}
+        plot, also, frame = None, {}, None
         if os.path.exists(os.path.join(a.page, "static.json")):
             with open(os.path.join(a.page, "static.json")) as fh:
-                plot = (json.load(fh).get("plot_gauge") or {}).get("id")
+                st = json.load(fh)
+            plot = (st.get("plot_gauge") or {}).get("id")
+            frame = {k: st[k] for k in ("epsg", "x0", "ytop", "unit_m", "width_m", "height_m")}
         if plot and plot not in levels:                 # the prediction plot's gauge, when nothing here is tethered to it
             try:
                 also[plot] = station_levels(a.site, plot)
@@ -370,10 +372,11 @@ def main(argv=None):
             rows = [r for r in csv.DictReader(fh) if r["station"] in want and r["lat"]]
         for r in rows:
             noaa.update({r["station"]: q.split(":")[1] for q in r["obs"].split(";") if q.strip().startswith("coops:")})
-        events = history.for_page([{"station": r["station"], "lat": float(r["lat"]), "lon": float(r["lon"])} for r in rows], noaa, plot=plot)
+        events = history.for_page([{"station": r["station"], "lat": float(r["lat"]), "lon": float(r["lon"])} for r in rows], noaa, plot=plot, frame=frame)
         with open(os.path.join(a.page, "events.json"), "w") as fh:
             json.dump(events, fh, separators=(",", ":"))
-        print(f"{len(events['events'])} historical floods written for the page")
+        print(f"{len(events['events'])} historical floods written for the page, "
+              f"{sum(len(e.get('marks', [])) for e in events['events'])} USGS high water marks and sensor peaks on them")
     print(json.dumps(summary["totals"]))
     print(f"{len(rkeep)} road pieces and {len(bkeep)} buildings written to {a.out}")
     return summary

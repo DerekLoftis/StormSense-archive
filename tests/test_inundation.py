@@ -507,3 +507,53 @@ def test_the_union_find_takes_memory_only_where_it_is_written():
     a = spread.sparse(50_000_000, np.uint32)
     a[7] = 9; a[-1] = 3
     assert a.dtype == np.uint32 and len(a) == 50_000_000 and a[7] == 9 and a[-1] == 3 and a[1_000_000] == 0
+
+
+def test_the_storms_are_listed_newest_first():
+    from inundation import history
+    ids = [e["id"] for e in history.events()]
+    assert ids[0] == "2026-thanksgiving-noreaster" and ids[-1] == "1933-hurricane" and "2012-sandy" in ids
+    assert ids == sorted(ids, reverse=True)                            # every id starts with its year
+
+
+def test_a_reports_mark_takes_the_viewers_details_and_keeps_its_own_id():
+    from inundation import history
+
+    def mark(i, lat, ft, **kw):
+        return {**{k: "" for k in history.MARK_COLS}, "id": i, "kind": "hwm", "lat": lat, "lon": -76.3, "elev_ft_navd88": ft, **kw}
+    report = [mark("HWM-VA-NFK-005", 36.8588, 4.88, wave="yes", source="report"), mark("HWM-VA-NFK-009", 36.90, 5.31, source="report")]
+    viewer = [mark("VANOR07695-6598", 36.85881, 4.9, quality="Good", within_ft=0.1, type="Stain line", environment="Coastal",
+                   place="Fairfax Ave.", source="viewer"),             # the viewer keeps 0.1 ft: the same mark
+              mark("VANOR07699-6601", 36.8588, 6.4, quality="Fair", source="viewer")]      # same spot, another height: its own mark
+    out = history.merge_marks(report, viewer)
+    assert [m["id"] for m in out] == ["HWM-VA-NFK-005", "HWM-VA-NFK-009", "VANOR07699-6601"]
+    assert (out[0]["quality"], out[0]["type"], out[0]["wave"], out[0]["place"]) == ("Good", "Stain line", "yes", "Fairfax Ave.")
+    assert out[0]["source"] == "report; viewer" and out[1]["source"] == "report" and out[1]["quality"] == ""
+    assert history._within("Good: +/- 0.10 ft") == ("Good", 0.1) and history._within("Unknown/Historical") == ("Unknown/Historical", None)
+
+
+def test_marks_on_a_page_are_the_tides_marks_inside_its_frame(tmp_path, monkeypatch):
+    pytest.importorskip("pyproj")
+    import csv
+    from inundation import history
+    monkeypatch.setattr(history, "EVENTS", str(tmp_path))
+    (tmp_path / "storm").mkdir()
+    rows = [("in", "hwm", 36.95, -76.25, 6.21, "7.05", "NGVD29", "Coastal", "", "Good", "0.1"),
+            ("sensor", "sensor", 36.86, -76.30, 5.94, "5.94", "NAVD88", "", "", "", ""),
+            ("river", "hwm", 36.90, -76.28, 6.0, "6.0", "NAVD88", "Riverine", "", "", ""),
+            ("runup", "hwm", 36.96, -76.26, 14.2, "14.2", "NAVD88", "Coastal", "yes", "", ""),
+            ("outside", "hwm", 37.90, -75.40, 5.0, "5.0", "NAVD88", "Coastal", "", "", "")]
+    with open(tmp_path / "storm" / "marks.csv", "w", newline="") as fh:
+        w = csv.DictWriter(fh, history.MARK_COLS)
+        w.writeheader()
+        for i, kind, lat, lon, ft, raw, datum, env, wave, q, u in rows:
+            w.writerow({**{k: "" for k in history.MARK_COLS}, "id": i, "kind": kind, "lat": lat, "lon": lon, "elev_ft_navd88": ft,
+                        "elev_ft": raw, "datum": datum, "environment": env, "wave": wave, "quality": q, "within_ft": u,
+                        "source": "viewer" if kind == "hwm" else "report"})
+    frame = {"epsg": 32618, "x0": 370000.0, "ytop": 4100000.0, "unit_m": 0.5, "width_m": 30000.0, "height_m": 30000.0}
+    marks, src, off = history.marks_for_page("storm", frame, top_ft=6.3)
+    assert [m["n"] for m in marks] == ["in", "sensor"] and off == 2 and src == ["viewer", "report"]
+    assert marks[0]["k"] == "h" and marks[0]["o"] == "7.05 ft NGVD29" and marks[0]["u"] == 0.1 and marks[0]["s"] == 0
+    assert marks[1]["k"] == "s" and "o" not in marks[1] and marks[1]["s"] == 1
+    assert 0 < marks[0]["x"] < 60000 and 0 < marks[0]["y"] < 60000      # page units of half a metre from the frame's corner
+    assert history.marks_for_page("no-such-storm", frame, 6.3) == ([], [], 0)

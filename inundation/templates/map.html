@@ -7,7 +7,7 @@
   --navy:#0b3954; --accent:#00a9b5; --cyan:#00E5EE;
   --flooded:#f57c00; --ponded:#f2c500; --building:#d32f2f;
   --map-land:#eef1ee; --map-water:#d3dfe6; --map-flood:#2f8fd8; --map-road:#ffffff; --map-road-edge:#c3ccd2;
-  --map-major:#fbe9b7; --map-bridge:#aebbc6; --map-bldg:#d5d0c8; --map-casing:#3b2a12; --map-gauge:#0b3954; --map-label:#0f2230; --map-halo:#ffffff;
+  --map-major:#fbe9b7; --map-bridge:#aebbc6; --map-bldg:#d5d0c8; --map-casing:#3b2a12; --map-gauge:#0b3954; --map-label:#0f2230; --map-halo:#ffffff; --map-mark:#8e24aa;
   --display:"Segoe UI Semibold","Segoe UI",-apple-system,"Helvetica Neue",Arial,sans-serif;
   --body:"Segoe UI",-apple-system,"Helvetica Neue",Arial,sans-serif;
 }
@@ -16,14 +16,14 @@
   --navy:#8fd3f0; --accent:#2fd6df;
   --flooded:#ff9a2e; --ponded:#ffd93b; --building:#ff5a52;
   --map-land:#1b2a33; --map-water:#243843; --map-flood:#3aa0ee; --map-road:#3c4f5b; --map-road-edge:#2a3a45;
-  --map-major:#5b5330; --map-bridge:#55687a; --map-bldg:#4a5560; --map-casing:#0a0f13; --map-gauge:#8fd3f0; --map-label:#e3edf2; --map-halo:#0c1820;
+  --map-major:#5b5330; --map-bridge:#55687a; --map-bldg:#4a5560; --map-casing:#0a0f13; --map-gauge:#8fd3f0; --map-label:#e3edf2; --map-halo:#0c1820; --map-mark:#e39bf2;
   color-scheme:dark}}
 :root[data-theme="dark"]{
   --bg:#0c1820; --panel:#132430; --ink:#e3edf2; --muted:#93a8b6; --line:#253b4a; --soft:#1a2f3c;
   --navy:#8fd3f0; --accent:#2fd6df;
   --flooded:#ff9a2e; --ponded:#ffd93b; --building:#ff5a52;
   --map-land:#1b2a33; --map-water:#243843; --map-flood:#3aa0ee; --map-road:#3c4f5b; --map-road-edge:#2a3a45;
-  --map-major:#5b5330; --map-bridge:#55687a; --map-bldg:#4a5560; --map-casing:#0a0f13; --map-gauge:#8fd3f0; --map-label:#e3edf2; --map-halo:#0c1820;
+  --map-major:#5b5330; --map-bridge:#55687a; --map-bldg:#4a5560; --map-casing:#0a0f13; --map-gauge:#8fd3f0; --map-label:#e3edf2; --map-halo:#0c1820; --map-mark:#e39bf2;
   color-scheme:dark}
 [hidden]{display:none!important}
 body{background:var(--bg);color:var(--ink);font-family:var(--body);font-size:14.5px;line-height:1.45;margin:0}
@@ -72,6 +72,7 @@ button:focus-visible,input:focus-visible,canvas:focus-visible{outline:2px solid 
 .pop .u{color:var(--muted)}
 .pop .f{display:block;margin-top:3px}
 .pop .f i{font-style:normal;color:var(--muted)}
+.pop hr{border:0;border-top:1px solid var(--line);margin:6px 0}
 .hint{position:absolute;left:10px;bottom:10px;background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:3px 8px;font-size:12px;color:var(--muted)}
 .chips{display:flex;flex-wrap:wrap;gap:6px 16px;font-size:12.5px;color:var(--muted)}
 .chips span{display:inline-flex;align-items:center;gap:6px}
@@ -162,6 +163,8 @@ select{font:inherit;font-size:13.5px;color:var(--ink);background:var(--panel);bo
         <span><span class="sw box" style="background:var(--building)"></span>Flooded Building, in more than 0.5 ft</span>
         <span><span class="sw box" style="background:var(--map-water)"></span>Tidal water at an ordinary high tide</span>
         <span><span class="sw" style="background:var(--map-bridge)"></span>Bridge or tunnel, not evaluated</span>
+        <span class="mk" hidden><svg width="13" height="13" viewBox="0 0 13 13" aria-hidden="true"><path d="M6.5 0.8 12.2 6.5 6.5 12.2 0.8 6.5Z" fill="var(--map-mark)" stroke="var(--map-halo)"/></svg>USGS high water mark (hollow: wave-affected)</span>
+        <span class="mk" hidden><svg width="13" height="13" viewBox="0 0 13 13" aria-hidden="true"><path d="M6.5 1 12.3 11.6H0.7Z" fill="var(--map-mark)" stroke="var(--map-halo)"/></svg>USGS storm-tide sensor peak</span>
       </div>
     </div>
 
@@ -217,7 +220,7 @@ function tok(n){ return getComputedStyle(document.documentElement).getPropertyVa
 function rgb(hex){ hex = hex.replace("#",""); if (hex.length === 3) hex = hex.replace(/(.)/g,"$1$1"); var v = parseInt(hex,16); return [(v>>16)&255,(v>>8)&255,v&255]; }
 function u32(hex, a){ var c = rgb(hex); return ((a << 24) | (c[2] << 16) | (c[1] << 8) | c[0]) >>> 0; }
 function readColors(){
-  ["land","water","flood","road","road-edge","major","bridge","bldg","casing","gauge","label","halo"].forEach(function(k){ C[k] = tok("--map-"+k); });
+  ["land","water","flood","road","road-edge","major","bridge","bldg","casing","gauge","label","halo","mark"].forEach(function(k){ C[k] = tok("--map-"+k); });
   C.flooded = tok("--flooded"); C.ponded = tok("--ponded"); C.building = tok("--building");
   C.ink = tok("--ink"); C.muted = tok("--muted"); C.line = tok("--line"); C.panel = tok("--panel"); C.navy = tok("--navy");
   R.colWater = u32(C.water, 255); R.colDepth = DEPTH.map(function(h){ return u32(h, 240); });
@@ -286,12 +289,13 @@ function setup(){
   if (R.val){ var V0 = S.values, mn = $("dmgNote"); mn.hidden = false; $("tDmg").hidden = false;
     mn.textContent = "Damage is estimated for homes only" + (V0.home_rule ? " (" + V0.home_rule + ")" : "") + ", from the deepest water the selected forecast line, past flood or scenario puts at the building: " + V0.damage.citation + ". The percent is applied to the building's share of the parcel's " + V0.tax_year + " assessed improvement value (" + S.sources.values + "). Depth is counted from the first floor. " + (V0.certificates ? V0.certificates.toLocaleString("en-US") + " buildings here have a surveyed first floor from an elevation certificate (HRPDC); every other" : "With no surveyed first floor elevations each") + " home's floor is assumed at FEMA Hazus's default for a crawlspace: " + (V0.firm_year ? "3 ft above the ground if built before the first flood map (" + V0.firm_year + "), 4 ft after." : "3 ft above the ground.") + " The Zillow figure is the typical home value in the building's ZIP code (" + S.sources.zillow + "), not a value for that address."; }
   if (EV.events.length){ var hn = $("histNote"); hn.hidden = false;
-    hn.textContent = "Historical floods replay the 36 hours before and after a storm's highest water at Sewells Point, Virginia's longest tide record, on today's ground and buildings. Each gauge that recorded the storm drives its own roads and buildings; where a gauge did not exist yet, or failed in the storm, the nearest gauge that recorded it stands in (in 1933 that is Sewells Point for every place). Rain is not in it.";
+    hn.textContent = "Historical floods replay the 36 hours before and after a storm's highest water at Sewells Point, Virginia's longest tide record, on today's ground and buildings. Each gauge that recorded the storm drives its own roads and buildings; where a gauge did not exist yet, or failed in the storm, the nearest gauge that recorded it stands in (in 1933 that is Sewells Point for every place). Rain is not in it. Where the U.S. Geological Survey surveyed high water marks or left storm-tide sensors after a storm (Isabel, Irene and Sandy in Virginia; Flood Event Viewer and the Survey's open-file reports), they are on the map in feet above NAVD88, so the map's water can be checked against what the storm left behind.";
     $("evSel").innerHTML = EV.events.map(function(e, q){ return '<option value="' + q + '">' + e.name + "</option>"; }).join(""); }
   $("bHist").disabled = !EV.events.length;
   var h = "<b>Water depth (ft)</b>"; DEPTH.forEach(function(c, q){ h += '<span><i style="background:' + c + '"></i>' + (q ? "" : "≤") + DEPTH_LABEL[q] + "</span>"; }); $("ramp").innerHTML = h;
   var ov = S.raster.overview; R.over = tile("z0", ov.file, ov.width, ov.height);
   bind(); resize(true); use("fc");
+  window.__inundation = function(){ return {view:T.view, event:A && A.ev, s:V.s, ox:V.ox, oy:V.oy}; };   // for browser checks
 }
 
 /* ---------- what the map shows: the forecast, a past flood, or a scenario ---------- */
@@ -317,6 +321,7 @@ function use(view, ev){
 function playLabel(){ return T.view === "scen" ? "▶ Play the levels" : "▶ Play 72 hours"; }
 function chrome(){ var v = T.view, E = A.ev, pg = S.plot_gauge, top = S.levels.start + S.levels.step * (S.levels.n - 1);
   $("bHist").setAttribute("aria-pressed", v === "hist"); $("bScen").setAttribute("aria-pressed", v === "scen");
+  var mkOn = v === "hist" && !!(E && E.marks && E.marks.length); document.querySelectorAll(".chips .mk").forEach(function(x){ x.hidden = !mkOn; });
   $("histBar").hidden = v !== "hist"; $("scenBar").hidden = v !== "scen"; $("modeBox").hidden = v !== "fc"; $("gaugeCard").hidden = v === "scen";
   $("bPlay").textContent = playLabel(); $("evSel").value = T.ev;
   $("time").setAttribute("aria-label", v === "scen" ? "Water level of the scenario" : v === "hist" ? "Time in the flood" : "Time in the forecast");
@@ -328,7 +333,7 @@ function chrome(){ var v = T.view, E = A.ev, pg = S.plot_gauge, top = S.levels.s
   key += sw(C.flooded, "Road miles flooded") + sw(C.ponded, "Road miles ponded") + sw(C.building, "Buildings flooded" + (v === "scen" ? " (right axis)" : " (far right axis)"), true);
   $("plotKey").innerHTML = key;
   if (v === "hist"){ var pt = new Date(E.peak_time_z);
-    $("evNote").textContent = "Highest water at Sewells Point: " + fTimeY.format(pt) + ", " + E.peak_ft.toFixed(2) + " ft NAVD88" + (mllw(E.peak_ft) ? " (" + mllw(E.peak_ft) + ")" : "") + ". " + E.gauges + (E.gauges === 1 ? " gauge has" : " gauges have") + " a record through the peak." + (E.note ? " " + E.note : "") + (E.complete === false && E.observed_through_z ? " The record so far ends " + fTime.format(new Date(E.observed_through_z)) + "; the rest of the 36 hours after the peak is added as it is archived." : ""); }
+    $("evNote").textContent = "Highest water at Sewells Point: " + fTimeY.format(pt) + ", " + E.peak_ft.toFixed(2) + " ft NAVD88" + (mllw(E.peak_ft) ? " (" + mllw(E.peak_ft) + ")" : "") + ". " + E.gauges + (E.gauges === 1 ? " gauge has" : " gauges have") + " a record through the peak." + (E.note ? " " + E.note : "") + (E.complete === false && E.observed_through_z ? " The record so far ends " + fTime.format(new Date(E.observed_through_z)) + "; the rest of the 36 hours after the peak is added as it is archived." : "") + markNote(E); }
   var any = R.series.filter(Boolean)[0];
   var fcNote = ""; if (v === "hist" && E.runs && E.runs.length){ var mx = E.runs.map(function(r){ return r.max_ft; });
     fcNote = " StormSense's " + E.runs.length + " forecasts issued before the peak put the highest water at " + Math.min.apply(null, mx).toFixed(2) + " to " + Math.max.apply(null, mx).toFixed(2) + " ft; the gauge recorded " + E.peak_ft.toFixed(2) + " ft."; }
@@ -337,6 +342,22 @@ function chrome(){ var v = T.view, E = A.ev, pg = S.plot_gauge, top = S.levels.s
     "Forecast: StormSense fore72" + (any && any.updated ? ", updated " + any.updated : "") + ". Drag the slider or the plot to move through it. Times are Eastern.";
 }
 
+function markSetup(E){ // each mark's gauge is that of the nearest road piece within 1.5 km; the map's highest water there is that gauge's
+  if (!E.marks || E._mk) return; E._mk = true; var xy = R.pxy, n = S.pieces.n, lim = Math.pow(1500 / S.unit_m, 2), top = {};
+  E.marks.forEach(function(m){ var bd = lim, best = -1;
+    for (var i = 0; i < n; i++){ var q = 4 * i, dx = xy[q] - m.x, dy = xy[q+1] - m.y, d = dx * dx + dy * dy; if (d < bd){ bd = d; best = i; } }
+    if (best < 0) return; var si = R.pst[best], d2 = E.stations[S.stations[si].id]; if (!d2) return;
+    if (top[si] == null){ var mx = -Infinity; d2.f.forEach(function(v){ if (v != null && v > mx) mx = v; }); top[si] = mx; }
+    if (top[si] > -Infinity){ m.si = si; m.map = top[si]; m.dif = Math.round((m.ft - top[si]) * 100) / 100; } });
+}
+function markNote(E){ if (!E.marks || !E.marks.length) return E.marks_left_off ? " USGS high water marks in this frame are left off the map: they are a river's flood or a wave's run-up, far above the tide." : "";
+  markSetup(E); var h = E.marks.filter(function(m){ return m.k === "h"; }).length, sn = E.marks.length - h;
+  var c = E.marks.filter(function(m){ return m.dif != null && m.w !== 1; }).map(function(m){ return m.dif; }).sort(function(a, b){ return a - b; });
+  var t = " On the map: " + (h ? h + " USGS high water mark" + (h === 1 ? "" : "s") + " (diamonds)" : "") + (h && sn ? " and " : "") + (sn ? sn + " USGS storm-tide sensor peak" + (sn === 1 ? "" : "s") + " (triangles)" : "") + " surveyed after this storm; tap one to compare it with the map's highest water there.";
+  if (c.length >= 3){ var md = c.length % 2 ? c[(c.length - 1) / 2] : (c[c.length / 2 - 1] + c[c.length / 2]) / 2;
+    t += " The " + c.length + " not noted as wave-affected stand a median " + Math.abs(md).toFixed(2) + " ft " + (md >= 0 ? "above" : "below") + " the map's highest water."; }
+  if (E.marks_left_off) t += " " + E.marks_left_off + " more " + (E.marks_left_off === 1 ? "is" : "are") + " left off (a river's flood or a wave's run-up far above the tide).";
+  return t; }
 function level(s){ // water level at gauge s for the current selection, in hundredths of a foot (null: none)
   var d = R.series[s]; if (!d) return null;
   var v = T.obs ? d.obs_ft : d[T.mode][T.i];
@@ -550,12 +571,26 @@ function draw(){
     ctx.beginPath(); ctx.arc(gx, gy, 5.5, 0, 6.2832); ctx.fillStyle = C.gauge; ctx.fill(); ctx.lineWidth = 2; ctx.strokeStyle = C.halo; ctx.stroke();
     var lv = R.L[si], t = g.id + (lv > -32000 ? " " + (lv / 100).toFixed(1) + " ft" : "");
     ctx.lineWidth = 3.5; ctx.strokeStyle = C.halo; ctx.strokeText(t, gx + 9, gy); ctx.fillStyle = C.label; ctx.fillText(t, gx + 9, gy); });
+  // a past flood's surveyed marks: diamonds (high water marks) and triangles (storm-tide sensor peaks)
+  if (T.view === "hist" && A.ev.marks){ markSetup(A.ev); var put = [], lab = mpx > 0.05; ctx.font = "600 11px " + tok("--body"); ctx.textBaseline = "middle"; ctx.lineJoin = "miter";
+    A.ev.marks.forEach(function(m){ var mx = m.x * s + ox, my = m.y * s + oy, r = 6.5; if (mx < -30 || mx > w + 30 || my < -20 || my > h + 20) return;
+      ctx.beginPath();
+      if (m.k === "s"){ ctx.moveTo(mx, my - r); ctx.lineTo(mx + r, my + r * 0.85); ctx.lineTo(mx - r, my + r * 0.85); }
+      else { ctx.moveTo(mx, my - r); ctx.lineTo(mx + r, my); ctx.lineTo(mx, my + r); ctx.lineTo(mx - r, my); }
+      ctx.closePath(); ctx.lineWidth = 4; ctx.strokeStyle = C.halo; ctx.stroke(); ctx.fillStyle = m.w === 1 ? C.halo : C.mark; ctx.fill();
+      if (m.w === 1){ ctx.lineWidth = 2; ctx.strokeStyle = C.mark; ctx.stroke(); }
+      if (!lab) return; for (k = 0; k < put.length; k++) if (Math.abs(put[k][0] - mx) < 44 && Math.abs(put[k][1] - my) < 13) return;
+      put.push([mx, my]); var t = m.ft.toFixed(1) + " ft";
+      ctx.lineWidth = 3.5; ctx.strokeStyle = C.halo; ctx.strokeText(t, mx + 10, my); ctx.fillStyle = C.label; ctx.fillText(t, mx + 10, my); });
+    ctx.lineJoin = "round"; }
   // scale
   var target = 110 / mpx, steps = [10, 20, 50, 100, 200, 500, 1000, 2000, 5000], m = steps[0]; steps.forEach(function(v){ if (v <= target) m = v; });
   $("scale").innerHTML = '<span style="display:inline-block;width:' + Math.round(m * mpx) + 'px;border-bottom:2px solid currentColor;border-left:2px solid currentColor;border-right:2px solid currentColor;height:5px;margin-right:6px;vertical-align:middle"></span>' + (m >= 1000 ? m / 1000 + " km" : m + " m");
 }
 function pick(px, py){ // a building under the pointer, else the nearest road piece within 9 px
   var s = V.s, ux = (px - V.ox) / s, uy = (py - V.oy) / s, i, k, e, B = S.buildings, P = S.pieces;
+  if (T.view === "hist" && A.ev.marks){ var near = [], md = Math.pow(11 / s, 2); A.ev.marks.forEach(function(m){ var d = Math.pow(m.x - ux, 2) + Math.pow(m.y - uy, 2); if (d < md) near.push([d, m]); });
+    if (near.length) return {kind:"m", marks:near.sort(function(a, b){ return a[0] - b[0]; }).map(function(a){ return a[1]; })}; }
   for (i = 0; i < B.n; i++){ var b = 4 * i; if (ux < R.bbox[b] || ux > R.bbox[b+2] || uy < R.bbox[b+1] || uy > R.bbox[b+3]) continue;
     var inside = false; k = R.bstart[i]; e = R.bstart[i+1];
     for (var a = k, c = e - 1; a < e; c = a++){ var xa = R.bxy[2*a], ya = R.bxy[2*a+1], xc = R.bxy[2*c], yc = R.bxy[2*c+1]; if ((ya > uy) !== (yc > uy) && ux < (xc - xa) * (uy - ya) / (yc - ya) + xa) inside = !inside; }
@@ -564,7 +599,21 @@ function pick(px, py){ // a building under the pointer, else the nearest road pi
   for (i = 0; i < P.n; i++){ var q = 4 * i, mx = (xy[q] + xy[q+2]) / 2 - ux, my = (xy[q+1] + xy[q+3]) / 2 - uy, d = mx * mx + my * my; if (d < bd){ bd = d; best = i; } }
   return best < 0 ? null : {kind:"p", i:best};
 }
+function markDif(m){ return m.dif == null ? "" : Math.abs(m.dif) < 0.005 ? "matches the map" : Math.abs(m.dif).toFixed(2) + " ft " + (m.dif > 0 ? "higher" : "lower") + " than the map"; }
+function markHTML(m, E){ var sen = m.k === "s", h = "<b>" + (sen ? "USGS storm-tide sensor peak" : "USGS high water mark") + "</b>" + (m.t && m.t !== "Other" ? " <span class='u'>" + m.t + "</span>" : "");
+  h += "<br>" + m.ft.toFixed(2) + " ft NAVD88" + (m.o ? " (surveyed as " + m.o + ")" : "") + (m.q ? " · " + (m.u ? m.q + ", within " + m.u.toFixed(2) + " ft" : "quality not rated") : "");
+  if (m.z) h += "<br>Peak recorded " + fTimeY.format(new Date(m.z));
+  if (m.w === 1) h += "<br>Noted as wave-affected: waves or run-up lifted it above the still water";
+  if (m.dif != null){ var g = S.stations[m.si], from = E.stations[g.id];
+    h += "<br>The map's highest water here: " + m.map.toFixed(2) + " ft (" + g.id + (from && from.own === false ? ", taken from " + from.from : "") + ")<br>" +
+      (Math.abs(m.dif) < 0.005 ? "The mark matches it" : "The mark is " + Math.abs(m.dif).toFixed(2) + " ft " + (m.dif > 0 ? "higher" : "lower")); }
+  else h += "<br>No road here follows a gauge, so the map has no level to compare";
+  if (m.d) h += "<span class='f'><i>Where:</i> " + String(m.d).replace(/</g, "&lt;") + "</span>";
+  return h + "<span class='f'><i>Source:</i> " + E.mark_sources[m.s] + " · " + m.n + "</span>"; }
 function popup(px, py){ var hit = pick(px, py), p = $("pop"); if (!hit){ p.hidden = true; return; }
+  if (hit.kind === "m"){ var more = hit.marks.slice(1, 6).map(function(m){ return "<span class='f'>" + m.ft.toFixed(2) + " ft" + (markDif(m) ? " · " + markDif(m) : "") + (m.w === 1 ? " · wave-affected" : "") + "</span>"; }).join("");
+    p.innerHTML = markHTML(hit.marks[0], A.ev) + (more ? "<hr><span class='f'><i>" + (hit.marks.length - 1) + " more within reach of this tap (zoom in to tell them apart):</i></span>" + more : ""); p.hidden = false; var ml = Math.min(px + 12, R.w - p.offsetWidth - 8), mt = py + 14; if (mt + p.offsetHeight > R.h - 8) mt = py - p.offsetHeight - 10;
+    p.style.left = Math.max(8, ml) + "px"; p.style.top = Math.max(8, mt) + "px"; return; }
   var NO = S.no_level, g, c, si, name, first, pd = S.ponded_ft, fd = S.flooded_ft, scen = T.view === "scen", hist = T.view === "hist";
   if (hit.kind === "p"){ g = R.pg[hit.i] / 100; c = R.pc[hit.i] / 100; si = R.pst[hit.i]; name = S.roads.names[R.rname[R.proad[hit.i]]] || "Unnamed road"; first = Math.max(g + pd, c); }
   else { g = R.bg[hit.i] / 100; c = R.bc[hit.i] / 100; si = R.bst[hit.i]; name = R.bstate[hit.i] ? "Flooded Building" : "Building"; first = Math.max(g + fd, c); }

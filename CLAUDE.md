@@ -186,11 +186,19 @@ project's shared folder (skill code, baselines, notes, station sheet, disclosure
   right (his layout: keep the two right axes). `python -m inundation.page --prepared <page dir> --work <work dir>`
   redraws a prepared area's picture.
 - Historical floods (`history.py`, `events/<id>/`): the 72 hours around the highest water at Sewells Point for the 2026
-  Thanksgiving Day Nor'easter (from the archived runs, with every forecast), the 1933 Hurricane, Isabel 2003, Nor'Ida
-  2009, Irene 2011 and Matthew 2016 (NOAA CO-OPS, USGS since 2007; ft NAVD88). Run tarballs made before 2026-11-27
+  Thanksgiving Day Nor'easter (from the archived runs, with every forecast), Matthew 2016, Sandy 2012, Irene 2011,
+  Nor'Ida 2009, Isabel 2003 and the 1933 Hurricane (NOAA CO-OPS, USGS since 2007; ft NAVD88; the menu lists them
+  newest first, Derek 2026-11-27). Run tarballs made before 2026-11-27
   have `observed_ft` interpolated straight across a gauge's outage: `history.unbridged` takes those lines out. A gauge
   without its own record through the peak follows the nearest one that has it. Add a storm as a row in `events/events.json` and run
   `python -m inundation.history noaa --event <id>`.
+- USGS high water marks (Derek, 2026-11-27): `python -m inundation.history marks --all` writes `events/<id>/marks.csv`
+  (ft NAVD88) from the Flood Event Viewer's service (api.waterdata.usgs.gov/stnservices since stn.wim.usgs.gov only
+  forwards; no key needed) and the tables of the USGS open-file reports named in `events.json` `marks` (Sandy
+  2013-1043, Irene 2012-1022). Isabel's 99 marks are NGVD29, moved to NAVD88 with NOAA NGS VERTCON per mark
+  (geodesy.noaa.gov/api/ncat; -0.82 ft at Sewells Point, not the -1 ft of thumb). The viewer has no Virginia marks for
+  Nor'Ida or Matthew. The pages draw them in the Historical Floods view with the difference from the map's highest
+  water (Norfolk in Isabel: 21 marks, median 0.03 ft below the map).
 - Site (2026-11-27): `inundation/areas.csv` lists the localities (Hampton Roads and the Middle Peninsula so far; add
   a row to add one). `python -m inundation.site --prepared <dir of <name>/> --latest <Latest site> --out site/inundation`
   writes each locality's page under `<name>/` and `index.html`, the map of all of them (`templates/statewide.html`:
@@ -200,6 +208,10 @@ project's shared folder (skill code, baselines, notes, station sheet, disclosure
   Pages at /StormSense-archive/inundation/ (release `inundation-pages`); Pages is one site per repo, so it and
   `crest.yml` each unpack the other's zip before deploying. Localities are prepared on Actions, once each (manual run,
   `prepare` = names, `missing` or `all`; release `inundation-prepared`), because a session cannot upload release assets.
+  A locality that cannot be prepared does not keep the others off Pages (deploy's `!cancelled()`; the first publishing
+  run, 27 Nov, built 17 localities and skipped the deploy). Newport News failed that day: the city's
+  `Operational/StormwaterManhole` service had no layers. Prep stops there on purpose (pipes without their manholes
+  fall apart into pieces whose ends count as openings); run `prepare` = newport_news again once the layer is back.
 - Tidal water (2026-11-27): the largest body at -2 ft in the frame plus every body of 5 ha or more that runs off the
   frame's edge (`depth.tidal_seeds`; before that the Piankatank side of Gloucester and the York side of James City
   were land), except one leaving inside a watershed without a gauge (`prep.sea_cells`). `spread.sparse` keeps the
@@ -275,7 +287,8 @@ project's shared folder (skill code, baselines, notes, station sheet, disclosure
   services2/services3/services5/services6/services7.arcgis.com, tiles.arcgis.com, geo.vbgov.com, maps.nnva.gov,
   geo.hrsd.com, gis.hrpdcva.gov, property.jamescitycountyva.gov, files.zillowstatic.com and the USACE/HRPDC document
   hosts; since 2026-11-27 api.tidesandcurrents.noaa.gov, waterservices.usgs.gov and nwis.waterservices.usgs.gov, where USGS
-  serves readings older than 120 days). No Claude session reaches
+  serves readings older than 120 days, plus stn.wim.usgs.gov, apps.usgs.gov, api.waterdata.usgs.gov, pubs.usgs.gov and
+  geodesy.noaa.gov for the high water marks). No Claude session reaches
   tidesandcurrents.noaa.gov itself, tds.vims.edu or *.github.io; NOAA AWS buckets work.
 - GitHub Actions has full internet (except NOMADS ETSS paths, 403), so put blocked downloads in a
   workflow. Read live pages from a workflow, not the sandbox. A finished job's log is readable from a session with

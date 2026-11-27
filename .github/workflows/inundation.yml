@@ -216,7 +216,9 @@ jobs:
 
   deploy:
     needs: publish
-    if: needs.publish.outputs.pages == 'true'
+    # !cancelled(): a plain condition also asks that no job before this one failed or was skipped, so one
+    # locality that could not be prepared, or a run that prepared none, kept the pages built by publish off Pages
+    if: ${{ !cancelled() && needs.publish.result == 'success' && needs.publish.outputs.pages == 'true' }}
     runs-on: ubuntu-latest
     concurrency:
       group: pages
