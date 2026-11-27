@@ -235,6 +235,31 @@ The pages' Historical Floods menu lists them newest first (`history.events`).
   through the peak (more than 70% of the readings within 1.5 hours of it, and 60% of the window anyone recorded);
   otherwise the nearest gauge that does. In 1933 that is Sewells Point for every place. The ground, roads and
   buildings are today's.
+- `python -m inundation.history marks --all` (or `--event <id>`): the U.S. Geological Survey's surveyed high water
+  marks and storm-tide sensor peaks in Virginia for the storms with a `"marks"` entry in `events.json`, written to
+  `events/<id>/marks.csv` (`id`, `kind` hwm or sensor, `lat, lon, elev_ft_navd88, elev_ft, datum, quality, within_ft, type,
+  environment, wave, county, waterbody, place, time_z, source`). Two sources, merged: the Flood Event Viewer's
+  Short-Term Network service (`fev_event`; since 2026 at api.waterdata.usgs.gov/stnservices, where stn.wim.usgs.gov
+  forwards to) and the tables of the Survey's open-file reports (`reports`: the report's own mark ids, its
+  wave-affected column, and the peaks of its temporary storm-tide sensors). A report's mark and the viewer's mark
+  within 60 m at the same height to 0.1 ft are one mark. Isabel's marks were surveyed in NGVD29 and are moved to
+  NAVD88 at each mark's own place with NOAA NGS's VERTCON (geodesy.noaa.gov/api/ncat; -0.77 to -1.23 ft across
+  tidewater Virginia, -0.82 ft at Sewells Point). Needs openpyxl for the report tables.
+
+  | Storm | High water marks with an elevation | Sensor peaks | Sources |
+  |---|---|---|---|
+  | 2012 Hurricane Sandy | 26 (16 noted as wave-affected) | 10 | Open-File Report 2013-1043 tables 3 and 6; Flood Event Viewer event 24 |
+  | 2011 Hurricane Irene | 19 (2 on rivers) | 11 | Open-File Report 2012-1022 tables 2 and 5; Flood Event Viewer event 23 |
+  | 2003 Hurricane Isabel | 99 (59 more have no surveyed elevation; 19 noted as wave run-up) | none | Flood Event Viewer event 133 |
+
+  The viewer has no Virginia marks for Nor'Ida (9 water-level sensors were out, no peaks are published) or Matthew
+  (Open-File Report 2017-1122 covers Florida to North Carolina), and nothing for 1933.
+- On a page the marks inside the frame are drawn in the Historical Floods view: diamonds for high water marks
+  (hollow where wave-affected), triangles for sensor peaks. A tap gives the mark, its quality and place, and the map's
+  highest water there (the highest reading of the gauge that the nearest road piece within 1.5 km follows), and the
+  flood's note gives the median difference of the marks not noted as wave-affected. A river's marks and marks more
+  than 6 ft above every gauge's highest water are left off (`marks_left_off`). First check, Norfolk in Isabel: 21
+  marks stand a median 0.03 ft below the map's highest water (Sewells Point, 6.28 ft).
 
 ## Numbers (run of 2026-11-26 00Z, a forecast major flood)
 

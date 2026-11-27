@@ -192,6 +192,13 @@ project's shared folder (skill code, baselines, notes, station sheet, disclosure
   have `observed_ft` interpolated straight across a gauge's outage: `history.unbridged` takes those lines out. A gauge
   without its own record through the peak follows the nearest one that has it. Add a storm as a row in `events/events.json` and run
   `python -m inundation.history noaa --event <id>`.
+- USGS high water marks (Derek, 2026-11-27): `python -m inundation.history marks --all` writes `events/<id>/marks.csv`
+  (ft NAVD88) from the Flood Event Viewer's service (api.waterdata.usgs.gov/stnservices since stn.wim.usgs.gov only
+  forwards; no key needed) and the tables of the USGS open-file reports named in `events.json` `marks` (Sandy
+  2013-1043, Irene 2012-1022). Isabel's 99 marks are NGVD29, moved to NAVD88 with NOAA NGS VERTCON per mark
+  (geodesy.noaa.gov/api/ncat; -0.82 ft at Sewells Point, not the -1 ft of thumb). The viewer has no Virginia marks for
+  Nor'Ida or Matthew. The pages draw them in the Historical Floods view with the difference from the map's highest
+  water (Norfolk in Isabel: 21 marks, median 0.03 ft below the map).
 - Site (2026-11-27): `inundation/areas.csv` lists the localities (Hampton Roads and the Middle Peninsula so far; add
   a row to add one). `python -m inundation.site --prepared <dir of <name>/> --latest <Latest site> --out site/inundation`
   writes each locality's page under `<name>/` and `index.html`, the map of all of them (`templates/statewide.html`:
@@ -276,7 +283,8 @@ project's shared folder (skill code, baselines, notes, station sheet, disclosure
   services2/services3/services5/services6/services7.arcgis.com, tiles.arcgis.com, geo.vbgov.com, maps.nnva.gov,
   geo.hrsd.com, gis.hrpdcva.gov, property.jamescitycountyva.gov, files.zillowstatic.com and the USACE/HRPDC document
   hosts; since 2026-11-27 api.tidesandcurrents.noaa.gov, waterservices.usgs.gov and nwis.waterservices.usgs.gov, where USGS
-  serves readings older than 120 days). No Claude session reaches
+  serves readings older than 120 days, plus stn.wim.usgs.gov, apps.usgs.gov, api.waterdata.usgs.gov, pubs.usgs.gov and
+  geodesy.noaa.gov for the high water marks). No Claude session reaches
   tidesandcurrents.noaa.gov itself, tds.vims.edu or *.github.io; NOAA AWS buckets work.
 - GitHub Actions has full internet (except NOMADS ETSS paths, 403), so put blocked downloads in a
   workflow. Read live pages from a workflow, not the sandbox. A finished job's log is readable from a session with

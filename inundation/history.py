@@ -2,6 +2,7 @@
 
     python -m inundation.history noaa --event 2003-isabel          one storm from NOAA's records
     python -m inundation.history noaa --all                        every storm in events.json with source "noaa"
+    python -m inundation.history marks --all                       USGS high water marks and sensor peaks (below)
     python -m inundation.history stormsense --event 2026-thanksgiving-noreaster --runs ensemble_*.tar.gz
 
 `events/events.json` lists the storms. For each, the highest water at Sewells Point (NOAA 8638610, the
@@ -23,6 +24,7 @@ import io
 import json
 import math
 import os
+import re
 import tarfile
 import time
 import urllib.error
@@ -39,6 +41,13 @@ HALF_H = 36
 API = "https://api.tidesandcurrents.noaa.gov/api/prod/datagetter"
 MDAPI = "https://api.tidesandcurrents.noaa.gov/mdapi/prod/webapi/stations.json"
 UA = {"User-Agent": "StormSense (VIMS)"}
+FEV = "https://api.waterdata.usgs.gov/stnservices"         # USGS Flood Event Viewer (Short-Term Network) services
+NCAT = "https://geodesy.noaa.gov/api/ncat/llh"             # NOAA NGS coordinate conversion (VERTCON for NGVD29)
+FT_PER_M = 3.280839895
+MARK_COLS = ["id", "kind", "lat", "lon", "elev_ft_navd88", "elev_ft", "datum", "quality", "within_ft", "type",
+             "environment", "wave", "county", "waterbody", "place", "time_z", "source"]
+MARK_NEAR_M = 60        # a report's mark and the viewer's mark this close, at the same height to 0.1 ft, are one mark
+MARK_OVER_FT = 6.0      # a mark this far above every gauge's highest water is a river's or a wave's: not on the map
 STEP_MIN = 6            # the page's time step for every storm
 NEAR_PEAK_H = 1.5       # a gauge stands for itself only if it recorded the hours around the peak
 MIN_COVER = 0.6         # ... and this share of the window that anyone recorded
@@ -381,9 +390,189 @@ def forecasts(event_id, station):
     return out
 
 
-def for_page(stations, coops_of=None, ids=None, plot=None):
+def ngvd29_shift_ft(lat, lon, _cache={}):
+    """NAVD88 minus NGVD29 at a place, in feet (NOAA NGS VERTCON through NCAT; about -0.8 ft at Sewells Point)."""
+    key = (round(lat, 3), round(lon, 3))
+    if key not in _cache:
+        q = urllib.parse.urlencode({"lat": key[0], "lon": key[1], "inDatum": "nad83(2011)", "outDatum": "nad83(2011)",
+                                    "inVertDatum": "NGVD29", "outVertDatum": "NAVD88", "orthoHt": "0.0"})
+        doc = json.loads(_get(f"{NCAT}?{q}"))
+        _cache[key] = float(doc["destOrthoht"]) * FT_PER_M
+    return _cache[key]
+
+
+def _within(quality):
+    """'Good: +/- 0.10 ft' -> ('Good', 0.1)"""
+    name, _, rest = (quality or "").partition(":")
+    m = re.search(r"([0-9.]+)\s*ft", rest)
+    return name.strip(), (float(m.group(1)) if m else None)
+
+
+def fev_marks(event_no, state="VA", log=print):
+    """Virginia's high water marks of one Flood Event Viewer event, as MARK_COLS rows. Marks without a surveyed
+    elevation are counted and left out; NGVD29 elevations are moved to NAVD88 at the mark's own place."""
+    rows = json.loads(_get(f"{FEV}/hwms/filteredhwms/?event={event_no}&states={state}", timeout=180))
+    out, bare = [], 0
+    for r in rows:
+        if r.get("elev_ft") is None:
+            bare += 1
+            continue
+        lat, lon, datum = float(r["latitude_dd"]), float(r["longitude_dd"]), (r.get("vertical_datum_name") or "").strip()
+        if datum == "NAVD88":
+            navd = float(r["elev_ft"])
+        elif datum == "NGVD29":
+            navd = float(r["elev_ft"]) + ngvd29_shift_ft(lat, lon)
+        else:
+            bare += 1
+            continue
+        q, within = _within(r.get("hwm_quality_name"))
+        text = " ".join(str(r.get(k) or "") for k in ("location_description", "notes"))
+        place = "; ".join(t.strip() for t in (r.get("site_description"), r.get("location_description"), r.get("notes")) if t and t.strip())
+        out.append({"id": f"{r['site_number']}-{r['id']}", "kind": "hwm", "lat": round(lat, 6), "lon": round(lon, 6),
+                    "elev_ft_navd88": round(navd, 2), "elev_ft": r["elev_ft"], "datum": datum, "quality": q,
+                    "within_ft": "" if within is None else within, "type": (r.get("hwm_type_name") or "").split(" (")[0],
+                    "environment": r.get("environment") or "", "wave": "yes" if re.search(r"wave|run-?up", text, re.I) else "",
+                    "county": (r.get("county_name") or "").title(), "waterbody": r.get("waterbody") or "",
+                    "place": re.sub(r"\s+", " ", place)[:300], "time_z": "",
+                    "source": f"USGS Flood Event Viewer, event {r.get('event_name') or event_no}"})
+    log(f"  Flood Event Viewer event {event_no}: {len(rows)} marks in {state}, {len(out)} with a surveyed elevation ({bare} without)")
+    return out
+
+
+def report_table(url, state="Virginia"):
+    """One state's rows of a USGS open-file report's table (xlsx): [{column heading: value}]."""
+    import io
+    try:
+        import openpyxl
+    except ImportError:
+        raise SystemExit("reading a report's tables needs openpyxl (pip install openpyxl)")
+    ws = openpyxl.load_workbook(io.BytesIO(_get(url, timeout=180)), read_only=True, data_only=True).worksheets[0]
+    head, out = None, []
+    for r in ws.iter_rows(values_only=True):
+        if not r or r[0] is None:
+            continue
+        if str(r[0]).strip().startswith("Site Id"):
+            head = [re.sub(r"\s+", " ", str(c)).strip().lower() if c is not None else "" for c in r]
+        elif head and len(r) > 1 and str(r[1]).strip() == state:
+            out.append(dict(zip(head, r)))
+    return out
+
+
+def _col(row, *starts):
+    for k, v in row.items():
+        if any(k.startswith(s) for s in starts):
+            return v
+
+
+def report_marks(rep, log=print):
+    """A report's high water marks and storm-tide sensor peaks in Virginia (ft NAVD88), as MARK_COLS rows."""
+    out = []
+    for kind, key in (("hwm", "hwm"), ("sensor", "sensors")):
+        if not rep.get(key):
+            continue
+        n = 0
+        for r in report_table(rep[key]):
+            try:
+                elev, lat, lon = float(_col(r, "peak storm")), float(_col(r, "latitude")), -abs(float(_col(r, "longitude")))
+            except (TypeError, ValueError):
+                continue                                   # "none": the sensor recorded no surge
+            if kind == "sensor" and "water level" not in str(_col(r, "site type") or "").lower():
+                continue                                   # the wave sensor beside it repeats the site
+            when = _col(r, "peak storm-tide date", "peak storm- tide date", "peak storm-tide estimated", "peak storm- tide estimated")
+            wave = str(_col(r, "wave") or "").strip().lower()
+            out.append({"id": str(_col(r, "site id")).strip(), "kind": kind, "lat": round(lat, 6), "lon": round(lon, 6),
+                        "elev_ft_navd88": round(elev, 2), "elev_ft": round(elev, 2), "datum": "NAVD88", "quality": "", "within_ft": "",
+                        "type": "Storm-tide sensor" if kind == "sensor" else "", "environment": "",
+                        "wave": wave if wave in ("yes", "no") else "", "county": str(_col(r, "county") or "").strip(),
+                        "waterbody": "", "place": "",
+                        "time_z": when.strftime("%Y-%m-%dT%H:%MZ") if kind == "sensor" and hasattr(when, "strftime") else "",
+                        "source": rep["cite"]})
+            n += 1
+        log(f"  {rep['cite']}: {n} {'high water marks' if kind == 'hwm' else 'storm-tide sensor peaks'} in Virginia")
+    return out
+
+
+def merge_marks(report, viewer):
+    """The report's rows first (its ids, its wave note), each taking the quality, type and place of the viewer's
+    mark at the same spot and height; then the viewer's marks no report row matched."""
+    left, out = list(viewer), []
+    for m in report:
+        twin = min((v for v in left if m["kind"] == "hwm" and abs(v["elev_ft_navd88"] - m["elev_ft_navd88"]) <= 0.055
+                    and _km(m["lat"], m["lon"], v["lat"], v["lon"]) * 1000 <= MARK_NEAR_M),
+                   key=lambda v: abs(v["elev_ft_navd88"] - m["elev_ft_navd88"]), default=None)   # the viewer keeps 0.1 ft
+        if twin:
+            left.remove(twin)
+            m = {**m, **{k: twin[k] for k in ("quality", "within_ft", "type", "environment", "waterbody", "place")},
+                 "wave": m["wave"] or twin["wave"], "source": f"{m['source']}; {twin['source']}"}
+        out.append(m)
+    return out + left
+
+
+def fetch_marks(ev, log=print):
+    """USGS high water marks and storm-tide sensor peaks for one storm -> events/<id>/marks.csv (ft NAVD88)."""
+    spec = ev["marks"]
+    log(f"{ev['name']}:")
+    rows = merge_marks([m for rep in spec.get("reports", []) for m in report_marks(rep, log)],
+                       fev_marks(spec["fev_event"], log=log) if spec.get("fev_event") else [])
+    rows.sort(key=lambda m: (m["kind"], m["county"], m["id"]))
+    os.makedirs(os.path.join(EVENTS, ev["id"]), exist_ok=True)
+    with open(os.path.join(EVENTS, ev["id"], "marks.csv"), "w", newline="") as fh:
+        w = csv.DictWriter(fh, MARK_COLS, lineterminator="\n")
+        w.writeheader()
+        w.writerows(rows)
+    log(f"  {sum(m['kind'] == 'hwm' for m in rows)} high water marks and {sum(m['kind'] == 'sensor' for m in rows)} sensor peaks written")
+    return rows
+
+
+def marks(event_id):
+    """The storm's surveyed marks (fetch_marks), numbers as floats; [] where it has none."""
+    path = os.path.join(EVENTS, event_id, "marks.csv")
+    if not os.path.exists(path):
+        return []
+    with open(path, newline="") as fh:
+        rows = list(csv.DictReader(fh))
+    for m in rows:
+        for k in ("lat", "lon", "elev_ft_navd88"):
+            m[k] = float(m[k])
+        m["within_ft"] = float(m["within_ft"]) if m["within_ft"] else None
+    return rows
+
+
+def marks_for_page(event_id, frame, top_ft):
+    """The marks inside a page's frame, in the page's units. frame: its static.json (epsg, x0, ytop, unit_m, width_m,
+    height_m). Left off: a river's marks (the map is the tide's), and a mark more than MARK_OVER_FT above top_ft, the
+    highest water any gauge recorded (a river's or a wave's run-up). Returns (marks, their sources, number left off)."""
+    rows = marks(event_id)
+    if not rows or not frame:
+        return [], [], 0
+    from pyproj import Transformer
+    fwd = Transformer.from_crs(4326, frame["epsg"], always_xy=True).transform
+    out, src, off = [], [], 0
+    for m in rows:
+        x, y = fwd(m["lon"], m["lat"])
+        ux, uy = (x - frame["x0"]) / frame["unit_m"], (frame["ytop"] - y) / frame["unit_m"]
+        if not (0 <= ux <= frame["width_m"] / frame["unit_m"] and 0 <= uy <= frame["height_m"] / frame["unit_m"]):
+            continue
+        if m["environment"] == "Riverine" or (top_ft is not None and m["elev_ft_navd88"] > top_ft + MARK_OVER_FT):
+            off += 1
+            continue
+        if m["source"] not in src:
+            src.append(m["source"])
+        d = {"x": round(ux, 1), "y": round(uy, 1), "ft": m["elev_ft_navd88"], "k": "s" if m["kind"] == "sensor" else "h",
+             "n": m["id"], "s": src.index(m["source"])}
+        for k, v in (("q", m["quality"]), ("u", m["within_ft"]), ("t", m["type"] if m["kind"] == "hwm" else ""),
+                     ("w", {"yes": 1, "no": 0}.get(m["wave"])), ("d", m["place"]), ("z", m["time_z"]),
+                     ("o", f"{m['elev_ft']} ft {m['datum']}" if m["datum"] != "NAVD88" else "")):
+            if v not in ("", None):
+                d[k] = v
+        out.append(d)
+    return out, src, off
+
+
+def for_page(stations, coops_of=None, ids=None, plot=None, frame=None):
     """stations: [{station, lat, lon}] (the page's gauges, and its plot gauge). coops_of: {station: NOAA id}.
     plot: the station of the page's plot, whose forecasts issued before the peak go along where the storm has them.
+    frame: the page's static.json, for the USGS high water marks and sensor peaks that lie inside it.
     Returns the page's events document: per storm, each station's level through the 72 hours."""
     coops_of = coops_of or {}
     out = []
@@ -423,7 +612,10 @@ def for_page(stations, coops_of=None, ids=None, plot=None):
                     if np.isfinite(f).any():
                         runs.append({"cycle": cyc, "max_ft": round(float(np.nanmax(f)), 2),
                                      "f": [None if not np.isfinite(x) else round(float(x), 2) for x in f]})
+        tops = [g["max_ft"] for k, g in doc["gauges"].items() if k in good and g.get("max_ft") is not None]
+        mk, mk_src, mk_off = marks_for_page(doc["id"], frame, max(tops) if tops else None)
         out.append({"id": doc["id"], "name": doc["name"], "note": doc.get("note"), "t0": iso(t0)[:-1] + ":00Z",
+                    **({"marks": mk, "mark_sources": mk_src} if mk else {}), **({"marks_left_off": mk_off} if mk_off else {}),
                     "step_min": STEP_MIN, "n": n, "peak_i": peak_i, "peak_time_z": doc["peak_time_z"],
                     "peak_ft": doc["peak_ft_navd88"], "gauges": len(good), "gauges_recorded": len(doc["gauges"]),
                     "complete": doc.get("complete", True), "observed_through_z": doc.get("observed_through_z"),
@@ -433,12 +625,19 @@ def for_page(stations, coops_of=None, ids=None, plot=None):
 
 def main(argv=None):
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
-    ap.add_argument("source", choices=["noaa", "stormsense"])
+    ap.add_argument("source", choices=["noaa", "stormsense", "marks"])
     ap.add_argument("--event")
     ap.add_argument("--all", action="store_true")
     ap.add_argument("--runs", nargs="*", default=[], help="archived run tarballs (ensemble_<cycle>.tar.gz)")
     ap.add_argument("--stations", default=os.path.join(HERE, "..", "stormsense", "stations.csv"))
     a = ap.parse_args(argv)
+    if a.source == "marks":
+        todo = [e for e in events() if e.get("marks") and (a.all or e["id"] == a.event)]
+        if not todo:
+            raise SystemExit("no such event in events.json with a \"marks\" entry")
+        for ev in todo:
+            fetch_marks(ev)
+        return
     todo = [e for e in events() if e.get("source", "noaa") == a.source and (a.all or e["id"] == a.event)]
     if not todo:
         raise SystemExit("no such event in events.json for that source")

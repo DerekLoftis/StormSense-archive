@@ -3,9 +3,18 @@
   "search": ["2026-11-25", "2026-11-27"]},
  {"id": "2016-matthew", "name": "2016 Hurricane Matthew", "search": ["2016-10-07", "2016-10-10"],
   "note": "Mostly rainfall-driven flooding, which a tide gauge does not measure: the map shows the tide's part only."},
- {"id": "2012-sandy", "name": "2012 Hurricane Sandy", "search": ["2012-10-27", "2012-10-31"]},
- {"id": "2011-irene", "name": "2011 Hurricane Irene", "search": ["2011-08-26", "2011-08-29"]},
+ {"id": "2012-sandy", "name": "2012 Hurricane Sandy", "search": ["2012-10-27", "2012-10-31"],
+  "marks": {"fev_event": 24, "reports": [
+   {"cite": "USGS Open-File Report 2013-1043, Monitoring storm tide and flooding from Hurricane Sandy along the Atlantic coast of the United States, October 2012 (doi:10.3133/ofr20131043)",
+    "hwm": "https://pubs.usgs.gov/of/2013/1043/downloads/Table6_Sandy.xlsx",
+    "sensors": "https://pubs.usgs.gov/of/2013/1043/downloads/Table3_Sandy.xlsx"}]}},
+ {"id": "2011-irene", "name": "2011 Hurricane Irene", "search": ["2011-08-26", "2011-08-29"],
+  "marks": {"fev_event": 23, "reports": [
+   {"cite": "USGS Open-File Report 2012-1022, Monitoring inland storm tide and flooding from Hurricane Irene along the Atlantic Coast of the United States, August 2011 (doi:10.3133/ofr20121022)",
+    "hwm": "https://pubs.usgs.gov/of/2012/1022/downloads/ofr2012-1022-table5.xlsx",
+    "sensors": "https://pubs.usgs.gov/of/2012/1022/downloads/ofr2012-1022-table2.xlsx"}]}},
  {"id": "2009-norida", "name": "2009 Nor'Ida", "search": ["2009-11-10", "2009-11-15"]},
- {"id": "2003-isabel", "name": "2003 Hurricane Isabel", "search": ["2003-09-17", "2003-09-20"]},
+ {"id": "2003-isabel", "name": "2003 Hurricane Isabel", "search": ["2003-09-17", "2003-09-20"],
+  "marks": {"fev_event": 133}},
  {"id": "1933-hurricane", "name": "1933 Hurricane", "search": ["1933-08-21", "1933-08-25"]}
 ]
