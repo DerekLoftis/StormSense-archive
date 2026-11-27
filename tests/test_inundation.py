@@ -298,7 +298,7 @@ def test_elevation_certificate_floor_replaces_the_assumed_height():
 
 
 def test_flood_raster_is_an_overview_plus_tiles(tmp_path):
-    from PIL import Image
+    Image = pytest.importorskip("PIL.Image")                          # with inundation/requirements.txt, like scipy above
     from inundation import page
     rng = np.random.default_rng(3)
     nh, nw = page.TILE + 76, 2 * page.TILE + 52                       # 2 rows and 3 columns of tiles, overview at 1/2
