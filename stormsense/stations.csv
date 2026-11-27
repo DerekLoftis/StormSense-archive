@@ -64,7 +64,7 @@ USPA,Elizabeth River at Route 165 in Virginia Beach,36.827589,-76.165338,nwis:02
 USPT,Elizabeth River near Pinehurst in Portsmouth (IN MLLW),36.8436,-76.3647,nwis:02042893,1.78,,,,,ELZV2,8638339,USPT,,,,
 USSB,USSB,,,nwis:01484812,1.302,,,,,,est2349,USSB,,yes,,
 USSC,"Starling Creek at Port of Saxis at Saxis, VA",37.918828,-75.727539,nwis:01484938,1.414,,,,,,8633777,USSC,,yes,,
-USSF,Nansemond River at Suffolk (IN MLLW),36.739166666667,-76.582777777778,nwis:02042822,1.798,,,,,NMDV2,est2346,USSF,,,,
+USSF,Nansemond River at Suffolk (IN MLLW),36.739166666667,-76.582777777778,nwis:02042822;nwps:NMDV2,1.798,,-0.112,,,NMDV2,est2346,USSF,,,,"NWPS NMDV2 fills in when USGS goes stale (USGS = NWPS stage - 0.112 ft, 788 readings 22-25 Nov 2026, SD 0.000)"
 USTC,Thalia Creek at Route 58 in Thalia,36.843179,-76.124409,nwis:0204291317,1.695,,,,,THAV2,est0035,USTC,,,,
 VIMS,Virginia Institute of Marine Science at Gloucester Point,37.248188,-76.504634,coops:8637689,1.53,,,,,,8637689,,YRCG,,2026-10-28,"Stand-in until the VIMS boat basin GreenStream gauge is installed: NOAA Yorktown 8637689 (YRCG), 3 km across the York River"
 WACH,Atlantic Coast at Wachapreague (IN MLLW),37.6083333,-75.685,coops:8631044,2.61,,,,,WAHV2,8631044,WACH,,,,
