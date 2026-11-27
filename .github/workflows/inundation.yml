@@ -1,0 +1,240 @@
+# StormSense inundation maps: roads and buildings under water from the gauges and the published 72-hour
+# forecast, one map page per locality and one map of them all. Code: inundation/ (README.md there).
+#
+# publish  after every StormSense run (and on a manual run): inundation.site reads the forecast the run just
+#          published (the public StormSense-latest `site` branch) for every prepared locality and writes the
+#          pages. They go to release "inundation-pages" (inundation_site.zip) and, with the repository variable
+#          CREST_PAGES "true", to GitHub Pages at https://derekloftis.github.io/StormSense-archive/inundation/.
+#          Pages holds one site per repository, so this workflow unpacks CREST's newest pages (release
+#          "crest-pages") beside its own before deploying, and crest.yml does the same with these.
+# prepare  only on a manual run with "prepare" filled in: inundation.prep for those localities of
+#          inundation/areas.csv (elevation, storm drains, floodwalls, parcels: 10 minutes to a few hours each,
+#          one job per locality), saved as <name>_prepared.tar and <name>_inundation_gdb.zip on release
+#          "inundation-prepared". A locality needs it once, and again when its sources or the method change.
+#
+# A pull request prepares Poquoson (the smallest locality) and builds its pages as an artifact; nothing is
+# published.
+name: Inundation maps
+
+on:
+  workflow_run:
+    workflows: [StormSense]
+    types: [completed]
+  workflow_dispatch:
+    inputs:
+      prepare:
+        description: "Prepare first: names from inundation/areas.csv separated by commas, 'missing' (those not prepared yet) or 'all'; empty = none"
+        required: false
+        default: ""
+  pull_request:
+    paths: [inundation/**, .github/workflows/inundation.yml]
+
+permissions:
+  contents: write
+
+concurrency:
+  group: inundation-${{ github.event_name == 'pull_request' && github.ref || 'main' }}
+  cancel-in-progress: false
+
+env:
+  GH_TOKEN: ${{ github.token }}
+  PR: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  plan:
+    # after a real run only: StormSense also runs a dry build on pull requests, which publishes nothing
+    if: >-
+      github.event_name != 'workflow_run' ||
+      (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'workflow_dispatch')
+    runs-on: ubuntu-latest
+    outputs:
+      areas: ${{ steps.pick.outputs.areas }}
+      any: ${{ steps.pick.outputs.any }}
+    steps:
+      - uses: actions/checkout@v4
+      - id: pick
+        env:
+          WANT: ${{ github.event.inputs.prepare }}
+        run: |
+          HAVE=""
+          if [ "$PR" != true ]; then
+            HAVE=$(gh release view inundation-prepared -R "$GITHUB_REPOSITORY" --json assets -q '.assets[].name' 2>/dev/null | sed -n 's/_prepared\.tar$//p' | tr '\n' ' ')
+          fi
+          export HAVE
+          python3 - <<'PY' >> "$GITHUB_OUTPUT"
+          import csv, json, os
+          rows = list(csv.DictReader(open("inundation/areas.csv")))
+          want, have = os.environ.get("WANT", "").strip(), set(os.environ.get("HAVE", "").split())
+          if os.environ["PR"] == "true":
+              pick = [r for r in rows if r["name"] == "poquoson"]
+          elif want == "all":
+              pick = rows
+          elif want == "missing":
+              pick = [r for r in rows if r["name"] not in have]
+          else:
+              names = {n.strip() for n in want.split(",") if n.strip()}
+              pick = [r for r in rows if r["name"] in names]
+          print("areas=" + json.dumps(pick))
+          print("any=" + ("true" if pick else "false"))
+          PY
+          cat "$GITHUB_OUTPUT"
+      - name: The release the prepared localities are kept on
+        if: steps.pick.outputs.any == 'true' && github.event_name != 'pull_request'
+        run: |
+          gh release view inundation-prepared -R "$GITHUB_REPOSITORY" >/dev/null 2>&1 || \
+            gh release create inundation-prepared -R "$GITHUB_REPOSITORY" --title "Inundation: prepared localities" \
+              --notes "What inundation.prep made for each locality of inundation/areas.csv: <name>_prepared.tar (the road and building tables with their ground and connect levels, the map page's tiles and shapes) and <name>_inundation_gdb.zip (the same as a file geodatabase). The Inundation maps workflow reads the .tar files on every run."
+
+  prepare:
+    needs: plan
+    if: needs.plan.outputs.any == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 330
+    strategy:
+      fail-fast: false
+      max-parallel: 4
+      matrix:
+        area: ${{ fromJson(needs.plan.outputs.areas) }}
+    env:
+      NAME: ${{ matrix.area.name }}
+      FIPS: ${{ matrix.area.fips }}
+      TITLE: ${{ matrix.area.title }}
+    steps:
+      - name: Room for a county's 1 m elevation grid
+        run: |
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache/CodeQL
+          df -h / | tail -1
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -q -r requirements.txt -r inundation/requirements.txt
+      - name: Prepare
+        run: |
+          set -o pipefail
+          python -m inundation.prep --fips "$FIPS" --name "$NAME" --title "$TITLE" --out prepared --work work --no-gpkg --gdb 2>&1 | tee prep_log.txt
+          df -h / | tail -1
+      - name: Pack
+        run: |
+          mkdir -p "pack/$NAME"
+          cp "prepared/${NAME}_roads.csv.gz" "prepared/${NAME}_buildings.csv.gz" "prepared/${NAME}_prep.json" \
+             "prepared/${NAME}_tether.csv" "prepared/${NAME}_outline.geojson" prep_log.txt "pack/$NAME/"
+          cp -r prepared/page "pack/$NAME/page"
+          rm -f "pack/$NAME/page/index.html" "pack/$NAME/page/page.html"
+          tar -cf "${NAME}_prepared.tar" -C pack "$NAME"
+          (cd prepared && zip -qr "../${NAME}_inundation_gdb.zip" "${NAME}.gdb")
+          ls -la ./*.tar ./*.zip
+      - name: Keep (pull request)
+        if: github.event_name == 'pull_request'
+        uses: actions/upload-artifact@v4
+        with:
+          name: prepared-${{ matrix.area.name }}
+          path: ${{ matrix.area.name }}_prepared.tar
+          retention-days: 3
+      - name: Save to the release
+        if: github.event_name != 'pull_request'
+        run: gh release upload inundation-prepared -R "$GITHUB_REPOSITORY" --clobber "${NAME}_prepared.tar" "${NAME}_inundation_gdb.zip"
+      - name: Show the end of a failed run as an annotation
+        if: failure()
+        run: echo "::error title=prep $NAME failed::$(tail -c 900 prep_log.txt 2>/dev/null | tr '\n' ' ')"
+
+  publish:
+    needs: [plan, prepare]
+    if: ${{ !cancelled() && needs.plan.result == 'success' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    outputs:
+      pages: ${{ steps.build.outputs.built == 'true' && github.event_name != 'pull_request' && vars.CREST_PAGES == 'true' }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -q numpy -r inundation/requirements.txt
+
+      - name: Prepared localities (pull request)
+        if: github.event_name == 'pull_request'
+        uses: actions/download-artifact@v4
+        with:
+          pattern: prepared-*
+          path: dl
+          merge-multiple: true
+      - name: Prepared localities (release)
+        if: github.event_name != 'pull_request'
+        run: |
+          mkdir -p dl
+          gh release download inundation-prepared -R "$GITHUB_REPOSITORY" -p '*_prepared.tar' -D dl 2>/dev/null || echo "::notice::no prepared locality yet: run this workflow with prepare = missing"
+
+      - name: The forecast as published
+        run: git clone -q --depth 1 -b site https://github.com/DerekLoftis/StormSense-latest latest
+
+      - name: Build
+        id: build
+        run: |
+          set -o pipefail
+          mkdir -p prepared
+          for f in dl/*_prepared.tar; do [ -e "$f" ] && tar -xf "$f" -C prepared; done
+          if [ -z "$(ls prepared)" ]; then echo "built=false" >> "$GITHUB_OUTPUT"; exit 0; fi
+          python -m inundation.site --prepared prepared --latest latest --out site/inundation 2>&1 | grep -v '^{' | tee site_log.txt
+          cp site_log.txt site/inundation/build_log.txt
+          du -sh site/inundation
+          echo "built=true" >> "$GITHUB_OUTPUT"
+
+      - name: Keep the pages (pull requests and every run)
+        if: steps.build.outputs.built == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: inundation-site
+          path: site
+          retention-days: ${{ github.event_name == 'pull_request' && 14 || 2 }}
+
+      - name: Save the pages to the release
+        if: steps.build.outputs.built == 'true' && github.event_name != 'pull_request'
+        run: |
+          (cd site && zip -qr ../inundation_site.zip inundation)
+          gh release view inundation-pages -R "$GITHUB_REPOSITORY" >/dev/null 2>&1 || \
+            gh release create inundation-pages -R "$GITHUB_REPOSITORY" --title "Inundation pages" \
+              --notes "The newest StormSense inundation site (the map of all localities, one map page per locality, their tables) as inundation_site.zip, replaced after every forecast run."
+          gh release upload inundation-pages -R "$GITHUB_REPOSITORY" --clobber inundation_site.zip
+
+      - name: CREST's pages beside these (one Pages site per repository)
+        if: steps.build.outputs.built == 'true' && github.event_name != 'pull_request' && vars.CREST_PAGES == 'true'
+        run: |
+          if gh release download crest-pages -R "$GITHUB_REPOSITORY" -p crest_site.zip -D . 2>/dev/null; then
+            unzip -qo crest_site.zip -d site
+          else
+            printf '<!doctype html><meta charset="utf-8"><meta http-equiv="refresh" content="0; url=inundation/"><title>StormSense Inundation</title><a href="inundation/">StormSense Inundation</a>\n' > site/index.html
+          fi
+          touch site/.nojekyll
+          du -sh site
+
+      - name: Pages artifact
+        if: steps.build.outputs.built == 'true' && github.event_name != 'pull_request' && vars.CREST_PAGES == 'true'
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
+
+  deploy:
+    needs: publish
+    if: needs.publish.outputs.pages == 'true'
+    runs-on: ubuntu-latest
+    concurrency:
+      group: pages
+      cancel-in-progress: false
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.retry.outputs.page_url || steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/configure-pages@v5
+      - id: deployment
+        continue-on-error: true
+        uses: actions/deploy-pages@v4
+      # GitHub sometimes can't see the Pages artifact for a short while after it is uploaded
+      - if: steps.deployment.outcome == 'failure'
+        run: sleep 60
+      - id: retry
+        if: steps.deployment.outcome == 'failure'
+        uses: actions/deploy-pages@v4

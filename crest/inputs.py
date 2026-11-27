@@ -23,6 +23,7 @@ import numpy as np
 import pandas as pd
 
 from stormsense import releases
+from stormsense.obs import without_bridges
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 REPO_ROOT = os.path.dirname(HERE)
@@ -114,7 +115,7 @@ def reduce_run(path, navd88=None):
             seen = None
             if own and "observed_ft" in df:
                 # the gauge's last day before issue: fills CREST's observations past the daily obs archive
-                o = df["observed_ft"].dropna()
+                o = pd.Series(without_bridges(df["observed_ft"].to_numpy(float)), df.index).dropna()   # no line across an outage
                 if len(o):
                     og = pd.date_range(o.index[0], o.index[-1], freq=f"{STEP_MIN}min")
                     seen = {"t0": int(og[0].value // 10**6),

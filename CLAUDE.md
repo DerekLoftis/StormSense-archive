@@ -28,6 +28,7 @@ project's shared folder (skill code, baselines, notes, station sheet, disclosure
 | Harmonic tide refit | `harmonics.yml` here, commits `harmonics/<ST>.json` | 2nd of month |
 | Verified obs + rescoring (`archiver/verified.py`) | `verified.yml` here, release `verified-YYYY-MM` (final vs preliminary readings, every change > 0.1 ft, the month's runs rescored); `data/verified/status.csv`, `cadence.csv` | 10th monthly 05:30 (Derek 2026-11-27); each month rechecked until NOAA verifies / USGS approves all of it |
 | CREST review pages (`python -m crest.build`) | `crest.yml` here; releases `crest-data` (finished months), `crest-pages` (site zip); Pages at /StormSense-archive/crest/ once var `CREST_PAGES=true` | daily 13:40 via cron-job.org (GitHub cron 14:40 fallback) |
+| Inundation maps (`python -m inundation.site`) | `inundation.yml` here; releases `inundation-prepared` (each locality, prepared once), `inundation-pages` (site zip); Pages at /StormSense-archive/inundation/ | after every StormSense run |
 
 - Publishing: the run force-pushes each site as one commit to the public repo's `site` branch and sends a
   `publish` repository_dispatch; the public repo's `deploy.yml` (on main) deploys that branch to Pages
@@ -62,6 +63,11 @@ project's shared folder (skill code, baselines, notes, station sheet, disclosure
   at the record's end; `_step_ok`, added after YRCG's 26 Nov 2026 15.4 ft NAVD plateau on web4/NWPS, which
   CO-OPS's own feed never had), stuck runs.
   `STORMSENSE_OBS_DIR` reads local `<ST>.csv` instead (testing).
+- An outage is a gap, never a line (Derek, 2026-11-27): the run's `observed` column (`station.on_grid` with
+  `obs_gap`: 30 minutes, or twice the gauge's own reporting step) is blank where the gauge was silent, the charts
+  break their Observed and Residual lines there (`charts.pts` with `gap`), and the readers of archived runs
+  (`skill.read_run`, `archive.read_run`, `crest/inputs.py`) drop the lines older runs drew (`obs.without_bridges`:
+  12 or more readings in one straight line).
 - `tide.py`: UTide, 27 constituents no Sa/Ssa (13 under ~6 months), stored fits `harmonics/<ST>.json`
   or fitted per run from 40 days (>=29 d). m30 lock: tide shifted so its mean over the last 30 days of
   observations equals m30 (only when >=15 days observed). m30 drawn on fore72 as a VIMS-teal line.
@@ -181,12 +187,28 @@ project's shared folder (skill code, baselines, notes, station sheet, disclosure
   redraws a prepared area's picture.
 - Historical floods (`history.py`, `events/<id>/`): the 72 hours around the highest water at Sewells Point for the 2026
   Thanksgiving Day Nor'easter (from the archived runs, with every forecast), the 1933 Hurricane, Isabel 2003, Nor'Ida
-  2009, Irene 2011 and Matthew 2016 (NOAA CO-OPS, USGS since 2007; ft NAVD88). The run tarballs' `observed_ft` is
-  interpolated straight across a gauge's outage (no gap limit in `station.py`): `history.unbridged` takes those lines out. A gauge without its own record through
-  the peak follows the nearest one that has it. Add a storm as a row in `events/events.json` and run
+  2009, Irene 2011 and Matthew 2016 (NOAA CO-OPS, USGS since 2007; ft NAVD88). Run tarballs made before 2026-11-27
+  have `observed_ft` interpolated straight across a gauge's outage: `history.unbridged` takes those lines out. A gauge
+  without its own record through the peak follows the nearest one that has it. Add a storm as a row in `events/events.json` and run
   `python -m inundation.history noaa --event <id>`.
-- Not wired yet: a workflow, Pages hosting and the push to the AGOL folder "StormSense CREST". Each area's prepared
-  tables and file geodatabase are in the project's shared folder under `inundation/<area>/`.
+- Site (2026-11-27): `inundation/areas.csv` lists the localities (Hampton Roads and the Middle Peninsula so far; add
+  a row to add one). `python -m inundation.site --prepared <dir of <name>/> --latest <Latest site> --out site/inundation`
+  writes each locality's page under `<name>/` and `index.html`, the map of all of them (`templates/statewide.html`:
+  Leaflet, Esri satellite hybrid or street basemap, opens on Sewells Point, water reprojected from the localities' UTM
+  depth tiles, totals from `areas.json` `curves`, each flagged road piece and building from zoom 15 in, read from the
+  locality's own `static.json`). `inundation.yml` runs it after every StormSense run and deploys to
+  Pages at /StormSense-archive/inundation/ (release `inundation-pages`); Pages is one site per repo, so it and
+  `crest.yml` each unpack the other's zip before deploying. Localities are prepared on Actions, once each (manual run,
+  `prepare` = names, `missing` or `all`; release `inundation-prepared`), because a session cannot upload release assets.
+- Tidal water (2026-11-27): the largest body at -2 ft in the frame plus every body of 5 ha or more that runs off the
+  frame's edge (`depth.tidal_seeds`; before that the Piankatank side of Gloucester and the York side of James City
+  were land), except one leaving inside a watershed without a gauge (`prep.sea_cells`). `spread.sparse` keeps the
+  union-find's untouched pages out of memory (King and Queen's frame is 2.96 billion cells). VGIN has no footprints
+  for King and Queen: FEMA USA Structures outlines stand in (`vgin.buildings`).
+- A gauge without a forecast in a run (BRDH on 27 Nov 2026) follows the nearest gauge that has one
+  (`status.read_levels`; `stations_following` in the summary, `follows` in levels.json, named on the pages).
+- Not wired yet: the push to the AGOL folder "StormSense CREST". Each area's prepared tables and file geodatabase are
+  also in the project's shared folder under `inundation/<area>/`.
 
 ## Station sources that are not Tidewatch
 

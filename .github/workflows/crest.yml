@@ -143,6 +143,15 @@ jobs:
               --notes "The newest StormSense CREST site (map page, one page per station, data and feeds) as crest_site.zip, replaced on every run."
           gh release upload crest-pages -R "$GITHUB_REPOSITORY" --clobber crest_site.zip
 
+      # GitHub Pages holds one site per repository: the newest inundation maps (inundation.yml) go out with CREST's
+      - name: The inundation maps beside these
+        if: steps.build.outcome == 'success' && github.event_name != 'pull_request' && vars.CREST_PAGES == 'true'
+        run: |
+          if gh release download inundation-pages -R "$GITHUB_REPOSITORY" -p inundation_site.zip -D . 2>/dev/null; then
+            unzip -qo inundation_site.zip -d site
+            du -sh site/inundation
+          fi
+
       - name: Pages artifact
         if: steps.build.outcome == 'success' && github.event_name != 'pull_request' && vars.CREST_PAGES == 'true'
         uses: actions/upload-pages-artifact@v3
@@ -176,6 +185,9 @@ jobs:
     needs: build
     if: needs.build.outputs.pages == 'true'
     runs-on: ubuntu-latest
+    concurrency:          # inundation.yml deploys the same site
+      group: pages
+      cancel-in-progress: false
     permissions:
       pages: write
       id-token: write

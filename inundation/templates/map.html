@@ -194,7 +194,7 @@ select{font:inherit;font-size:13.5px;color:var(--ink);background:var(--panel);bo
 
   <div class="card" id="gaugeCard">
     <h2>Gauges</h2>
-    <p class="note">Each road piece and building follows its nearest StormSense gauge. Levels are feet above NAVD88 at the selected time.</p>
+    <p class="note">Each road piece and building follows its nearest StormSense gauge. Levels are feet above NAVD88 at the selected time.<span id="followNote"></span></p>
     <div class="scroll"><table id="gauges"></table></div>
   </div>
 </div>
@@ -242,8 +242,10 @@ Promise.all([getJSON("static.json"), getJSON("levels.json"), getJSON("events.jso
   S = r[0]; LV = r[1]; EV = r[2] && r[2].events ? r[2] : EV; setup();
 }).catch(function(e){ fail("The map data did not load (" + e.message + "). Reload the page to try again."); });
 
+function followNote(){ var out = []; for (var id in LV.stations){ var f = LV.stations[id].follows; if (f) out.push(id + " has no forecast in this run and follows " + f + "."); }
+  if ($("followNote")) $("followNote").textContent = out.length ? " " + out.join(" ") : ""; }
 function setup(){
-  readColors();
+  readColors(); followNote();
   var P = S.pieces, B = S.buildings, RD = S.roads, i, k;
   R.pxy = arr(P.xy, Uint16Array); R.pg = arr(P.ground, Int16Array); R.pc = arr(P.connect, Int16Array);
   R.pst = bytes(P.station); R.proad = arr(P.road, P.road_bytes === 4 ? Uint32Array : Uint16Array); R.plen = arr(P.len, Uint16Array);
@@ -484,7 +486,7 @@ function paint(t){ if (t.stamp === R.stamp) return; var a = t.a, lev = t.lev, zn
   t.ctx.putImageData(t.im, 0, 0); t.stamp = R.stamp; }
 function resize(fit){ cv.style.aspectRatio = S.width_m + " / " + S.height_m; var r = cv.getBoundingClientRect(); cv.width = Math.round(r.width * DPR); cv.height = Math.round(r.height * DPR); R.w = r.width; R.h = r.height; if (fit) fitAll(); }
 function fitAll(){ var wu = S.width_m / S.unit_m, hu = S.height_m / S.unit_m; V.s = Math.min(R.w / wu, R.h / hu); V.ox = (R.w - wu * V.s) / 2; V.oy = (R.h - hu * V.s) / 2; }
-function zoomAt(x, y, k){ var wu = S.width_m / S.unit_m, min = Math.min(R.w / wu, R.h / (S.height_m / S.unit_m)) * 0.8, s = Math.max(min, Math.min(6, V.s * k)); k = s / V.s; V.ox = x - (x - V.ox) * k; V.oy = y - (y - V.oy) * k; V.s = s; draw(); $("pop").hidden = true; }
+function zoomAt(x, y, k){ var wu = S.width_m / S.unit_m, min = Math.min(R.w / wu, R.h / (S.height_m / S.unit_m)) * 0.8, s = Math.max(min, Math.min(12 * S.unit_m, V.s * k)); k = s / V.s; V.ox = x - (x - V.ox) * k; V.oy = y - (y - V.oy) * k; V.s = s; draw(); $("pop").hidden = true; }
 function drawRaster(s, ox, oy, w, h){ if (!R.L) return;
   var ra = S.raster, cu = ra.cell_m / S.unit_m, pc = s * cu, ov = ra.overview, o = R.over, r, c;
   if (o && o.state === 1){ paint(o); ctx.imageSmoothingEnabled = pc * ov.factor < 3; ctx.drawImage(o.cv, ox, oy, ov.width * ov.factor * pc, ov.height * ov.factor * pc); }

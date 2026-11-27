@@ -43,8 +43,18 @@ def ms(t):
     return int(t.timestamp() * 1000)
 
 
-def pts(times, vals):
-    return [[ms(t), round(float(v), 3)] for t, v in zip(times, vals) if not np.isnan(v)]
+def pts(times, vals, gap=None):
+    """[[ms, value]] without the NaNs. With gap (a timedelta), a [ms, null] follows a point whose next one is
+    further away than that, so the chart breaks the line there instead of drawing it across an outage."""
+    out = [[ms(t), round(float(v), 3)] for t, v in zip(times, vals) if not np.isnan(v)]
+    if gap is None or len(out) < 2:
+        return out
+    limit, broken = gap.total_seconds() * 1000, [out[0]]
+    for a, b in zip(out, out[1:]):
+        if b[0] - a[0] > limit:
+            broken.append([a[0] + 1, None])
+        broken.append(b)
+    return broken
 
 
 def local_label(t):

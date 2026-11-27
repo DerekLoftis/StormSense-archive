@@ -49,6 +49,7 @@ import numpy as np
 import pandas as pd
 
 from . import flood, releases
+from .obs import without_bridges
 
 BANDS = (("0-12", 0, 12), ("12-36", 12, 36), ("36-72", 36, 72), ("0-36", 0, 36), ("0-72", 0, 72))
 SEGMENTS = tuple((f"{a}-{a + 6}", a, a + 6) for a in range(0, 72, 6))
@@ -184,6 +185,8 @@ def read_run(path, navd88=None):
             else:
                 df = pd.read_csv(t.extractfile(files[name]))
             df.index = pd.to_datetime(df.pop("date_time_z"), utc=True)
+            if "observed_ft" in df:       # runs before 2026-11-27 drew a line across an outage: not the truth
+                df["observed_ft"] = without_bridges(df["observed_ft"].to_numpy(float))
             out[st] = (pd.Timestamp(info["t0"]), df, info.get("members", {}))
     updated = pd.Timestamp(datetime.strptime(latest["updated"], "%Y-%m-%d %H:%M UTC").replace(tzinfo=timezone.utc))
     return updated, out

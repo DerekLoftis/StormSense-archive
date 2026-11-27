@@ -21,6 +21,9 @@ estimated damage.
 2. **Every forecast run** (`python -m inundation.status`): each tethered gauge's published fore72 (NAVD88) and
    last observation are compared with those levels: state now, at the forecast's highest water, at the 90% level,
    first and last time flooded, hours flooded, and an approximate chance of flooding within 72 hours.
+   A gauge the run published no forecast for (it is out, like Back River's after the 2026 Thanksgiving storm)
+   follows the nearest gauge that has one (`status.read_levels`), so its roads and buildings are not counted dry;
+   the summary lists it under `stations_following` and the pages name it.
 
 Nothing heavy happens per run: the rasters are only read in step 1.
 
@@ -33,6 +36,13 @@ Nothing heavy happens per run: the rasters are only read in step 1.
   `noaa-nos-coastal-lidar-pds/dem/Chesapeake_Coned_update_DEM_2016_8656/` (EPSG:26918, m NAVD88). At each
   level, water covers the cells at or below it that are joined to tidal water, so a low spot behind higher ground
   stays dry until that ground is overtopped, or until a storm drain reaches it (next section).
+  Tidal water is the largest body of water at -2 ft in the locality's frame, and every other body of 5 hectares or
+  more that runs off the frame's edge (`depth.tidal_seeds`): an estuary that meets the first one outside the frame,
+  like the Piankatank north of Gloucester (frame: the York and Mobjack Bay) or the York north of James City (frame:
+  the James). Until 2026-11-27 only the largest body counted, and the second river's shore was land. A body that
+  leaves the frame inside a watershed no gauge stands for (below) is not tidal water (`prep.sea_cells`).
+- Memory: one byte per cell for the result plus the union-find's pages over low ground (`spread.sparse`; the frame
+  of King and Queen County is 2.96 billion cells and needed all 16 GB before the untouched pages were kept out).
 - Derek's 0.25 ft HUC-12 depth grids, once hosted (planned: mobjack.vims.edu `VIMS_PHYS`): sample each grid at the
   points and pass the depths to `depth.from_depth_stack`; everything after that is unchanged.
 
@@ -100,6 +110,12 @@ them in early 2026, year built for some, the site ZIP code, and no use codes. A 
 not from the localities' code tables, and the first flood map year is only set for Norfolk (elsewhere every assumed
 floor is 3 ft).
 
+## Building footprints
+
+VGIN's statewide footprints, by locality FIPS. VGIN publishes none for King and Queen County (November 2026): there
+the outlines of FEMA's USA Structures (Oak Ridge National Laboratory, traced from imagery) stand in
+(`vgin.buildings`), and the page's sources say so.
+
 ## Bridges, piers
 
 The bare-earth DEM has no bridge decks. Road pieces are kept in the table but never flagged when `bridge` > 0:
@@ -125,7 +141,7 @@ bridge layer (VDOT structures) would be better.
 | `tether.py` | HUC-12s, nearest gauge, overrides |
 | `prep.py` | step 1; writes `<name>_roads.csv.gz`, `<name>_buildings.csv.gz`, `<name>.gpkg` (`--gdb`: `<name>.gdb`), `<name>_tether.csv`, `page/` |
 | `status.py` | step 2; writes `<name>_roads_status.csv`, `<name>_buildings_status.csv` (+ `.geojson` with `--layers`), `<name>_summary.json`, `<name>_timeline.csv`, `page/levels.json` |
-| `page.py`, `templates/map.html` | the area's self-contained map page (no CDN, no map tiles): forecast, Historical Floods and Scenario views, the prediction plot, counts, gauge table; `python -m inundation.page --prepared <page dir> --work <work dir>` redraws an area's flood picture without a new `prep` |
+| `page.py`, `templates/map.html` | the area's self-contained map page (no CDN, no map tiles): forecast, Historical Floods and Scenario views, the prediction plot, counts, gauge table; `python -m inundation.page --prepared <page dir> --work <work dir>` redraws an area's flood picture without a new `prep`; with `--shapes` it only writes the page's coordinates again (they are whole units in 16 bits, half a metre each, doubled for a frame longer than 32.7 km) |
 | `history.py`, `events/` | past floods: 72 hours of every gauge's record around the highest water at Sewells Point |
 
 Extra packages (not needed by the StormSense run): `pip install -r inundation/requirements.txt`.
@@ -158,6 +174,34 @@ python -m inundation.status --prepared prepared --name norfolk --site <StormSens
   its 10-90% band and NWS stages on the left axis, road miles and buildings on two right axes (Derek's layout,
   2026-11-27).
 
+## The site and the map of all localities
+
+`areas.csv` lists the localities (FIPS, the short name used in file names and URLs, the title, the region):
+Hampton Roads and the Middle Peninsula so far. Add a row to add a locality.
+
+    python -m inundation.site --prepared <folder of <name>/ folders> --latest <Latest site> --out site/inundation
+
+writes one site: `<name>/` is each prepared locality's own map page (its tables under `<name>/data/`) and
+`index.html` is the map of all of them (`templates/statewide.html`). That map opens on Sewells Point over a
+satellite basemap with roads and place names, or a street map (Esri's World Imagery, its two reference layers and
+World Street Map, drawn with Leaflet from `crest/jslib`). The water is drawn from the localities' own depth tiles:
+they are in each locality's UTM zone, so the page reprojects them as it draws (a far view from `tiles/z1.png`,
+`tiles/z0.png` closer, the 1024-pixel tiles from zoom 14), cut to the locality's outline (`<name>_outline.geojson`,
+written by `prep`) so neighbours do not paint over each other. Roads, buildings and damage are counted from
+`areas.json`'s `curves`: for each locality and gauge, the totals at each of the 49 levels, read off at the gauge's
+water level, so the far view never loads the road and building tables. From zoom 15 in, the page reads the
+`static.json` of each locality in view (its own page's data) and draws every flooded or ponded road piece and
+flooded building on the water; a click on one gives its depth, ground and gauge, a click elsewhere in a locality its
+counts and the link to its own map. The plot is Sewells Point's forecast.
+
+`.github/workflows/inundation.yml` runs it after every StormSense run and publishes to GitHub Pages at
+https://derekloftis.github.io/StormSense-archive/inundation/ (and to release `inundation-pages`). GitHub Pages
+holds one site per repository, so this workflow and `crest.yml` each unpack the other's newest site zip beside their
+own before deploying. A locality is prepared on Actions too, once: run the workflow by hand with `prepare` set to
+names from `areas.csv`, `missing` or `all` (one job per locality, four at a time); the result is kept on release
+`inundation-prepared` as `<name>_prepared.tar` and `<name>_inundation_gdb.zip`. Prepare a locality again after its
+sources or the method change. A pull request prepares Poquoson and keeps its site as an artifact.
+
 ## Historical floods
 
 `events/events.json` lists the storms; each has `events/<id>/event.json` (peak, window, every gauge with its highest
@@ -182,7 +226,7 @@ before and after the highest water at Sewells Point (NOAA 8638610, on record sin
 - `python -m inundation.history stormsense --event 2026-thanksgiving-noreaster --runs ensemble_*.tar.gz`: StormSense's
   own gauges from the archived runs' `observed_ft`, plus every run's published forecast (`forecasts.csv.gz`: `cycle,
   station, date_time_z, forecast_ft_navd88, p10_ft, p90_ft`). `complete` is false until the 36 hours after the peak are
-  archived: run it again then. An ens72 table draws its `observed_ft` straight across a gauge's outage; twelve or more
+  archived: run it again then. An ens72 table made before 27 Nov 2026 draws its `observed_ft` straight across a gauge's outage; twelve or more
   readings in one line are taken as such a bridge and left out (`bridged_readings_left_out`: the Bay Bridge Tunnel
   gauge was down from 3:36 AM to 2 PM EST on 26 Nov, through the peak).
 - On a page (`status --page` writes `events.json`), each of the area's gauges uses its own record where it has one
@@ -248,4 +292,4 @@ the page says which watersheds are missing. A gauge there (or a Currituck Sound 
 - `chance` uses the 10-90% band at the forecast's peak; the run's own error trajectories would be better.
 - "Now" is the last observation at the forecast run; a lighter, more frequent job could refresh it.
 - Statewide, 5 m pieces are tens of millions of features: decide the packaging (per locality or HUC-12) first.
-- Publishing: hosted layers in the AGOL folder "StormSense CREST" and the page on Pages are not wired yet.
+- Publishing: the hosted layers in the AGOL folder "StormSense CREST" are not wired yet (Pages is: see "The site").

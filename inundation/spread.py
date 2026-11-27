@@ -40,13 +40,24 @@ def own_level(dem_ft, levels, blocked=None, rows=2048, path=None):
     return g
 
 
-def seed_cell(dem_ft, level, step=8):
-    """A cell of the largest body of water at the lowest level, found on every `step`-th cell of a large grid."""
+def seed_cells(dem_ft, level, step=8):
+    """A cell in each body of tidal water at the lowest level (depth.tidal_seeds), found on every `step`-th cell of
+    a large grid."""
     from . import depth
     if dem_ft.size <= 50_000_000:
-        return depth.tidal_seed(np.asarray(dem_ft), level)[0]
-    (r, c), _ = depth.tidal_seed(np.asarray(dem_ft[::step, ::step]), level)
-    return r * step, c * step
+        return depth.tidal_seeds(np.asarray(dem_ft), level)
+    return [(r * step, c * step) for r, c in depth.tidal_seeds(np.asarray(dem_ft[::step, ::step]), level, cell_m2=step * step)]
+
+
+def sparse(n, dtype):
+    """n items whose untouched pages take no memory. numpy asks the kernel for huge pages for a large array, so one
+    write commits 2 MB: the union-find's 4 bytes per cell were all in memory although only the low ground is ever
+    written, and King and Queen County's 2.96 billion cells did not fit in 16 GB."""
+    import mmap
+    m = mmap.mmap(-1, max(1, n) * np.dtype(dtype).itemsize)
+    if hasattr(mmap, "MADV_NOHUGEPAGE"):
+        m.madvise(mmap.MADV_NOHUGEPAGE)
+    return np.frombuffer(m, dtype)
 
 
 if njit is not None:
@@ -97,8 +108,7 @@ if njit is not None:
         vflag = np.full(max(n_nets, 1), 255, np.uint8)
         for i in range(n_nets):
             parent[n + i] = n + i
-        seed = seed_r * w + seed_c
-        if (gf[seed] & 127) != 0:
+        if (gf[seed_r[0] * w + seed_c[0]] & 127) != 0:
             return 0
         for k in range(nlev):
             for r in range(h):
@@ -132,9 +142,11 @@ if njit is not None:
                         while lo < len(cells) and cells[lo] == cell:
                             _join(parent, flag, vflag, n, cell, n + nets[lo], k)
                             lo += 1
-            if k == 0:
-                root = _find(parent, seed)
-                flag[root] = 0
+            if k == 0:                                                  # every body of tidal water is the sea
+                for i in range(len(seed_r)):
+                    seed = seed_r[i] * w + seed_c[i]
+                    if (gf[seed] & 127) == 0:
+                        flag[_find(parent, seed)] = 0
         wet = 0
         for cell in range(n):
             if (gf[cell] & 127) == 127:
@@ -163,8 +175,9 @@ def connect_index(dem_ft, levels, seed=None, log=None, links=None, blocked=None,
     paths = [store] if isinstance(store, str) else list(store or [])
     tmp = paths[0] + ".levels.tmp.npy" if paths and h * w > BIG else None
     g = own_level(dem_ft, levels, blocked, path=tmp)
-    if seed is None:
-        seed = seed_cell(dem_ft, levels[0])
+    from .depth import seed_list
+    seeds = seed_cells(dem_ft, levels[0]) if seed is None else seed_list(seed)
+    seed_r, seed_c = (np.array([q[i] for q in seeds], np.int64) for i in (0, 1))
     n_nets = 0
     if links is not None:
         lr, lc, ln = (np.asarray(a) for a in links)
@@ -173,10 +186,10 @@ def connect_index(dem_ft, levels, seed=None, log=None, links=None, blocked=None,
         n_nets = int(net.max()) + 1 if len(net) else 0
     if h * w + n_nets >= 2 ** 32:
         raise ValueError("the grid has more than 4.29 billion cells: split the area")
-    parent = np.empty(h * w + n_nets, np.uint32)
+    parent = sparse(h * w + n_nets, np.uint32)
     empty = np.zeros(0, np.int64)
     out = np.full((h, w), NEVER, np.uint8)
-    n = _spread(g, out, parent, seed[0], seed[1], len(levels), empty, empty, 0, False)
+    n = _spread(g, out, parent, seed_r, seed_c, len(levels), empty, empty, 0, False)
     if log:
         log(f"  over the surface: {n:,} cells reached through {levels[-1]:+.2f} ft")
     def keep(a, i):                       # to its file and back as a memory map, or as it is
@@ -198,7 +211,7 @@ def connect_index(dem_ft, levels, seed=None, log=None, links=None, blocked=None,
     order = np.argsort(cell, kind="stable")
     g[lr, lc] |= OPENING
     piped = np.full((h, w), NEVER, np.uint8)
-    m = _spread(g, piped, parent, seed[0], seed[1], len(levels), cell[order], net[order], n_nets, True)
+    m = _spread(g, piped, parent, seed_r, seed_c, len(levels), cell[order], net[order], n_nets, True)
     if log:
         log(f"  with the pipes: {m - n:,} more cells")
     del parent

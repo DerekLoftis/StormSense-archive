@@ -384,3 +384,126 @@ def test_a_line_drawn_across_an_outage_is_not_a_record():
     assert kept == tide[:41] + tide[150:]
     short = [(a[0] + timedelta(minutes=6 * k), round(a[1] + (tide[46][1] - a[1]) * k / 6, 3)) for k in range(1, 6)]
     assert history.unbridged(tide[:41] + short + tide[46:]) == tide[:41] + short + tide[46:]   # half an hour's fill is left alone
+
+
+def test_page_coordinates_fit_a_long_county():
+    """Half-metre units in 16 bits end at 32.7 km: Gloucester (42 km) drew everything past that on one line."""
+    from inundation import page
+    assert page.unit_for((0, 0, 16000, 17500)) == 0.5
+    assert page.unit_for((0, 0, 36915, 42325)) == 1.0
+    assert page.unit_for((0, 0, 70000, 140000)) == 4.0
+    unit = page.unit_for((0, 0, 36915, 42325))
+    far = page.units([42000.0], 0, unit)
+    assert far[0] == 42000 and far[0] < 65535
+
+
+def test_statewide_curves_count_each_gauges_roads_and_buildings_at_every_level():
+    from inundation import site
+    roads = {"station": np.array(["AAAA", "AAAA", "AAAA", "ZZZZ"], dtype=object), "bridge": np.array([0, 0, 1, 0.0]),
+             "ground_ft": np.array([3.0, 3.0, 3.0, 1.0]), "connect_ft": np.array([3.0, 5.0, 3.0, 1.0]),
+             "length_m": np.array([site.M_PER_MILE, site.M_PER_MILE / 2, 50.0, site.M_PER_MILE / 4])}
+    bldgs = {"station": np.array(["AAAA", "AAAA"], dtype=object), "over_water": np.array([0, 1.0]),
+             "ground_ft": np.array([4.0, 0.0]), "connect_ft": np.array([4.0, 0.0])}
+    c = site.curves(roads, bldgs, {})
+    lv = list(depth.LEVELS_FT)
+    assert sorted(c) == ["AAAA", "ZZZZ"] and all(len(c["AAAA"][k]) == len(lv) == 49 for k in "fpb") and "d" not in c["AAAA"]
+    at = lambda st, k, ft: c[st][k][lv.index(ft)]                      # noqa: E731
+    assert at("AAAA", "f", 3.0) == 0 and at("AAAA", "p", 3.25) == 1.0 and at("AAAA", "p", 3.5) == 1.0
+    assert at("AAAA", "f", 3.75) == 1.0 and at("AAAA", "p", 3.75) == 0      # the bridge is never counted
+    assert at("AAAA", "f", 4.75) == 1.0 and at("AAAA", "f", 5.0) == 1.5     # the cut-off piece floods when water gets to it
+    assert at("AAAA", "b", 4.5) == 0 and at("AAAA", "b", 4.75) == 1 and at("AAAA", "b", 10.0) == 1
+    assert at("ZZZZ", "f", 1.75) == 0.25 and c["ZZZZ"]["b"] == [0] * 49
+
+
+def test_the_list_of_areas_names_each_locality_once_and_the_workflow_reads_it():
+    from inundation import site
+    rows = site.areas()
+    assert len({r["name"] for r in rows}) == len({r["fips"] for r in rows}) == len(rows) >= 18
+    assert all(r["fips"].startswith("51") and len(r["fips"]) == 5 and r["title"] and r["region"] for r in rows)
+    assert all(r["name"] == r["name"].lower() and " " not in r["name"] for r in rows)       # a folder and a URL
+    assert {"norfolk", "poquoson", "gloucester", "york"} <= {r["name"] for r in rows}
+    with open(os.path.join(os.path.dirname(site.__file__), "templates", "statewide.html")) as fh:
+        html = fh.read()
+    assert "__LEAFLET__" in html and "__LEAFLET_CSS__" in html and "areas.json" in html
+
+
+def test_statewide_map_gets_a_small_far_view_of_an_area(tmp_path):
+    Image = pytest.importorskip("PIL.Image")
+    from inundation import site
+    os.makedirs(tmp_path / "tiles")
+    a = np.zeros((900, 1500, 3), np.uint8)
+    a[::3, ::3] = (7, 1, 40)
+    Image.fromarray(a, "RGB").save(tmp_path / "tiles" / "z0.png")
+    raster = {"dir": "tiles", "overview": {"file": "tiles/z0.png", "factor": 4, "width": 1500, "height": 900}}
+    small = site.small_overview(str(tmp_path), raster)
+    assert small == {"file": "tiles/z1.png", "factor": 12, "width": 500, "height": 300}
+    b = np.asarray(Image.open(tmp_path / "tiles" / "z1.png"))
+    assert b.shape == (300, 500, 3) and (b == a[1::3, 1::3]).all()          # cells are picked, never averaged
+    raster["overview"].update(width=400, height=300)
+    assert site.small_overview(str(tmp_path), raster) == raster["overview"]
+
+
+def test_a_gauge_without_a_forecast_follows_the_nearest_gauge_that_has_one(tmp_path):
+    os.makedirs(tmp_path / "fore72")
+    t0 = datetime(2026, 11, 27, 18, 0, tzinfo=timezone.utc)
+    rows = [{"date_time_z": (t0 + timedelta(hours=h)).strftime("%Y-%m-%dT%H:%M:%SZ"), "SSforecast_ft": 2.0 + h / 10} for h in range(4)]
+    for st in ("USBK", "SWPT"):
+        with open(tmp_path / "fore72" / f"{st}_fore72_NAVD.json", "w") as fh:
+            json.dump({"datum": "NAVD88", "units": "feet", "data": rows}, fh)
+    said = []
+    levels, follows, missing = status.read_levels(str(tmp_path), ["BRDH", "USBK", "NOPE"], log=said.append)
+    assert follows == {"BRDH": "USBK"} and missing == ["NOPE"]            # Back River's nearest gauge is Brick Kiln Creek
+    assert levels["BRDH"]["follows"] == "USBK" and levels["BRDH"]["station"] == "BRDH" and "follows" not in levels["USBK"]
+    assert levels["BRDH"]["peak_ft"] == levels["USBK"]["peak_ft"] == 2.3 and len(said) == 2 and "follow USBK" in said[0]
+
+
+def two_estuaries():
+    """Sea on the west edge, a second estuary running off the south edge behind a ridge, and a pond inside."""
+    dem = np.full((40, 60), 30.0, np.float32)
+    dem[:, :5] = -6.0                          # the sea: the largest body
+    dem[:, 5:10] = 1.0                         # its shore
+    dem[25:, 30:40] = -4.0                     # an estuary that meets the sea outside the grid
+    dem[20:25, 30:40] = 2.0                    # its marsh
+    dem[5:10, 45:50] = -4.0                    # a pond: the sea has to reach it
+    dem[5:10, 50:55] = 2.0
+    return dem
+
+
+def test_every_estuary_that_runs_off_the_grid_is_tidal_water():
+    pytest.importorskip("scipy")
+    dem = two_estuaries()
+    seeds = depth.tidal_seeds(dem, min_m2=100)
+    assert len(seeds) == 2 and seeds[0][1] < 5 and seeds[1][0] == 39 and 30 <= seeds[1][1] < 40
+    assert len(depth.tidal_seeds(dem, min_m2=200)) == 1                  # too small to be an estuary: not a seed
+    lv = list(depth.LEVELS_FT)
+    for method in ("label", "spread"):
+        if method == "spread":
+            pytest.importorskip("numba")
+        one = depth.connect_index(dem, seed=seeds[0], method=method)
+        both = depth.connect_index(dem, seed=seeds, method=method)
+        assert one[30, 35] == depth.NEVER and one[22, 35] == depth.NEVER   # with the sea alone the estuary is land
+        assert both[30, 35] == 0 and both[22, 35] == lv.index(2.0)          # its marsh floods at 2 ft
+        assert both[7, 47] == depth.NEVER and both[7, 52] == depth.NEVER    # the pond is behind 30 ft of ground
+        assert both[3, 7] == one[3, 7] == lv.index(1.0)
+
+
+def test_water_leaving_the_grid_in_a_watershed_without_a_gauge_is_not_the_sea():
+    pytest.importorskip("scipy"); pytest.importorskip("shapely")
+    from inundation import prep
+    dem = np.full((400, 600), 30.0, np.float32)
+    dem[:, :200] = -6.0
+    dem[150:, 300:500] = -4.0                                             # 50,000 cells off the south edge
+    box = lambda x0, x1, code: {"type": "Feature", "properties": {"huc12": code, "name": code},     # noqa: E731
+                                "geometry": {"type": "Polygon", "coordinates": [[[x0, 0], [x1, 0], [x1, 400], [x0, 400], [x0, 0]]]}}
+    hucs = [box(0, 250, "020801010101"), box(250, 600, "030102050101")]
+    said = []
+    kept = prep.sea_cells(dem, (0, 400), hucs, {"03010205*": "-"}, flat, said.append)
+    assert len(kept) == 1 and kept[0][1] < 200 and "030102050101" in said[0]
+    assert len(prep.sea_cells(dem, (0, 400), hucs, {}, flat)) == 2
+
+
+def test_the_union_find_takes_memory_only_where_it_is_written():
+    from inundation import spread
+    a = spread.sparse(50_000_000, np.uint32)
+    a[7] = 9; a[-1] = 3
+    assert a.dtype == np.uint32 and len(a) == 50_000_000 and a[7] == 9 and a[-1] == 3 and a[1_000_000] == 0

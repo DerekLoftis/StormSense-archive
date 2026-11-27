@@ -98,9 +98,44 @@ def tidal_seed(dem_ft, level=LEVELS_FT[0]):
     return (int(r), int(c)), int(sizes[k])
 
 
+EDGE_BODY_M2 = 50_000      # a body of water that runs off the grid's edge is tidal water from this size up
+
+
+def tidal_seeds(dem_ft, level=LEVELS_FT[0], cell_m2=1.0, min_m2=EDGE_BODY_M2):
+    """One cell in each body of tidal water at the lowest level, the largest body first.
+
+    The largest body is the sea. Every other body of at least `min_m2` that runs off the grid's edge is tidal too:
+    an estuary that meets the sea outside the frame (the Piankatank north of Gloucester, whose frame holds the York
+    and Mobjack Bay; the York north of James City, whose frame holds the James). Its cell is one on the edge, so
+    the caller can tell where it leaves the grid. A pond inside the grid is not a seed: the sea has to reach it."""
+    from scipy import ndimage
+    lab, n = ndimage.label(dem_ft <= level, structure=np.ones((3, 3)))
+    if n == 0:
+        raise ValueError("no cell at or below the lowest level: nothing to flood from")
+    sizes = np.bincount(lab.ravel())
+    sizes[0] = 0
+    k = int(sizes.argmax())
+    r, c = np.unravel_index(int(np.argmax(lab == k)), lab.shape)
+    out = [(int(r), int(c))]
+    h, w = lab.shape
+    er = np.concatenate([np.zeros(w, int), np.full(w, h - 1), np.arange(h), np.arange(h)])
+    ec = np.concatenate([np.arange(w), np.arange(w), np.zeros(h, int), np.full(h, w - 1)])
+    ids, first = np.unique(lab[er, ec], return_index=True)
+    for i, j in sorted(zip(ids.tolist(), first.tolist()), key=lambda q: -sizes[q[0]]):
+        if i not in (0, k) and sizes[i] * cell_m2 >= min_m2:
+            out.append((int(er[j]), int(ec[j])))
+    return out
+
+
+def seed_list(seed):
+    """[(row, col), ...] from one cell or a list of them."""
+    return [tuple(int(v) for v in seed)] if np.ndim(seed) == 1 else [tuple(int(v) for v in q) for q in seed]
+
+
 def connect_index(dem_ft, levels=LEVELS_FT, seed=None, log=None, links=None, blocked=None, method=None, store=None):
     """For every cell, the index of the lowest level at which it is under water joined to the seed
-    (NEVER where it stays dry or cut off through the top level).
+    (NEVER where it stays dry or cut off through the top level). seed: one (row, col) or a list of them, a cell in
+    each body of tidal water; default tidal_seeds (the largest body and those that run off the grid's edge).
 
     links=(rows, cols, network) adds the stormwater pipes (drainage.links): cells that belong to the same network
     are joined below ground, so once water covers one of them, every other one at or below the level floods the
@@ -117,8 +152,7 @@ def connect_index(dem_ft, levels=LEVELS_FT, seed=None, log=None, links=None, blo
         if method == "spread":
             raise ImportError("numba is not installed")
     from scipy import ndimage
-    if seed is None:
-        seed, _ = tidal_seed(dem_ft, levels[0])
+    seeds = tidal_seeds(dem_ft, levels[0]) if seed is None else seed_list(seed)
     out = np.full(dem_ft.shape, NEVER, np.uint8)
     piped = np.full(dem_ft.shape, NEVER, np.uint8) if links is not None else None
     if links is not None:
@@ -131,8 +165,9 @@ def connect_index(dem_ft, levels=LEVELS_FT, seed=None, log=None, links=None, blo
             low[blocked] = False
         lab, n = ndimage.label(low, structure=eight)
         del low
-        sea = lab[seed]
-        wet = lab == sea
+        sea = np.unique([lab[q] for q in seeds])
+        sea = sea[sea > 0]
+        wet = np.isin(lab, sea)
         out[wet & (out == NEVER)] = k
         msg = f"  level {lev:+.2f} ft: {int(wet.sum()):,} cells wet"
         if links is not None:

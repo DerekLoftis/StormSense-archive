@@ -19,6 +19,8 @@ from datetime import datetime, timedelta, timezone
 
 import numpy as np
 
+from .obs import without_bridges
+
 REPO = "DerekLoftis/StormSense-ensemble"
 UA = {"User-Agent": "StormSense forecast model (VIMS)"}
 NAME = re.compile(r"ensemble_(\d{4}-\d\d-\d\dT\d\dZ)(\.tar\.gz)?$")
@@ -105,6 +107,8 @@ def read_run(path, navd88=None):
         cols = {}
         for j, h in enumerate(head[1:], 1):
             v = np.array([float(r[j]) if r[j] else np.nan for r in rows])
+            if h == "observed_ft":        # runs before 2026-11-27 drew a line across an outage
+                v = without_bridges(v)
             if not np.isnan(v).all():
                 cols[h[:-3]] = v + (0.0 if h.endswith("_surge_ft") else add)
         by_st[st] = (grid, cols)

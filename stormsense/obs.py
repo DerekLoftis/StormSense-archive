@@ -355,7 +355,36 @@ def qc(t, v, lo=-4.0, hi=14.0):
     return t[flags == 0], v[flags == 0]
 
 
-def on_six_minutes(t, v, max_gap=timedelta(minutes=30)):
+MAX_GAP = timedelta(minutes=30)     # a longer silence is an outage: a gap in the record, never a line across it
+BRIDGE_N = 12                       # this many readings in one straight line (72 minutes) are such a line
+
+
+def without_bridges(v, n=BRIDGE_N, tol=0.0021):
+    """v (readings on the six-minute clock, NaN where there is none) with the straight lines taken out.
+    Runs archived before 2026-11-27 interpolated the gauge straight across an outage, so a gauge that was
+    down through a storm's peak seemed to have recorded a slow, steady rise. n or more readings in a line,
+    to the tables' three decimals, are set to NaN; the reading at each end of the line is real and kept,
+    except a line the series starts in, whose start is part of the line."""
+    v = np.array(v, float)
+    if len(v) < max(n, 3):
+        return v
+    line = np.abs(np.diff(v, 2)) <= tol       # False next to a NaN
+    seen = np.flatnonzero(~np.isnan(v))
+    out, i = v.copy(), 0
+    while i < len(line):
+        if not line[i]:
+            i += 1
+            continue
+        j = i
+        while j < len(line) and line[j]:
+            j += 1
+        if j - i + 2 >= n:                    # readings i .. j+1 are in one line
+            out[i + (0 if i == seen[0] else 1):j + 1] = np.nan
+        i = j
+    return out
+
+
+def on_six_minutes(t, v, max_gap=MAX_GAP):
     """Series on the 6-minute clock: values on it kept, others interpolated across gaps up to
     max_gap (USGS gauges report every 15 minutes, VIMS gauges every minute)."""
     if len(t) < 2:

@@ -83,6 +83,44 @@ def station_levels(site, st):
     return out
 
 
+def read_levels(site, stations, log=print):
+    """({gauge: levels}, {gauge: the gauge it follows}, [gauges left out]) for the gauges an area is tethered to.
+
+    A gauge the run published no forecast for (it is out, like Back River's after the Thanksgiving storm) follows
+    the nearest gauge that has one, so its roads and buildings are not silently counted dry. The pages say so."""
+    levels, lost = {}, []
+    for st in stations:
+        try:
+            levels[st] = station_levels(site, st)
+        except Exception as e:
+            lost.append((st, e))
+    follows, missing = {}, []
+    if lost:
+        from . import tether
+        known = {g["station"]: g for g in tether.stations()}
+        with open(tether.STATIONS, newline="") as fh:
+            where = {r["station"]: (float(r["lat"]), float(r["lon"])) for r in csv.DictReader(fh) if r["lat"] and r["lon"]}
+        for st, e in lost:
+            near = []
+            if st in where:
+                lat, lon = where[st]
+                near = sorted((math.hypot((g["lat"] - lat) * 111.2, (g["lon"] - lon) * 111.2 * math.cos(math.radians(lat))), k)
+                              for k, g in known.items() if k != st)
+            for km, k in near[:8]:
+                try:
+                    own = levels.get(k)
+                    levels[st] = {**(own if own and not own.get("follows") else station_levels(site, k)), "station": st, "follows": k}
+                except Exception:
+                    continue
+                follows[st] = k
+                log(f"{st}: no forecast in this run; its roads and buildings follow {k}, {km:.1f} km away")
+                break
+            else:
+                missing.append(st)
+                log(f"{st}: no forecast read ({e}) and no gauge near it has one; its features are left out")
+    return levels, follows, missing
+
+
 def depth_at(level, ground, connect):
     """Water depth (ft) over features at a water level; 0 where the water has not reached them."""
     d = level - ground
@@ -208,13 +246,8 @@ def main(argv=None):
     roads = read_table(f"{a.prepared}/{a.name}_roads.csv.gz")
     bldgs = read_table(f"{a.prepared}/{a.name}_buildings.csv.gz")
     rskip, bskip = roads["bridge"] > 0, bldgs["over_water"] > 0
-    levels, missing = {}, []
-    for st in sorted((set(roads["station"]) | set(bldgs["station"])) - {""}):       # "": ground no gauge stands for
-        try:
-            levels[st] = station_levels(a.site, st)
-        except Exception as e:
-            missing.append(st)
-            print(f"{st}: no forecast read ({e}); its features are left out")
+    # "": ground no gauge stands for
+    levels, follows, missing = read_levels(a.site, sorted((set(roads["station"]) | set(bldgs["station"])) - {""}))
     rres, bres = evaluate(roads, levels, rskip), evaluate(bldgs, levels, bskip)
 
     def write(kind, cols, res, id_col, extra, layer, more=None):
@@ -296,7 +329,7 @@ def main(argv=None):
 
     summary = {"area": a.name, "made_utc": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%MZ"),
                "ponded_ft": PONDED_FT, "flooded_ft": FLOODED_FT, "stations_without_forecast": missing,
-               "totals": total(), "stations": {}}
+               "stations_following": follows, "totals": total(), "stations": {}}
     if dmg:
         from . import damage
         summary["damage"] = {"curves": damage.CITATION, "value": f"{prep['values'].get('assessment', 'assessed')} building (improvement) value",
