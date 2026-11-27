@@ -220,3 +220,38 @@ def test_plain_scores_fit_under_the_limit(tmp_path):
     assert kept.groupby("cycle").size().eq(50).all()           # whole cycles only
     assert skill.write_plain_scores(str(path), pub, limit=full + 10) == cycles[0]
     assert len(pd.read_csv(path)) == len(pub)
+
+
+def test_qc_drops_a_plateau_that_steps_away_and_back():
+    # YRCG 26 Nov 2026: the real-time feed jumped ~10 ft for 12 minutes, then for 72 minutes, through
+    # a half-way 6-minute average; the rolling median keeps a plateau longer than half its window
+    t, v = series(24, f=lambda h: 4.0 + np.cos(2 * np.pi * h / 12.42))
+    v = v.copy()
+    v[100], v[101] = v[99] + 5.0, v[99] + 6.0   # 12-minute spike through a ramp, under the 14 ft range
+    v[150] = v[149] + 3.0
+    v[151:163] = v[149] + 6.0                   # 78-minute plateau
+    tf, vf, f = obs.qc_flags(t, v)
+    assert (f[100:102] > 0).all() and (f[150:163] == 4).all()  # the short one is a plain spike
+    assert (f[:100] == 0).all() and (f[102:150] == 0).all() and (f[163:] == 0).all()
+
+
+def test_qc_step_block_open_at_the_end_is_dropped_but_a_lasting_shift_is_kept():
+    t, v = series(24)
+    v = v.copy()
+    v[-8:] += 5.0                                # still up when the run starts: not used
+    _, _, f = obs.qc_flags(t, v)
+    assert (f[-8:] == 4).all() and (f[:-8] == 0).all()
+    t, v = series(24)
+    v = v.copy()
+    v[100:] += 2.0                               # a datum change lasting 14 h: kept
+    _, _, f = obs.qc_flags(t, v)
+    assert not (f == 4).any()
+
+
+def test_qc_step_check_leaves_fast_real_water_alone():
+    # 0.8 ft per 6 minutes (RDIV, HPPV in the Nov 2026 nor'easter) and readings across a 2-hour gap
+    t, v = series(24, f=lambda h: 1.3 + 3.0 * np.sin(2 * np.pi * h / 3.0))
+    keep = np.ones(len(t), bool)
+    keep[60:80] = False
+    _, _, f = obs.qc_flags(t[keep], v[keep])
+    assert not (f == 4).any()

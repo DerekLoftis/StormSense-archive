@@ -56,7 +56,10 @@ project's shared folder (skill code, baselines, notes, station sheet, disclosure
   (`obs._fill_stale`); USSF has `nwps:NMDV2` behind USGS (MLLW = stage - 0.112, Nov 2026 storm outage).
   GS01/GS02 have no keyless source (GreenStream API needs Derek's key). USAR = CRSM and USNR = USSF are
   the same USGS sites. Datums ft above MLLW in `data/datums/<ST>.json` (NOAA or VDatum).
-- `observe.py`/`obs.py`: 40 days of every gauge's own record, QC'd, 6-minute, ft MLLW. No web4.
+- `observe.py`/`obs.py`: 40 days of every gauge's own record, QC'd, 6-minute, ft MLLW. No web4. QC: range -4..14 ft
+  MLLW, rolling-median spike, step blocks (a jump > 1.5 ft + 1.5 ft/h that jumps back within 6 h, or is still open
+  at the record's end; `_step_ok`, added after YRCG's 26 Nov 2026 15.4 ft NAVD plateau on web4/NWPS, which
+  CO-OPS's own feed never had), stuck runs.
   `STORMSENSE_OBS_DIR` reads local `<ST>.csv` instead (testing).
 - `tide.py`: UTide, 27 constituents no Sa/Ssa (13 under ~6 months), stored fits `harmonics/<ST>.json`
   or fitted per run from 40 days (>=29 d). m30 lock: tide shifted so its mean over the last 30 days of

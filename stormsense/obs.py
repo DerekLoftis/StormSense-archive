@@ -236,7 +236,16 @@ def stage_to_mllw(info, t, v):
 
 
 # --- quality control ---------------------------------------------------------------
-QC_FLAGS = {0: "ok", 1: "range", 2: "spike", 3: "flatline"}
+QC_FLAGS = {0: "ok", 1: "range", 2: "spike", 3: "flatline", 4: "step"}
+# Step/plateau check (YRCG 26 Nov 2026: NOAA Yorktown's real-time feed on web4 and NWPS jumped from
+# ~5 ft to ~15.4 ft NAVD88 for 12 minutes and again for 72 minutes, a target close under the radar).
+# A rolling median cannot catch a plateau longer than half its window, so a reading block that jumps
+# away and later jumps back is dropped as a whole. Real 6-minute changes reach 0.8 ft (RDIV, HPPV,
+# USLN-X during that storm); the tide and surge move at most ~1.5 ft an hour.
+STEP_FT = 1.5        # a jump between neighbouring readings larger than this (plus STEP_RATE) is suspect
+STEP_RATE = 1.5      # ft per hour the water may move between two readings
+STEP_GAP = timedelta(hours=3)        # readings further apart than this are not compared
+STEP_HOLD = timedelta(hours=6)       # a jump not undone within this long is a real shift: kept
 
 
 def _spike_ok(v, window=15, tol=0.5):
@@ -245,6 +254,52 @@ def _spike_ok(v, window=15, tol=0.5):
     import pandas as pd
     med = pd.Series(v).rolling(window, center=True, min_periods=max(3, window // 3)).median().to_numpy()
     return np.abs(v - med) <= tol
+
+
+def _step_ok(t, v, step=None, rate=None, gap=None, hold=None):
+    """False for blocks of readings that jump away from the water level and come back: a jump
+    bigger than `step` ft (plus `rate` ft/h of elapsed time) between neighbouring readings starts a
+    block, and the block ends at the first later reading that jumps back (by at least half the first
+    jump) to within the allowance of the last reading before the jump. A block still open at the end of the record is dropped too (the
+    forecast must not start from it); one that has not come back after `hold` is a real shift and
+    is kept."""
+    step = STEP_FT if step is None else step
+    rate = STEP_RATE if rate is None else rate
+    gap = STEP_GAP if gap is None else gap
+    hold = STEP_HOLD if hold is None else hold
+    n = len(v)
+    keep = np.ones(n, bool)
+    if n < 3:
+        return keep
+    sec = np.array([x.timestamp() for x in t], float)
+
+    def allow(i, j):
+        return step + rate * abs(sec[j] - sec[i]) / 3600.0
+
+    i = 1
+    while i < n:
+        a = i - 1  # the last reading before the jump
+        if sec[i] - sec[a] > gap.total_seconds() or abs(v[i] - v[a]) <= allow(a, i):
+            i += 1
+            continue
+        end = None  # first reading back near the level before the jump
+        j = i + 1
+        up = v[i] > v[a]
+        while j < n and sec[j] - sec[a] <= hold.total_seconds():
+            back = (v[j] < v[j - 1]) if up else (v[j] > v[j - 1])
+            if back and abs(v[j] - v[j - 1]) >= 0.5 * abs(v[i] - v[a]) and abs(v[j] - v[a]) <= allow(a, j):
+                end = j
+                break
+            j += 1
+        if end is not None:
+            keep[i:end] = False
+            i = end + 1
+        elif j >= n:  # the record ends inside the block: drop it for now
+            keep[i:] = False
+            break
+        else:  # never came back within `hold`: a real change of level, keep it
+            i += 1
+    return keep
 
 
 def _flat_ok(t, v, max_same=timedelta(minutes=48)):
@@ -275,7 +330,8 @@ def flatline(t, v, max_same=timedelta(minutes=48)):
 
 def qc_flags(t, v, lo=-4.0, hi=14.0):
     """(times, values, flags) sorted and de-duplicated, every reading kept and flagged with a
-    QC_FLAGS code: out of a plausible range (ft MLLW), spike, or part of a stuck run."""
+    QC_FLAGS code: out of a plausible range (ft MLLW), spike, a block that steps away and back
+    (longer than the spike check sees), or part of a stuck run."""
     if not len(t):
         return t, v, np.zeros(0, int)
     s = np.array([x.timestamp() for x in t])
@@ -287,12 +343,14 @@ def qc_flags(t, v, lo=-4.0, hi=14.0):
     idx = np.where(flags == 0)[0]
     flags[idx[~_spike_ok(v[idx])]] = 2
     idx = np.where(flags == 0)[0]
+    flags[idx[~_step_ok(t[idx], v[idx])]] = 4
+    idx = np.where(flags == 0)[0]
     flags[idx[~_flat_ok(t[idx], v[idx])]] = 3
     return t, v, flags
 
 
 def qc(t, v, lo=-4.0, hi=14.0):
-    """Sorted, de-duplicated, in a plausible range (ft MLLW), despiked, no stuck runs."""
+    """Sorted, de-duplicated, in a plausible range (ft MLLW), despiked, no step blocks, no stuck runs."""
     t, v, flags = qc_flags(t, v, lo, hi)
     return t[flags == 0], v[flags == 0]
 
