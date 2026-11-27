@@ -121,5 +121,82 @@
     "residential_patterns": [
       "^20[1-9]\\d$"
     ]
+  },
+  "51830": {
+    "like": "_hrpdc",
+    "name": "Williamsburg",
+    "parcels": {
+      "where": "FIPS='830'"
+    },
+    "residential_note": "no use codes in the regional parcels: a home is a building of at most 500 m2 on a parcel zoned single-family (RS), multifamily (RM), downtown residential (RDT) or a planned residential district (PUD, PDR)",
+    "residential_patterns": [
+      "^RS-",
+      "^RM-",
+      "^RDT$",
+      "^PUD$",
+      "^PDR$"
+    ]
+  },
+  "51093": {
+    "like": "_hrpdc",
+    "name": "Isle of Wight County",
+    "parcels": {
+      "where": "FIPS='093'"
+    },
+    "residential_note": "no use codes in the regional parcels: a home is a building of at most 500 m2 on a parcel zoned rural agricultural conservation, neighborhood conservation, suburban, rural or urban residential, or planned residential (RAC, NC, SR, RR, UR, PD-R), or a Smithfield or Windsor residential, agricultural or mobile home district; farm buildings on RAC land under 500 m2 are counted as homes too",
+    "residential_patterns": [
+      "^RAC$",
+      "^NC$",
+      "^SR$",
+      "^RR$",
+      "^UR$",
+      "^PD-R$",
+      "^SMITH: [A-Z]+-R\\b",
+      "^WINDSOR: [RA]-",
+      "MHP"
+    ]
+  },
+  "51199": {
+    "like": "_hrpdc",
+    "name": "York County",
+    "parcels": {
+      "where": "FIPS='199'"
+    },
+    "residential_note": "no use codes in the regional parcels: a home is a building of at most 500 m2 on a parcel whose zoning name says residential or manufactured home, or in a planned development or the Yorktown village",
+    "residential_patterns": [
+      "Residential",
+      "Manufact",
+      "^Planned Development$",
+      "^Yorktown Village"
+    ]
+  },
+  "51095": {
+    "like": "_hrpdc",
+    "name": "James City County",
+    "parcels": {
+      "where": "FIPS='095'"
+    },
+    "residential_note": "no use codes in the regional parcels: a home is a building of at most 500 m2 on a parcel zoned R1 to R8, A1 (general agriculture) or PUD-R; mixed use (MU) parcels are left out",
+    "residential_patterns": [
+      "^R\\d ",
+      "^A1",
+      "^PUD-R"
+    ]
+  },
+  "51073": {
+    "like": "_hrpdc",
+    "name": "Gloucester County",
+    "parcels": {
+      "where": "FIPS='073'"
+    },
+    "residential_note": "no use codes in the regional parcels: a home is a building of at most 500 m2 on a parcel zoned single family (SF-1), suburban or rural countryside (SC-1, RC-1, RC-2), bayside conservation (C-2), multifamily (MF-1) or a planned unit development (PUD1)",
+    "residential_patterns": [
+      "^SF-1$",
+      "^SC-1$",
+      "^RC-[12]$",
+      "^C-2$",
+      "^MF-1$",
+      "^PUD1$"
+    ]
   }
 }

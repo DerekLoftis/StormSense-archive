@@ -295,3 +295,77 @@ def test_elevation_certificate_floor_replaces_the_assumed_height():
     usd, frac, above, ffh = damage.estimate([4.0, 4.0], [200000, 200000], [1950, 1950], "one_story", 1979,
                                             first_floor=[floor[0] - ground, np.nan])
     assert ffh[0] == 7.5 and ffh[1] == 3 and above[0] == -3.5 and usd[0] == 0 and above[1] == 1 and usd[1] > 0
+
+
+def test_flood_raster_is_an_overview_plus_tiles(tmp_path):
+    from PIL import Image
+    from inundation import page
+    rng = np.random.default_rng(3)
+    nh, nw = page.TILE + 76, 2 * page.TILE + 52                       # 2 rows and 3 columns of tiles, overview at 1/2
+    idx = rng.integers(0, 49, (nh, nw)).astype(np.uint8)
+    zone = rng.integers(0, 4, (nh, nw)).astype(np.uint8)
+    gnd = rng.integers(0, 255, (nh, nw)).astype(np.uint8)
+    idx[:8, :8], zone[:8, :8], gnd[:8, :8] = 255, page.NO_ZONE, 40    # a corner never reached, in a watershed left out
+    r = page.write_raster(str(tmp_path), idx, zone, gnd)
+    assert (r["rows"], r["cols"], r["overview"]["factor"]) == (2, 3, 2)
+    assert (r["overview"]["width"], r["overview"]["height"]) == (-(-nw // 2), -(-nh // 2))
+    got = np.zeros((nh, nw, 3), np.uint8)
+    for row in range(r["rows"]):
+        for col in range(r["cols"]):
+            t = np.asarray(Image.open(tmp_path / "tiles" / f"t_{row}_{col}.png"))
+            got[row * page.TILE:row * page.TILE + t.shape[0], col * page.TILE:col * page.TILE + t.shape[1]] = t
+    assert np.array_equal(got, np.dstack([idx, zone, gnd]))           # nothing lost at full detail
+    over = np.asarray(Image.open(tmp_path / r["overview"]["file"]))
+    assert tuple(over[0, 0]) == (255, page.NO_ZONE, 40)               # a block keeps one of its own cells, all three bands
+    assert tuple(over[10, 10]) in {tuple(v) for v in np.dstack([idx, zone, gnd])[20:22, 20:22].reshape(-1, 3)}
+
+
+def test_plot_gauge_is_the_nearest_noaa_tide_gauge():
+    from inundation import page
+    g, ref = page.plot_gauge(36.85, -76.29)                           # downtown Norfolk
+    assert g["id"] in ("SWPT", "MNPT") and g["noaa_id"] in ("8638610", "8639348")
+    assert ref["id"] == "SWPT" and ref["name"] == "Sewells Point" and abs(ref["navd88_above_mllw_ft"] - 1.61) < 0.02
+    assert page.plot_gauge(37.25, -76.50)[0]["id"] != g["id"]         # Gloucester Point is not Norfolk's gauge
+
+
+def test_a_past_flood_gives_each_gauge_its_own_record_or_the_nearest(tmp_path, monkeypatch):
+    from inundation import history
+    monkeypatch.setattr(history, "EVENTS", str(tmp_path))
+    (tmp_path / "events.json").write_text(json.dumps([{"id": "storm", "name": "Test Storm", "search": ["2003-09-17", "2003-09-20"]}]))
+    peak = datetime(2003, 9, 18, 21, 0, tzinfo=timezone.utc)
+    t0 = peak - timedelta(hours=history.HALF_H)
+    rows = []
+    for k in range(721):                                              # the whole 72 hours at Sewells Point, peak 6.28 ft
+        rows.append(("8638610", t0 + timedelta(minutes=6 * k), 6.28 - abs(k - 360) * 0.01))
+    for k in range(300):                                              # a gauge the storm took out six hours before the peak
+        rows.append(("LOST", t0 + timedelta(minutes=6 * k), 3.0))
+    for k in range(0, 721, 10):                                      # an hourly gauge with a four-hour hole after the peak
+        if not 400 < k < 440:
+            rows.append(("HOURLY", t0 + timedelta(minutes=6 * k), 5.0))
+    gauges = {"8638610": {"name": "Sewells Point", "lat": 36.943, "lon": -76.329, "step_min": 6},
+              "LOST": {"name": "Lost Gauge", "lat": 37.25, "lon": -76.50, "step_min": 6},
+              "HOURLY": {"name": "Hourly Gauge", "lat": 37.60, "lon": -76.29, "step_min": 60}}
+    doc = history.write_event(history.events()[0], peak, 6.28, rows, gauges)
+    assert doc["window"] == ["2003-09-17T09:00Z", "2003-09-20T09:00Z"] and doc["gauges"]["LOST"]["readings"] == 300
+    page_doc = history.for_page([{"station": "SWPT", "lat": 36.943, "lon": -76.329}, {"station": "YRCG", "lat": 37.25, "lon": -76.48},
+                                 {"station": "HOURLY", "lat": 37.60, "lon": -76.29}], coops_of={"SWPT": "8638610"})
+    ev = page_doc["events"][0]
+    assert (ev["n"], ev["peak_i"], ev["step_min"], ev["gauges"], ev["gauges_recorded"]) == (721, 360, 6, 2, 3)
+    sw, yr, hr = (ev["stations"][s] for s in ("SWPT", "YRCG", "HOURLY"))
+    assert sw["own"] and sw["from"] == "Sewells Point" and sw["f"][360] == 6.28 and sw["f"][0] == pytest.approx(2.68)
+    assert not yr["own"] and yr["from_id"] == "8638610" and yr["km"] > 30  # the lost gauge stands for nothing, not even its neighbour
+    assert hr["own"] and hr["f"][5] == 5.0                             # between two hourly readings
+    assert hr["f"][420] is None and hr["f"][400] == 5.0 and hr["f"][440] == 5.0   # nothing drawn across the hole
+    assert "runs" not in ev                                            # no forecasts kept for this storm
+    import csv
+    import gzip
+    with gzip.open(tmp_path / "storm" / "forecasts.csv.gz", "wt", newline="") as fh:
+        w = csv.writer(fh)
+        w.writerow(["cycle", "station", "date_time_z", "forecast_ft_navd88", "p10_ft", "p90_ft"])
+        for cyc, top in (("2003-09-18T00Z", 5.5), ("2003-09-18T18Z", 6.0), ("2003-09-19T00Z", 4.0)):   # the last one is after the peak
+            c0 = datetime.strptime(cyc, "%Y-%m-%dT%HZ").replace(tzinfo=timezone.utc)
+            for k in range(0, 300):
+                w.writerow([cyc, "SWPT", history.iso(c0 + timedelta(minutes=6 * k)), top - abs(k - 100) * 0.01, "", ""])
+    ev = history.for_page([{"station": "SWPT", "lat": 36.943, "lon": -76.329}], coops_of={"SWPT": "8638610"}, plot="SWPT")["events"][0]
+    assert [r["cycle"] for r in ev["runs"]] == ["2003-09-18T00Z", "2003-09-18T18Z"] and ev["runs_at"] == "SWPT"
+    assert ev["runs"][1]["max_ft"] == 6.0 and ev["runs"][1]["f"][0] is None and len(ev["runs"][0]["f"]) == 721

@@ -172,5 +172,34 @@
     "structures": [],
     "pipe_ends_open": true,
     "pipe_ends_note": "the city publishes the lines only, so every pipe end is taken as an inlet or outlet"
+  },
+  "51095": {
+    "name": "James City County",
+    "source": "James City County GIS (property.jamescitycountyva.gov, JCC/GIS_Data: county-owned storm pipes, inlets, outfalls and manholes only)",
+    "pipes": [
+      {
+        "url": "https://property.jamescitycountyva.gov/arcgis/rest/services/JCC/GIS_Data/FeatureServer/64",
+        "fields": "PIPEID,Material,Dimensions"
+      }
+    ],
+    "ditches": [],
+    "structures": [
+      {
+        "url": "https://property.jamescitycountyva.gov/arcgis/rest/services/JCC/GIS_Data/FeatureServer/62",
+        "fields": "OBJECTID",
+        "name": "inlet"
+      },
+      {
+        "url": "https://property.jamescitycountyva.gov/arcgis/rest/services/JCC/GIS_Data/FeatureServer/63",
+        "fields": "OBJECTID",
+        "name": "outfall"
+      },
+      {
+        "url": "https://property.jamescitycountyva.gov/arcgis/rest/services/JCC/GIS_Data/FeatureServer/65",
+        "fields": "OBJECTID",
+        "name": "manhole",
+        "closed": true
+      }
+    ]
   }
 }

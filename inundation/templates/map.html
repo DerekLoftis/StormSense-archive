@@ -6,7 +6,7 @@
   --bg:#f3f6f8; --panel:#ffffff; --ink:#0f2230; --muted:#566a78; --line:#d6e0e7; --soft:#e9f0f4;
   --navy:#0b3954; --accent:#00a9b5; --cyan:#00E5EE;
   --flooded:#f57c00; --ponded:#f2c500; --building:#d32f2f;
-  --map-land:#eef1ee; --map-water:#bcd9ea; --map-flood:#2f8fd8; --map-road:#ffffff; --map-road-edge:#c3ccd2;
+  --map-land:#eef1ee; --map-water:#d3dfe6; --map-flood:#2f8fd8; --map-road:#ffffff; --map-road-edge:#c3ccd2;
   --map-major:#fbe9b7; --map-bridge:#aebbc6; --map-bldg:#d5d0c8; --map-casing:#3b2a12; --map-gauge:#0b3954; --map-label:#0f2230; --map-halo:#ffffff;
   --display:"Segoe UI Semibold","Segoe UI",-apple-system,"Helvetica Neue",Arial,sans-serif;
   --body:"Segoe UI",-apple-system,"Helvetica Neue",Arial,sans-serif;
@@ -15,14 +15,14 @@
   --bg:#0c1820; --panel:#132430; --ink:#e3edf2; --muted:#93a8b6; --line:#253b4a; --soft:#1a2f3c;
   --navy:#8fd3f0; --accent:#2fd6df;
   --flooded:#ff9a2e; --ponded:#ffd93b; --building:#ff5a52;
-  --map-land:#1b2a33; --map-water:#0f3a55; --map-flood:#3aa0ee; --map-road:#3c4f5b; --map-road-edge:#2a3a45;
+  --map-land:#1b2a33; --map-water:#243843; --map-flood:#3aa0ee; --map-road:#3c4f5b; --map-road-edge:#2a3a45;
   --map-major:#5b5330; --map-bridge:#55687a; --map-bldg:#4a5560; --map-casing:#0a0f13; --map-gauge:#8fd3f0; --map-label:#e3edf2; --map-halo:#0c1820;
   color-scheme:dark}}
 :root[data-theme="dark"]{
   --bg:#0c1820; --panel:#132430; --ink:#e3edf2; --muted:#93a8b6; --line:#253b4a; --soft:#1a2f3c;
   --navy:#8fd3f0; --accent:#2fd6df;
   --flooded:#ff9a2e; --ponded:#ffd93b; --building:#ff5a52;
-  --map-land:#1b2a33; --map-water:#0f3a55; --map-flood:#3aa0ee; --map-road:#3c4f5b; --map-road-edge:#2a3a45;
+  --map-land:#1b2a33; --map-water:#243843; --map-flood:#3aa0ee; --map-road:#3c4f5b; --map-road-edge:#2a3a45;
   --map-major:#5b5330; --map-bridge:#55687a; --map-bldg:#4a5560; --map-casing:#0a0f13; --map-gauge:#8fd3f0; --map-label:#e3edf2; --map-halo:#0c1820;
   color-scheme:dark}
 [hidden]{display:none!important}
@@ -42,7 +42,7 @@ a{color:var(--accent)}
 body.embed .mast{display:none}
 .controls{display:flex;flex-wrap:wrap;gap:8px 14px;align-items:center}
 .lbl{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-right:6px}
-.seg{display:inline-flex;border:1px solid var(--line);border-radius:7px;overflow:hidden;vertical-align:middle}
+.seg{display:inline-flex;flex-wrap:wrap;max-width:100%;border:1px solid var(--line);border-radius:7px;overflow:hidden;vertical-align:middle}
 .seg button{border:0;border-radius:0;padding:5px 12px}
 .seg button[aria-pressed="true"]{background:var(--navy);color:var(--panel)}
 button{font:inherit;font-size:13.5px;color:var(--ink);background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:5px 11px;cursor:pointer}
@@ -61,6 +61,7 @@ button:focus-visible,input:focus-visible,canvas:focus-visible{outline:2px solid 
 .cols{display:grid;grid-template-columns:minmax(0,1.55fr) minmax(0,1fr);gap:12px;align-items:start}
 .side{display:flex;flex-direction:column;gap:12px;min-width:0}
 @media (max-width:980px){.cols{grid-template-columns:minmax(0,1fr)}}
+@media (max-width:520px){.seg button{padding:6px 9px;white-space:nowrap}}
 .mapbox{position:relative;border-radius:6px;overflow:hidden;border:1px solid var(--line);background:var(--map-land)}
 #map{display:block;width:100%;height:auto;aspect-ratio:1/1.05;max-height:min(74vh,780px);min-height:320px;touch-action:none;cursor:grab}
 #map.drag{cursor:grabbing}
@@ -92,6 +93,15 @@ ul.plain{margin:0;padding-left:18px;color:var(--muted);font-size:13px;max-width:
 ul.plain li{margin:2px 0}
 .disc{font-size:12px;color:var(--muted);margin:0}
 .err{border-left:4px solid var(--building)}
+select{font:inherit;font-size:13.5px;color:var(--ink);background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:5px 8px;max-width:100%}
+.bar{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:8px 12px}
+.bar .note{flex:1;min-width:240px;max-width:110ch}
+.plotsub{margin:-5px 0 0;font:600 13.5px var(--display);color:var(--muted)}
+.sw.dash{background:none;border-top:2px dashed var(--navy);height:0;border-radius:0}
+.ramp{display:flex;flex-wrap:wrap;align-items:flex-end;gap:2px;font-size:11px;color:var(--muted);font-variant-numeric:tabular-nums}
+.ramp b{font-weight:600;margin-right:8px;font-size:12.5px;align-self:center}
+.ramp span{display:flex;flex-direction:column;align-items:center;gap:2px;min-width:27px}
+.ramp i{display:block;width:100%;height:11px;border-radius:2px}
 @media (prefers-reduced-motion:reduce){*{scroll-behavior:auto}}
 </style>
 
@@ -109,16 +119,25 @@ ul.plain li{margin:2px 0}
 
   <div class="controls">
     <span class="when" id="when">Loading the forecast…</span>
-    <span class="seg" role="group" aria-label="Jump to">
+    <span class="seg" role="group" aria-label="What the map shows">
       <button id="bNow" type="button">Now</button>
       <button id="bPeak" type="button">Forecast peak</button>
       <button id="bObs" type="button" aria-pressed="false">Last observed</button>
+      <button id="bHist" type="button" aria-pressed="false">Historical Floods</button>
+      <button id="bScen" type="button" aria-pressed="false">Scenario</button>
     </span>
     <button id="bPlay" type="button" aria-pressed="false">▶ Play 72 hours</button>
-    <span><span class="lbl">Forecast</span><span class="seg" id="mode" role="group" aria-label="Forecast line">
+    <span id="modeBox"><span class="lbl">Forecast</span><span class="seg" id="mode" role="group" aria-label="Forecast line">
       <button type="button" data-v="p10" aria-pressed="false">Low (10%)</button>
       <button type="button" data-v="f" aria-pressed="true">Forecast</button>
       <button type="button" data-v="p90" aria-pressed="false">High (90%)</button></span></span>
+  </div>
+  <div class="controls bar" id="histBar" hidden>
+    <label class="lbl" for="evSel">Historical flood</label><select id="evSel"></select>
+    <p class="note" id="evNote"></p>
+  </div>
+  <div class="controls bar" id="scenBar" hidden>
+    <p class="note" id="scenNote"></p>
   </div>
 
   <div class="strip">
@@ -136,30 +155,32 @@ ul.plain li{margin:2px 0}
         <div class="hint" id="scale"></div>
         <div class="pop" id="pop" hidden></div>
       </div>
+      <div class="ramp" id="ramp" aria-label="Water depth in feet, by color"></div>
       <div class="chips">
         <span><span class="sw" style="background:var(--flooded)"></span>Road under more than 0.5 ft</span>
         <span><span class="sw" style="background:var(--ponded)"></span>Ponded, 0.25 to 0.5 ft</span>
         <span><span class="sw box" style="background:var(--building)"></span>Flooded Building, in more than 0.5 ft</span>
-        <span><span class="sw box" style="background:var(--map-flood);opacity:.55"></span>Water at the selected time</span>
+        <span><span class="sw box" style="background:var(--map-water)"></span>Tidal water at an ordinary high tide</span>
         <span><span class="sw" style="background:var(--map-bridge)"></span>Bridge or tunnel, not evaluated</span>
       </div>
     </div>
 
     <div class="side">
       <div class="card">
-        <h2>Through the 72 hours</h2>
-        <div class="chips"><span><span class="sw" style="background:var(--flooded)"></span>Road miles flooded</span><span><span class="sw" style="background:var(--ponded)"></span>Road miles ponded</span></div>
-        <div class="chart" id="cRoads"></div>
-        <p class="note" style="margin-top:2px">Buildings flooded</p>
-        <div class="chart" id="cBldg"></div>
+        <h2 id="plotTitle">StormSense Prediction Plot</h2>
+        <p class="plotsub" id="plotSub">Anticipated Impacts in the Next 72 Hours</p>
+        <div class="chips" id="plotKey"></div>
+        <div class="chart" id="cPlot"></div>
         <input type="range" id="time" min="0" max="1" step="1" value="0" aria-label="Time in the forecast">
+        <p class="note" id="lvlNote"></p>
         <p class="note" id="runNote"></p>
       </div>
       <div class="card">
         <h2>How to read this</h2>
         <ul class="plain">
           <li>Road centerlines from VGIN are cut into 5 m pieces. A piece turns yellow once the water over it is 0.25 ft deep and orange once it is more than 0.5 ft deep. A VGIN building footprint turns red once the water stands more than 0.5 ft over the ground at the building.</li>
-          <li>The water level at each piece and building is its gauge's level: the forecast at the selected time, or the last observation. Depth is that level minus the ground, where the water can reach from tidal water over ground at or below the level.</li>
+          <li>The water level at each piece and building is its gauge's level: the forecast at the selected time, the last observation, a past flood's record, or the level you set under Scenario. Depth is that level minus the ground, where the water can reach from tidal water over ground at or below the level. The blues on the map show that depth in 5 m cells.</li>
+          <li id="histNote" hidden></li>
           <li id="srcNote"></li>
           <li id="drainNote" hidden></li>
           <li id="gaugeNote" hidden></li>
@@ -171,7 +192,7 @@ ul.plain li{margin:2px 0}
     </div>
   </div>
 
-  <div class="card">
+  <div class="card" id="gaugeCard">
     <h2>Gauges</h2>
     <p class="note">Each road piece and building follows its nearest StormSense gauge. Levels are feet above NAVD88 at the selected time.</p>
     <div class="scroll"><table id="gauges"></table></div>
@@ -182,36 +203,46 @@ ul.plain li{margin:2px 0}
 (function(){
 "use strict";
 var $ = function(id){ return document.getElementById(id); };
-var S, LV, R = {}, V = {s:1, ox:0, oy:0}, T = {i:0, mode:"f", obs:false, playing:null};
+var S, LV, EV = {events:[]}, A = null, R = {tiles:{}, stamp:1, tick:0}, V = {s:1, ox:0, oy:0}, T = {i:0, mode:"f", obs:false, view:"fc", ev:0, playing:null};
 var cv = $("map"), ctx = cv.getContext("2d"), DPR = Math.max(1, Math.min(2.5, window.devicePixelRatio || 1));
 var C = {};
+// water depth classes, feet: up to 0.5, 1, 2 ... 10 (Derek's ramp, light blue to navy)
+var DEPTH = ["#bfe6f5","#a6d5ef","#8cc3e9","#73b0e2","#5c9bd9","#4885cf","#386fc2","#2b59b2","#20449f","#172f8a","#0f1c73"];
+var DEPTH_LABEL = ["0.5","1","2","3","4","5","6","7","8","9","10"];
+var MAX_TILES = Math.min(window.innerWidth, window.innerHeight) < 700 ? 6 : 12;
 if (/[?&]embed=1/.test(location.search)) document.body.classList.add("embed");
 
 function fail(msg){ var e = $("error"); e.hidden = false; e.textContent = msg; $("when").textContent = "Not loaded"; }
 function tok(n){ return getComputedStyle(document.documentElement).getPropertyValue(n).trim(); }
 function rgb(hex){ hex = hex.replace("#",""); if (hex.length === 3) hex = hex.replace(/(.)/g,"$1$1"); var v = parseInt(hex,16); return [(v>>16)&255,(v>>8)&255,v&255]; }
+function u32(hex, a){ var c = rgb(hex); return ((a << 24) | (c[2] << 16) | (c[1] << 8) | c[0]) >>> 0; }
 function readColors(){
   ["land","water","flood","road","road-edge","major","bridge","bldg","casing","gauge","label","halo"].forEach(function(k){ C[k] = tok("--map-"+k); });
   C.flooded = tok("--flooded"); C.ponded = tok("--ponded"); C.building = tok("--building");
-  C.ink = tok("--ink"); C.muted = tok("--muted"); C.line = tok("--line"); C.panel = tok("--panel");
+  C.ink = tok("--ink"); C.muted = tok("--muted"); C.line = tok("--line"); C.panel = tok("--panel"); C.navy = tok("--navy");
+  R.colWater = u32(C.water, 255); R.colDepth = DEPTH.map(function(h){ return u32(h, 240); });
 }
 function bytes(b){ var s = atob(b), n = s.length, a = new Uint8Array(n); for (var i=0;i<n;i++) a[i] = s.charCodeAt(i); return a; }
 function arr(b, Type){ var a = bytes(b); return new Type(a.buffer, 0, a.byteLength / Type.BYTES_PER_ELEMENT); }
 function getJSON(u){ return fetch(u, {cache:"no-store"}).then(function(r){ if (!r.ok) throw new Error(u + " " + r.status); return r.json(); }); }
 function getImage(u){ return new Promise(function(ok, no){ var im = new Image(); im.onload = function(){ ok(im); }; im.onerror = function(){ no(new Error(u)); }; im.src = u; }); }
 function fmtMi(v){ return v >= 10 ? v.toFixed(1) : v.toFixed(2); }
-var fTime = new Intl.DateTimeFormat("en-US", {timeZone:"America/New_York", weekday:"short", month:"short", day:"numeric", hour:"numeric", minute:"2-digit", timeZoneName:"short"});
-var fHour = new Intl.DateTimeFormat("en-US", {timeZone:"America/New_York", hour:"numeric"});
-var fDay = new Intl.DateTimeFormat("en-US", {timeZone:"America/New_York", weekday:"short", day:"numeric"});
-var fShort = new Intl.DateTimeFormat("en-US", {timeZone:"America/New_York", weekday:"short", hour:"numeric", minute:"2-digit"});
-function tAt(i){ return new Date(LV.t0ms + i * LV.step_min * 60000); }
+var TZ = "America/New_York";
+var fTime = new Intl.DateTimeFormat("en-US", {timeZone:TZ, weekday:"short", month:"short", day:"numeric", hour:"numeric", minute:"2-digit", timeZoneName:"short"});
+var fTimeY = new Intl.DateTimeFormat("en-US", {timeZone:TZ, weekday:"short", month:"short", day:"numeric", year:"numeric", hour:"numeric", minute:"2-digit", timeZoneName:"short"});
+var fDay = new Intl.DateTimeFormat("en-US", {timeZone:TZ, weekday:"short", day:"numeric"});
+var fShort = new Intl.DateTimeFormat("en-US", {timeZone:TZ, weekday:"short", hour:"numeric", minute:"2-digit"});
+function tAt(i){ return new Date(A.t0ms + i * A.step_min * 60000); }
 function utc(d){ return d.toISOString().slice(11,16) + " UTC"; }
+function scenLevel(i){ return Math.round((S.levels.start + i * S.levels.step) * 100) / 100; }
+function mllw(v, g){ g = g || S.mllw_ref; return g && g.navd88_above_mllw_ft != null ? (v + g.navd88_above_mllw_ft).toFixed(2) + " ft above MLLW" : ""; }
+function stepLabel(i){ return T.view === "scen" ? scenLevel(i).toFixed(2) + " ft NAVD88" : fShort.format(tAt(i)); }
 
-Promise.all([getJSON("static.json"), getJSON("levels.json"), getImage("extent.png")]).then(function(r){
-  S = r[0]; LV = r[1]; setup(r[2]);
+Promise.all([getJSON("static.json"), getJSON("levels.json"), getJSON("events.json").catch(function(){ return {events:[]}; })]).then(function(r){
+  S = r[0]; LV = r[1]; EV = r[2] && r[2].events ? r[2] : EV; setup();
 }).catch(function(e){ fail("The map data did not load (" + e.message + "). Reload the page to try again."); });
 
-function setup(img){
+function setup(){
   readColors();
   var P = S.pieces, B = S.buildings, RD = S.roads, i, k;
   R.pxy = arr(P.xy, Uint16Array); R.pg = arr(P.ground, Int16Array); R.pc = arr(P.connect, Int16Array);
@@ -231,10 +262,7 @@ function setup(img){
   R.bstart[B.n] = k;
   R.pvia = P.via ? bytes(P.via) : null; R.bvia = B.via ? bytes(B.via) : null;
   R.val = S.values && B.vbldg ? {year:arr(B.year, Uint16Array), vt:arr(B.vtotal, Uint32Array), vb:arr(B.vbldg, Uint32Array), res:bytes(B.res), curve:bytes(B.curve), ffh:bytes(B.ffh), ec:B.ec ? bytes(B.ec) : null, zip:bytes(B.zip), use:bytes(B.use)} : null;
-
-  // gauges and their series
-  LV.t0ms = Date.parse(LV.t0); R.ns = S.stations.length; R.series = [];
-  S.stations.forEach(function(st){ R.series.push(LV.stations[st.id] || null); });
+  LV.t0ms = Date.parse(LV.t0); R.ns = S.stations.length;
 
   // per gauge: road metres ponded and flooded and buildings flooded at every 0.01 ft of water level
   var LO = -300, HI = 1400, NB = HI - LO + 1; R.LO = LO; R.NB = NB;
@@ -247,31 +275,64 @@ function setup(img){
   for (i = 0; i < B.n; i++){ if (R.bc[i] === NO) continue; R.cumB[R.bst[i]][bin(Math.max(R.bg[i] + fd + 1, R.bc[i]))] += 1; }
   for (s = 0; s < R.ns; s++) [R.cumF[s], R.cumP[s], R.cumB[s]].forEach(function(a){ for (var q = 1; q <= NB; q++) a[q] += a[q-1]; });
 
-  // the raster: level index, gauge zone, ordinary water
-  var rw = S.raster.width, rh = S.raster.height, tmp = document.createElement("canvas"); tmp.width = rw; tmp.height = rh;
-  var tc = tmp.getContext("2d", {willReadFrequently:true}); tc.drawImage(img, 0, 0);
-  var px = tc.getImageData(0, 0, rw, rh).data, n = rw * rh, cnt = 0;
-  for (i = 0; i < n; i++){ var v = px[4*i]; if (v < 255 && px[4*i+2] < 128) cnt++; }
-  R.cell = new Uint32Array(cnt); R.cidx = new Uint8Array(cnt); R.czone = new Uint8Array(cnt); R.wmask = new Uint8Array(n);
-  for (i = 0, k = 0; i < n; i++){ v = px[4*i]; if (px[4*i+2] >= 128) R.wmask[i] = 1; else if (v < 255){ R.cell[k] = i; R.cidx[k] = v; R.czone[k] = px[4*i+1]; k++; } }
-  R.waterCv = document.createElement("canvas"); R.waterCv.width = rw; R.waterCv.height = rh;
-  R.floodCv = document.createElement("canvas"); R.floodCv.width = rw; R.floodCv.height = rh;
-  R.floodCtx = R.floodCv.getContext("2d"); R.floodImg = R.floodCtx.createImageData(rw, rh); R.flood32 = new Uint32Array(R.floodImg.data.buffer);
-  paintWater();
-
-  $("time").max = LV.n - 1;
-  var now = Math.round((Date.now() - LV.t0ms) / (LV.step_min * 60000));
-  R.nowOk = now >= 0 && now < LV.n; $("bNow").disabled = !R.nowOk;
-  R.ticks = ticks(); timeline(); T.i = R.nowOk ? now : R.peak;
-  var any = R.series.filter(Boolean)[0];
-  $("runNote").textContent = "Forecast: StormSense fore72" + (any && any.updated ? ", updated " + any.updated : "") + ". Drag the slider or the charts to move through it. Times are Eastern.";
-  $("srcNote").textContent = "Ground and depth: " + S.sources.depth + ", at water levels from " + S.levels.start + " to " + (S.levels.start + S.levels.step * (S.levels.n - 1)) + " ft NAVD88 in " + S.levels.step + " ft steps. Roads: " + S.sources.roads + ". Buildings: " + S.sources.buildings + ". " + S.totals.road_miles.toLocaleString() + " road miles and " + S.totals.buildings.toLocaleString() + " buildings are checked; the map draws the " + S.buildings.n.toLocaleString() + " buildings that 10 ft of water would reach.";
+  var top = S.levels.start + S.levels.step * (S.levels.n - 1);
+  $("srcNote").textContent = "Ground and depth: " + S.sources.depth + ", at water levels from " + S.levels.start + " to " + top + " ft NAVD88 in " + S.levels.step + " ft steps. Roads: " + S.sources.roads + ". Buildings: " + S.sources.buildings + ". " + S.totals.road_miles.toLocaleString() + " road miles and " + S.totals.buildings.toLocaleString() + " buildings are checked; the map draws the " + S.buildings.n.toLocaleString() + " buildings that 10 ft of water would reach.";
   $("disc").textContent = S.disclaimer;
+  $("scenNote").textContent = "Scenario: drag the slider or the plot to set one water level for every gauge, from " + S.levels.start + " to " + top + " ft NAVD88 in " + S.levels.step + " ft steps. No forecast or past flood is involved: the roads, the buildings and the damage estimate follow the level you set.";
   if (S.sources.ungauged){ var gn = $("gaugeNote"); gn.hidden = false; gn.textContent = "Left out: roads and buildings in " + S.sources.ungauged + ". That water drains south to Currituck Sound and rises with the wind, not with the ocean tide, and no StormSense gauge stands for it yet."; }
   if (S.sources.drainage){ var dn = $("drainNote"); dn.hidden = false; dn.textContent = "Storm drains are in it: where a pipe or ditch network has one opening in the water, the water also comes up at its other inlets and outfalls that lie at or below the level, as in Norfolk's TITAN. Pipes carry the level without loss. Source: " + S.sources.drainage + "." + (S.sources.barriers ? " Floodwalls and levees hold the water back, and no pipe carries it under them, up to the 10 ft level: " + S.sources.barriers + "." : ""); }
   if (R.val){ var V0 = S.values, mn = $("dmgNote"); mn.hidden = false; $("tDmg").hidden = false;
-    mn.textContent = "Damage is estimated for homes only" + (V0.home_rule ? " (" + V0.home_rule + ")" : "") + ", from the deepest water the selected forecast line puts at the building: " + V0.damage.citation + ". The percent is applied to the building's share of the parcel's " + V0.tax_year + " assessed improvement value (" + S.sources.values + "). Depth is counted from the first floor. " + (V0.certificates ? V0.certificates.toLocaleString("en-US") + " buildings here have a surveyed first floor from an elevation certificate (HRPDC); every other" : "With no surveyed first floor elevations each") + " home's floor is assumed at FEMA Hazus's default for a crawlspace: " + (V0.firm_year ? "3 ft above the ground if built before the first flood map (" + V0.firm_year + "), 4 ft after." : "3 ft above the ground.") + " The Zillow figure is the typical home value in the building's ZIP code (" + S.sources.zillow + "), not a value for that address."; }
-  bind(); resize(true); charts(); update();
+    mn.textContent = "Damage is estimated for homes only" + (V0.home_rule ? " (" + V0.home_rule + ")" : "") + ", from the deepest water the selected forecast line, past flood or scenario puts at the building: " + V0.damage.citation + ". The percent is applied to the building's share of the parcel's " + V0.tax_year + " assessed improvement value (" + S.sources.values + "). Depth is counted from the first floor. " + (V0.certificates ? V0.certificates.toLocaleString("en-US") + " buildings here have a surveyed first floor from an elevation certificate (HRPDC); every other" : "With no surveyed first floor elevations each") + " home's floor is assumed at FEMA Hazus's default for a crawlspace: " + (V0.firm_year ? "3 ft above the ground if built before the first flood map (" + V0.firm_year + "), 4 ft after." : "3 ft above the ground.") + " The Zillow figure is the typical home value in the building's ZIP code (" + S.sources.zillow + "), not a value for that address."; }
+  if (EV.events.length){ var hn = $("histNote"); hn.hidden = false;
+    hn.textContent = "Historical floods replay the 36 hours before and after a storm's highest water at Sewells Point, Virginia's longest tide record, on today's ground and buildings. Each gauge that recorded the storm drives its own roads and buildings; where a gauge did not exist yet, or failed in the storm, the nearest gauge that recorded it stands in (in 1933 that is Sewells Point for every place). Rain is not in it.";
+    $("evSel").innerHTML = EV.events.map(function(e, q){ return '<option value="' + q + '">' + e.name + "</option>"; }).join(""); }
+  $("bHist").disabled = !EV.events.length;
+  var h = "<b>Water depth (ft)</b>"; DEPTH.forEach(function(c, q){ h += '<span><i style="background:' + c + '"></i>' + (q ? "" : "≤") + DEPTH_LABEL[q] + "</span>"; }); $("ramp").innerHTML = h;
+  var ov = S.raster.overview; R.over = tile("z0", ov.file, ov.width, ov.height);
+  bind(); resize(true); use("fc");
+}
+
+/* ---------- what the map shows: the forecast, a past flood, or a scenario ---------- */
+function use(view, ev){
+  stop(); T.view = view; T.obs = false; var pid = S.plot_gauge ? S.plot_gauge.id : null;
+  if (view === "hist"){ if (ev != null) T.ev = ev; var E = EV.events[T.ev]; T.mode = "f";
+    A = {kind:"hist", t0ms:Date.parse(E.t0), step_min:E.step_min, n:E.n, ev:E};
+    R.series = S.stations.map(function(st){ var d = E.stations[st.id]; return d ? {f:d.f, p10:d.f, p90:d.f, from:d.from, own:d.own, km:d.km, flood_levels_ft:(LV.stations[st.id] || {}).flood_levels_ft} : null; });
+    var pd = pid && E.stations[pid]; R.plot = pd ? {f:pd.f, p10:pd.f, p90:pd.f, from:pd.from, own:pd.own, flood_levels_ft:(LV.stations[pid] || {}).flood_levels_ft} : null; }
+  else if (view === "scen"){ T.mode = "f"; var f = []; for (var q = 0; q < S.levels.n; q++) f.push(scenLevel(q));
+    A = {kind:"scen", t0ms:0, step_min:0, n:f.length};
+    R.series = S.stations.map(function(){ return {f:f, p10:f, p90:f}; }); R.plot = null; }
+  else { A = {kind:"fc", t0ms:LV.t0ms, step_min:LV.step_min, n:LV.n};
+    R.series = S.stations.map(function(st){ return LV.stations[st.id] || null; });
+    R.plot = (pid && LV.stations[pid]) || R.series.filter(Boolean)[0] || null; }
+  var now = Math.round((Date.now() - LV.t0ms) / (LV.step_min * 60000)); R.nowOk = now >= 0 && now < LV.n; $("bNow").disabled = !R.nowOk;
+  $("mode").querySelectorAll("button").forEach(function(x){ x.setAttribute("aria-pressed", x.dataset.v === T.mode); });
+  $("time").max = A.n - 1; R.ticks = ticks(); timeline();
+  T.i = view === "hist" ? Math.max(0, Math.min(A.n - 1, A.ev.peak_i)) :
+        view === "scen" ? Math.max(0, Math.min(A.n - 1, Math.round(((S.mllw_ref && S.mllw_ref.navd88_above_mllw_ft != null ? 7 - S.mllw_ref.navd88_above_mllw_ft : 5.5) - S.levels.start) / S.levels.step))) : R.peak;
+  chrome(); charts(); update();
+}
+function playLabel(){ return T.view === "scen" ? "▶ Play the levels" : "▶ Play 72 hours"; }
+function chrome(){ var v = T.view, E = A.ev, pg = S.plot_gauge, top = S.levels.start + S.levels.step * (S.levels.n - 1);
+  $("bHist").setAttribute("aria-pressed", v === "hist"); $("bScen").setAttribute("aria-pressed", v === "scen");
+  $("histBar").hidden = v !== "hist"; $("scenBar").hidden = v !== "scen"; $("modeBox").hidden = v !== "fc"; $("gaugeCard").hidden = v === "scen";
+  $("bPlay").textContent = playLabel(); $("evSel").value = T.ev;
+  $("time").setAttribute("aria-label", v === "scen" ? "Water level of the scenario" : v === "hist" ? "Time in the flood" : "Time in the forecast");
+  $("plotTitle").textContent = v === "hist" ? "StormSense Historical Flood" : v === "scen" ? "StormSense Scenario Builder" : "StormSense Prediction Plot";
+  $("plotSub").textContent = v === "hist" ? E.name + ": 36 Hours Before and After the Peak" : v === "scen" ? "Impacts at Each Water Level, " + S.levels.start + " to " + top + " ft NAVD88" : "Anticipated Impacts in the Next 72 Hours";
+  var key = "", sw = function(c, t, box){ return '<span><span class="sw' + (box ? " box" : "") + '" style="background:' + c + '"></span>' + t + "</span>"; };
+  if (v !== "scen" && R.plot) key += sw(C.navy, (v === "hist" ? "Water level recorded" + (R.plot.own === false ? " at " + R.plot.from + ", standing in for " : " at ") : "StormSense forecast at ") + (pg ? pg.name : "the gauge") + " (ft NAVD88, left axis)");
+  if (v === "hist" && E.runs && R.plot) key += '<span><span class="sw dash"></span>' + E.runs.length + " StormSense forecasts issued before the peak (later runs darker)</span>";
+  key += sw(C.flooded, "Road miles flooded") + sw(C.ponded, "Road miles ponded") + sw(C.building, "Buildings flooded" + (v === "scen" ? " (right axis)" : " (far right axis)"), true);
+  $("plotKey").innerHTML = key;
+  if (v === "hist"){ var pt = new Date(E.peak_time_z);
+    $("evNote").textContent = "Highest water at Sewells Point: " + fTimeY.format(pt) + ", " + E.peak_ft.toFixed(2) + " ft NAVD88" + (mllw(E.peak_ft) ? " (" + mllw(E.peak_ft) + ")" : "") + ". " + E.gauges + (E.gauges === 1 ? " gauge has" : " gauges have") + " a record through the peak." + (E.note ? " " + E.note : "") + (E.complete === false && E.observed_through_z ? " The record so far ends " + fTime.format(new Date(E.observed_through_z)) + "; the rest of the 36 hours after the peak is added as it is archived." : ""); }
+  var any = R.series.filter(Boolean)[0];
+  var fcNote = ""; if (v === "hist" && E.runs && E.runs.length){ var mx = E.runs.map(function(r){ return r.max_ft; });
+    fcNote = " StormSense's " + E.runs.length + " forecasts issued before the peak put the highest water at " + Math.min.apply(null, mx).toFixed(2) + " to " + Math.max.apply(null, mx).toFixed(2) + " ft; the gauge recorded " + E.peak_ft.toFixed(2) + " ft."; }
+  $("runNote").textContent = v === "hist" ? "Record: " + (E.record || "gauge observations") + "." + fcNote + " Drag the slider or the plot to move through the flood. Times are Eastern." :
+    v === "scen" ? "Drag the slider or the plot to change the water level." :
+    "Forecast: StormSense fore72" + (any && any.updated ? ", updated " + any.updated : "") + ". Drag the slider or the plot to move through it. Times are Eastern.";
 }
 
 function level(s){ // water level at gauge s for the current selection, in hundredths of a foot (null: none)
@@ -286,22 +347,26 @@ function totalsAt(i, mode){ var f = 0, p = 0, b = 0;
 function dmgFrac(above, curve){ // share of the structure's value lost with the water `above` ft over the first floor
   var D = S.values.damage, t = D.curves[curve] || D.curves[0], x = above - D.depth0; if (!(x > 0)) return 0;
   var k = Math.floor(x); return (k >= t.length - 1 ? t[t.length - 1] : t[k] + (t[k+1] - t[k]) * (x - k)) / 100; }
-function bDamage(i){ // at the highest water of the selected forecast line: null where there is no estimate
+function bDamage(i){ // at the highest water of the selection (a scenario: at its level): null where there is no estimate
   var v = R.val; if (!v || !v.res[i] || !v.vb[i] || R.bc[i] === S.no_level) return null;
   var pk = R.pk[R.bst[i]]; if (pk == null) return null;
   var d = pk >= R.bc[i] ? Math.max(0, (pk - R.bg[i]) / 100) : 0, above = d - v.ffh[i] / 10, fr = d > 0 ? dmgFrac(above, v.curve[i]) : 0;
   return {depth:d, above:above, frac:fr, usd:fr * v.vb[i]}; }
 function fmtUSD(v){ return "$" + Math.round(v).toLocaleString("en-US"); }
 function fmtBig(v){ return v >= 1e9 ? "$" + (v / 1e9).toFixed(2) + " billion" : v >= 1e6 ? "$" + (v / 1e6).toFixed(v >= 1e7 ? 0 : 1) + " million" : v >= 1e4 ? "$" + Math.round(v / 1e3) + " thousand" : fmtUSD(v); }
-function peaks(){ R.pk = []; R.pkI = [];
-  for (var s = 0; s < R.ns; s++){ var d = R.series[s], best = null, bi = -1; if (d) for (var i = 0; i < LV.n; i++){ var v = d[T.mode][i]; if (v != null && (best == null || v > best)){ best = v; bi = i; } }
+function peaks(){ R.pk = []; R.pkI = []; var i;
+  for (var s = 0; s < R.ns; s++){ var d = R.series[s], best = null, bi = -1;
+    if (d && T.view === "scen") best = d.f[T.i];
+    else if (d) for (i = 0; i < A.n; i++){ var v = d[T.mode][i]; if (v != null && (best == null || v > best)){ best = v; bi = i; } }
     R.pk.push(best == null ? null : Math.round(best * 100)); R.pkI.push(bi); }
   if (!R.val) return; var sum = 0, n = 0;
   for (i = 0; i < S.buildings.n; i++){ var e = bDamage(i); if (e && e.usd > 0){ sum += e.usd; n++; } }
   $("vDmg").textContent = fmtBig(sum);
-  $("dDmg").textContent = n.toLocaleString() + (n === 1 ? " home" : " homes") + " at the " + (T.mode === "f" ? "forecast's" : T.mode === "p90" ? "high (90%) line's" : "low (10%) line's") + " highest water; structure only, " + S.values.tax_year + " assessed value"; }
-function timeline(){ peaks(); var n = LV.n; R.tlF = new Float32Array(n); R.tlP = new Float32Array(n); R.tlB = new Float32Array(n); var best = 0;
-  for (var i = 0; i < n; i++){ var t = totalsAt(i, T.mode); R.tlF[i] = t[0]; R.tlP[i] = t[1]; R.tlB[i] = t[2]; if (t[0] + t[1] > R.tlF[best] + R.tlP[best]) best = i; }
+  $("dDmg").textContent = n.toLocaleString() + (n === 1 ? " home" : " homes") + " at " + (T.view === "scen" ? "this water level" : T.view === "hist" ? "this flood's highest water" : "the " + (T.mode === "f" ? "forecast's" : T.mode === "p90" ? "high (90%) line's" : "low (10%) line's") + " highest water") + "; structure only, " + S.values.tax_year + " assessed value"; }
+function timeline(){ peaks(); var n = A.n, i; R.tlF = new Float32Array(n); R.tlP = new Float32Array(n); R.tlB = new Float32Array(n); var best = 0;
+  for (i = 0; i < n; i++){ var t = totalsAt(i, T.mode); R.tlF[i] = t[0]; R.tlP[i] = t[1]; R.tlB[i] = t[2]; if (t[0] + t[1] > R.tlF[best] + R.tlP[best]) best = i; }
+  var pl = R.plot && R.plot[T.mode]; // the page opens at the forecast's highest water at the plot's gauge
+  if (pl){ best = 0; for (i = 1; i < n; i++) if (pl[i] != null && (pl[best] == null || pl[i] > pl[best])) best = i; }
   R.peak = best; }
 
 function update(){
@@ -309,59 +374,88 @@ function update(){
   for (var s = 0; s < R.ns; s++){ var v = level(s); L.push(v == null ? -32000 : v); kidx.push(v == null ? -1 : Math.floor((v / 100 - S.levels.start) / S.levels.step + 1e-9)); }
   for (i = 0; i < P.n; i++){ var lv = L[R.pst[i]], d = lv - R.pg[i]; R.pstate[i] = (R.pc[i] !== NO && lv >= R.pc[i] && d >= pd) ? (d > fd ? 2 : 1) : 0; }
   for (i = 0; i < B.n; i++){ lv = L[R.bst[i]]; R.bstate[i] = (R.bc[i] !== NO && lv >= R.bc[i] && lv - R.bg[i] > fd) ? 2 : 0; }
-  var f = rgb(C.flood), col = (150 << 24) | (f[2] << 16) | (f[1] << 8) | f[0], out = R.flood32, cell = R.cell, ci = R.cidx, cz = R.czone;
-  for (i = 0; i < cell.length; i++) out[cell[i]] = ci[i] <= kidx[cz[i]] ? col : 0;
-  R.floodCtx.putImageData(R.floodImg, 0, 0);
-  R.L = L;
+  R.L = L; R.kidx = kidx; R.stamp++;
+  if (T.view === "scen") peaks();
   var t = T.obs ? totalsAt(0, "obs") : [R.tlF[T.i], R.tlP[T.i], R.tlB[T.i]];
   $("vFlood").innerHTML = fmtMi(t[0]) + "<small>miles</small>"; $("vPond").innerHTML = fmtMi(t[1]) + "<small>miles</small>"; $("vBldg").textContent = Math.round(t[2]).toLocaleString();
-  if (T.obs){ var o = R.series.filter(function(d){ return d && d.obs_time; })[0];
+  var pg = S.plot_gauge, pv = R.plot ? (T.obs ? R.plot.obs_ft : R.plot[T.mode][T.i]) : null;
+  if (T.view === "scen"){ var sv = scenLevel(T.i);
+    $("when").innerHTML = "Water at " + sv.toFixed(2) + " ft NAVD88<small>" + (mllw(sv) ? mllw(sv) + " at " + S.mllw_ref.name + " · " : "") + "the same level at every gauge</small>"; }
+  else if (T.obs){ var o = R.series.filter(function(d){ return d && d.obs_time; })[0];
     $("when").innerHTML = "Last observed" + (o ? "<small>" + fTime.format(new Date(o.obs_time)) + " · the gauges at the forecast run</small>" : ""); }
+  else if (T.view === "hist"){ var dh = tAt(T.i), hp = (T.i - A.ev.peak_i) * A.step_min / 60;
+    $("when").innerHTML = fTimeY.format(dh) + "<small>" + utc(dh) + " · " + (Math.abs(hp) < 0.05 ? "the peak at Sewells Point" : hp < 0 ? (-hp).toFixed(1) + " h before the peak" : hp.toFixed(1) + " h after the peak") + "</small>"; }
   else { var d0 = tAt(T.i), lead = (d0 - Date.now()) / 3600000;
     $("when").innerHTML = fTime.format(d0) + "<small>" + utc(d0) + (R.nowOk ? " · " + (Math.abs(lead) < 0.2 ? "now" : lead > 0 ? "in " + lead.toFixed(lead < 10 ? 1 : 0) + " h" : (-lead).toFixed(1) + " h ago") : "") + "</small>"; }
+  $("lvlNote").textContent = T.view === "scen" || !pg || pv == null ? "" : pg.name + " at the selected time: " + pv.toFixed(2) + " ft NAVD88" + (mllw(pv, pg) ? " (" + mllw(pv, pg) + ")" : "") + (R.plot.own === false ? ", taken from " + R.plot.from : "") + ".";
   $("time").value = T.i; $("bObs").setAttribute("aria-pressed", T.obs);
-  $("time").setAttribute("aria-valuetext", fTime.format(tAt(T.i)));
+  $("time").setAttribute("aria-valuetext", T.view === "scen" ? scenLevel(T.i).toFixed(2) + " feet NAVD88" : fTime.format(tAt(T.i)));
   gauges(); cursors(); draw(); $("pop").hidden = true;
 }
 
 function gauges(){
+  if (T.view === "scen") return;
   var h = "<thead><tr><th>Gauge</th><th>Level</th><th>NWS stage</th><th>Peak</th><th>Roads flooded</th><th>Buildings</th></tr></thead><tbody>";
   S.stations.forEach(function(st, s){ var d = R.series[s];
-    if (!d){ h += "<tr><td><b>" + st.id + "</b><span class='nm'>" + st.name + "</span></td><td colspan='5' style='text-align:left'>no forecast in this run</td></tr>"; return; }
+    if (!d){ h += "<tr><td><b>" + st.id + "</b><span class='nm'>" + st.name + "</span></td><td colspan='5' style='text-align:left'>" + (T.view === "hist" ? "no gauge recorded this flood" : "no forecast in this run") + "</td></tr>"; return; }
     var v = T.obs ? d.obs_ft : d[T.mode][T.i], cat = "", fl = d.flood_levels_ft || {};
     ["action","minor","moderate","major"].forEach(function(k){ if (v != null && fl[k] != null && v >= fl[k]) cat = k; });
-    var pk = 0; for (var i = 1; i < LV.n; i++) if (d[T.mode][i] != null && (d[T.mode][pk] == null || d[T.mode][i] > d[T.mode][pk])) pk = i;
+    var pk = 0; for (var i = 1; i < A.n; i++) if (d[T.mode][i] != null && (d[T.mode][pk] == null || d[T.mode][i] > d[T.mode][pk])) pk = i;
     var q = v == null ? 0 : Math.max(0, Math.min(R.NB, Math.round(v * 100) - R.LO));
-    h += "<tr><td><b>" + st.id + "</b><span class='nm'>" + st.name.replace(/\s*\(IN MLLW\)/, "") + "</span></td><td>" + (v == null ? "–" : v.toFixed(2)) + "</td><td>" +
+    h += "<tr><td><b>" + st.id + "</b><span class='nm'>" + st.name.replace(/\s*\(IN MLLW\)/, "") + (d.own === false ? " · level from " + d.from + ", " + d.km + " km away" : "") + "</span></td><td>" + (v == null ? "–" : v.toFixed(2)) + "</td><td>" +
       (cat ? "<span class='pill'>" + cat[0].toUpperCase() + cat.slice(1) + "</span>" : "<span class='pill none'>below Action</span>") + "</td><td>" + (d[T.mode][pk] == null ? "–" : d[T.mode][pk].toFixed(2) + "<span class='nm'>" + fShort.format(tAt(pk)) + "</span>") + "</td><td>" + fmtMi(R.cumF[s][q] / 1609.344) + " mi</td><td>" + Math.round(R.cumB[s][q]).toLocaleString() + "</td></tr>"; });
   $("gauges").innerHTML = h + "</tbody>";
 }
 
-/* ---------- charts ---------- */
+/* ---------- the plot: water level on the left axis, impacts on the right ---------- */
 function nice(max){ if (max <= 0) return 1; var p = Math.pow(10, Math.floor(Math.log10(max))), m = max / p; return (m <= 1 ? 1 : m <= 2 ? 2 : m <= 5 ? 5 : 10) * p; }
-function ticks(){ // noon and midnight, Eastern
-  var f = new Intl.DateTimeFormat("en-US", {timeZone:"America/New_York", hour:"numeric", minute:"numeric", hourCycle:"h23"}), out = [];
-  for (var i = 1; i < LV.n - 1; i++){ var p = f.formatToParts(tAt(i)), hr = 0, mn = 0; p.forEach(function(q){ if (q.type === "hour") hr = +q.value; if (q.type === "minute") mn = +q.value; });
+function num(v){ return v >= 10 || v === 0 || v === Math.round(v) ? Math.round(v).toLocaleString() : v.toFixed(1); }
+function ticks(){ var out = [], i;
+  if (A.kind === "scen"){ for (i = 0; i < A.n; i++){ var lv = scenLevel(i); if (lv === Math.round(lv) && Math.round(lv) % 2 === 0) out.push({i:i, label:lv + " ft"}); } return out; }
+  var f = new Intl.DateTimeFormat("en-US", {timeZone:TZ, hour:"numeric", minute:"numeric", hourCycle:"h23"}); // noon and midnight, Eastern
+  for (i = 1; i < A.n - 1; i++){ var p = f.formatToParts(tAt(i)), hr = 0, mn = 0; p.forEach(function(q){ if (q.type === "hour") hr = +q.value; if (q.type === "minute") mn = +q.value; });
     if (mn === 0 && hr % 12 === 0) out.push({i:i, label: hr === 0 ? fDay.format(tAt(i)) : "noon"}); }
   return out; }
-function chart(el, series, unit, h, label){
-  var W = Math.max(260, el.clientWidth), H = h, m = {l:34, r:12, t:8, b:20}, pw = W - m.l - m.r, ph = H - m.t - m.b, n = LV.n;
-  var max = 0; series.forEach(function(s){ for (var i = 0; i < n; i++) if (s.v[i] > max) max = s.v[i]; });
-  var top = nice(max), x = function(i){ return m.l + pw * i / (n - 1); }, y = function(v){ return m.t + ph * (1 - v / top); };
-  var svg = '<svg viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="' + label + '">';
-  [0, 0.5, 1].forEach(function(f){ var yy = y(top * f), v = top * f; svg += '<line x1="' + m.l + '" x2="' + (W - m.r) + '" y1="' + yy + '" y2="' + yy + '" stroke="' + C.line + '" stroke-width="1"/><text x="' + (m.l - 6) + '" y="' + (yy + 3.5) + '" text-anchor="end">' + (v >= 10 || v === 0 || v === Math.round(v) ? Math.round(v).toLocaleString() : v.toFixed(1)) + '</text>'; });
-  var last = -99; R.ticks.forEach(function(t){ var xx = x(t.i); svg += '<line x1="' + xx + '" x2="' + xx + '" y1="' + (m.t + ph) + '" y2="' + (m.t + ph + 4) + '" stroke="' + C.line + '"/>';
-    if (xx - last > 46 && xx > m.l + 16 && xx < W - m.r - 16){ svg += '<text x="' + xx + '" y="' + (H - 4) + '" text-anchor="middle">' + t.label + '</text>'; last = xx; } });
-  series.forEach(function(s){ var p = "", a = "M" + x(0) + "," + y(0);
-    for (var i = 0; i < n; i++){ var pt = x(i).toFixed(1) + "," + y(s.v[i]).toFixed(1); p += (i ? "L" : "M") + pt; a += "L" + pt; }
-    a += "L" + x(n - 1) + "," + y(0) + "Z";
-    svg += '<path d="' + a + '" fill="' + s.c + '" fill-opacity="0.12"/><path d="' + p + '" fill="none" stroke="' + s.c + '" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>'; });
-  svg += '<g class="cur"><line y1="' + m.t + '" y2="' + (m.t + ph) + '" stroke="' + C.ink + '" stroke-width="1"/>' + series.map(function(s){ return '<circle r="4.5" fill="' + s.c + '" stroke="' + C.panel + '" stroke-width="2"/>'; }).join("") + '</g></svg><div class="tip" hidden></div>';
-  el.innerHTML = svg; el._g = {W:W, m:m, pw:pw, n:n, x:x, y:y, series:series, unit:unit};
+function plotChart(){
+  var el = $("cPlot"), n = A.n, scen = A.kind === "scen", lvl = scen || !R.plot ? null : R.plot[T.mode];
+  var band = lvl && A.kind === "fc" && R.plot.p10 && R.plot.p90 ? [R.plot.p10, R.plot.p90] : null;
+  var W = Math.max(280, el.clientWidth), H = 250, m = {l:36, r:lvl ? 88 : 46, t:20, b:22}, pw = W - m.l - m.r, ph = H - m.t - m.b, i;
+  var maxMi = 0, maxB = 0; for (i = 0; i < n; i++){ if (R.tlF[i] > maxMi) maxMi = R.tlF[i]; if (R.tlP[i] > maxMi) maxMi = R.tlP[i]; if (R.tlB[i] > maxB) maxB = R.tlB[i]; }
+  maxMi = nice(maxMi); maxB = nice(maxB);
+  var lo = Infinity, hi = -Infinity; var runs = lvl && A.kind === "hist" && A.ev.runs ? A.ev.runs : null;
+  (lvl ? [lvl].concat(band || [], runs ? runs.map(function(r){ return r.f; }) : []) : []).forEach(function(a){ for (var q = 0; q < n; q++){ var v = a[q]; if (v != null){ if (v < lo) lo = v; if (v > hi) hi = v; } } });
+  if (!isFinite(lo)){ lo = 0; hi = 1; } var st = hi - lo > 6 ? 2 : 1; lo = Math.floor(lo / st) * st; hi = Math.ceil(hi / st) * st; if (hi === lo) hi += st;
+  var x = function(q){ return m.l + pw * q / (n - 1); }, yL = function(v){ return m.t + ph * (1 - (v - lo) / (hi - lo)); },
+      yM = function(v){ return m.t + ph * (1 - v / maxMi); }, yB = function(v){ return m.t + ph * (1 - v / maxB); };
+  var svg = '<svg viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="' + $("plotTitle").textContent + ": " + $("plotSub").textContent + '">', xr = W - m.r, g, v;
+  if (lvl){ for (v = lo; v <= hi + 1e-9; v += st){ g = yL(v); svg += '<line x1="' + m.l + '" x2="' + xr + '" y1="' + g + '" y2="' + g + '" stroke="' + C.line + '"/><text x="' + (m.l - 6) + '" y="' + (g + 3.5) + '" text-anchor="end">' + v + '</text>'; }
+    svg += '<text x="' + (m.l - 30) + '" y="10">ft NAVD88</text><text x="' + (xr + 6) + '" y="10">miles</text><text x="' + (W - 1) + '" y="10" text-anchor="end">buildings</text>';
+    [0, 0.5, 1].forEach(function(f){ g = m.t + ph * (1 - f); svg += '<line x1="' + xr + '" x2="' + (xr + 4) + '" y1="' + g + '" y2="' + g + '" stroke="' + C.line + '"/><text x="' + (xr + 6) + '" y="' + (g + 3.5) + '">' + num(maxMi * f) + '</text><text x="' + (W - 1) + '" y="' + (g + 3.5) + '" text-anchor="end">' + num(maxB * f) + '</text>'; });
+    var fl = R.plot.flood_levels_ft || {}; ["action","minor","moderate","major"].forEach(function(k){ if (fl[k] == null || fl[k] < lo || fl[k] > hi) return; g = yL(fl[k]);
+      svg += '<line x1="' + m.l + '" x2="' + xr + '" y1="' + g + '" y2="' + g + '" stroke="' + C.muted + '" stroke-dasharray="3 4" stroke-width="1"/><text x="' + (xr - 4) + '" y="' + (g - 3) + '" text-anchor="end">' + k[0].toUpperCase() + k.slice(1) + " " + fl[k].toFixed(1) + '</text>'; }); }
+  else { [0, 0.5, 1].forEach(function(f){ g = m.t + ph * (1 - f); svg += '<line x1="' + m.l + '" x2="' + xr + '" y1="' + g + '" y2="' + g + '" stroke="' + C.line + '"/><text x="' + (m.l - 6) + '" y="' + (g + 3.5) + '" text-anchor="end">' + num(maxMi * f) + '</text><text x="' + (W - 1) + '" y="' + (g + 3.5) + '" text-anchor="end">' + num(maxB * f) + '</text>'; });
+    svg += '<text x="' + (m.l - 30) + '" y="10">miles</text><text x="' + (W - 1) + '" y="10" text-anchor="end">buildings</text>'; }
+  var placed = [];                                             // day names first, "noon" only where there is room
+  [false, true].forEach(function(noon){ R.ticks.forEach(function(t){ var xx = x(t.i); if ((t.label === "noon") !== noon) return;
+    if (!noon) svg += '<line x1="' + xx + '" x2="' + xx + '" y1="' + (m.t + ph) + '" y2="' + (m.t + ph + 4) + '" stroke="' + C.line + '"/>';
+    if (xx < m.l + 12 || xx > xr - 12 || placed.some(function(q){ return Math.abs(q - xx) < 46; })) return;
+    if (noon) svg += '<line x1="' + xx + '" x2="' + xx + '" y1="' + (m.t + ph) + '" y2="' + (m.t + ph + 4) + '" stroke="' + C.line + '"/>';
+    svg += '<text x="' + xx + '" y="' + (H - 4) + '" text-anchor="middle">' + t.label + '</text>'; placed.push(xx); }); });
+  function path(a, y, close){ var p = "", pen = false; for (var q = 0; q < n; q++){ if (a[q] == null){ pen = false; continue; } p += (pen ? "L" : "M") + x(q).toFixed(1) + "," + y(a[q]).toFixed(1); pen = true; }
+    return close ? p + "L" + x(n - 1) + "," + (m.t + ph) + "L" + x(0) + "," + (m.t + ph) + "Z" : p; }
+  if (band){ var up = "", dn = ""; for (i = 0; i < n; i++) if (band[0][i] != null && band[1][i] != null){ up += (up ? "L" : "M") + x(i).toFixed(1) + "," + yL(band[1][i]).toFixed(1); dn = "L" + x(i).toFixed(1) + "," + yL(band[0][i]).toFixed(1) + dn; }
+    if (up) svg += '<path d="' + up + dn + 'Z" fill="' + C.navy + '" fill-opacity="0.13"/>'; }
+  if (runs) runs.forEach(function(r, q){ svg += '<path d="' + path(r.f, yL) + '" fill="none" stroke="' + C.navy + '" stroke-opacity="' + (0.2 + 0.5 * (q + 1) / runs.length).toFixed(2) + '" stroke-width="1.2" stroke-dasharray="4 3"/>'; });
+  var ser = [{name:"Roads flooded", v:R.tlF, c:C.flooded, y:yM, unit:"mi", fill:true}, {name:"Roads ponded", v:R.tlP, c:C.ponded, y:yM, unit:"mi"}, {name:"Buildings flooded", v:R.tlB, c:C.building, y:yB, unit:"n"}];
+  ser.forEach(function(s){ if (s.fill) svg += '<path d="' + path(s.v, s.y, true) + '" fill="' + s.c + '" fill-opacity="0.12"/>';
+    svg += '<path d="' + path(s.v, s.y) + '" fill="none" stroke="' + s.c + '" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>'; });
+  if (lvl){ svg += '<path d="' + path(lvl, yL) + '" fill="none" stroke="' + C.navy + '" stroke-width="2.6" stroke-linejoin="round" stroke-linecap="round"/>'; ser.unshift({name:(S.plot_gauge ? S.plot_gauge.name : "Water level"), v:lvl, c:C.navy, y:yL, unit:"ft"}); }
+  svg += '<g class="cur"><line y1="' + m.t + '" y2="' + (m.t + ph) + '" stroke="' + C.ink + '" stroke-width="1"/>' + ser.map(function(s){ return '<circle r="4.5" fill="' + s.c + '" stroke="' + C.panel + '" stroke-width="2"/>'; }).join("") + '</g></svg><div class="tip" hidden></div>';
+  el.innerHTML = svg; el._g = {W:W, m:m, pw:pw, n:n, x:x, series:ser};
   if (!el._bound){ el._bound = true; var down = false;
-    var idx = function(e){ var g = el._g, r = el.firstChild.getBoundingClientRect(), f = ((e.clientX - r.left) / r.width * g.W - g.m.l) / g.pw; return Math.max(0, Math.min(g.n - 1, Math.round(f * (g.n - 1)))); };
-    var show = function(e){ var g = el._g, i = idx(e), r = el.getBoundingClientRect(), tip = el.lastChild;
-      tip.innerHTML = "<b>" + fShort.format(tAt(i)) + "</b><br>" + g.series.map(function(s){ return '<span class="sw" style="background:' + s.c + ';vertical-align:middle;margin-right:5px"></span>' + s.name + ": " + (g.unit === "mi" ? fmtMi(s.v[i]) + " mi" : Math.round(s.v[i]).toLocaleString()); }).join("<br>");
+    var idx = function(e){ var q = el._g, r = el.firstChild.getBoundingClientRect(), f = ((e.clientX - r.left) / r.width * q.W - q.m.l) / q.pw; return Math.max(0, Math.min(q.n - 1, Math.round(f * (q.n - 1)))); };
+    var show = function(e){ var q = el._g, k = idx(e), r = el.getBoundingClientRect(), tip = el.lastChild;
+      tip.innerHTML = "<b>" + stepLabel(k) + "</b><br>" + q.series.map(function(s){ var val = s.v[k]; return '<span class="sw" style="background:' + s.c + ';vertical-align:middle;margin-right:5px"></span>' + s.name + ": " + (val == null ? "–" : s.unit === "mi" ? fmtMi(val) + " mi" : s.unit === "ft" ? val.toFixed(2) + " ft NAVD88" + (mllw(val, S.plot_gauge) ? " (" + mllw(val, S.plot_gauge) + ")" : "") : Math.round(val).toLocaleString()); }).join("<br>");
       tip.hidden = false; var tx = e.clientX - r.left + 12; if (tx + tip.offsetWidth > r.width) tx = e.clientX - r.left - tip.offsetWidth - 12; tip.style.left = Math.max(0, tx) + "px"; };
     var set = function(e){ T.obs = false; T.i = idx(e); stop(); update(); };
     el.addEventListener("pointermove", function(e){ show(e); if (down) set(e); });
@@ -369,27 +463,46 @@ function chart(el, series, unit, h, label){
     window.addEventListener("pointerup", function(){ down = false; });
     el.addEventListener("pointerleave", function(){ el.lastChild.hidden = true; }); }
 }
-function charts(){
-  chart($("cRoads"), [{name:"Flooded", v:R.tlF, c:C.flooded}, {name:"Ponded", v:R.tlP, c:C.ponded}], "mi", 150, "Road miles flooded and ponded through the forecast");
-  chart($("cBldg"), [{name:"Buildings", v:R.tlB, c:C.building}], "n", 96, "Buildings flooded through the forecast");
-  cursors();
-}
-function cursors(){ ["cRoads", "cBldg"].forEach(function(id){ var el = $(id), g = el._g; if (!g) return; var cur = el.querySelector(".cur"); cur.style.display = T.obs ? "none" : "";
-    var cx = g.x(T.i), ln = cur.firstChild; ln.setAttribute("x1", cx); ln.setAttribute("x2", cx);
-    g.series.forEach(function(s, k){ var c = cur.childNodes[k + 1]; c.setAttribute("cx", cx); c.setAttribute("cy", g.y(s.v[T.i])); }); }); }
+function charts(){ plotChart(); cursors(); }
+function cursors(){ var el = $("cPlot"), g = el._g; if (!g) return; var cur = el.querySelector(".cur"); cur.style.display = T.obs ? "none" : "";
+  var cx = g.x(T.i), ln = cur.firstChild; ln.setAttribute("x1", cx); ln.setAttribute("x2", cx);
+  g.series.forEach(function(s, k){ var c = cur.childNodes[k + 1], v = s.v[T.i]; c.style.display = v == null ? "none" : ""; if (v != null){ c.setAttribute("cx", cx); c.setAttribute("cy", s.y(v)); } }); }
 
 /* ---------- map ---------- */
-function paintWater(){ var rw = S.raster.width, rh = S.raster.height, c = R.waterCv.getContext("2d"), im = c.createImageData(rw, rh), a = new Uint32Array(im.data.buffer), w = rgb(C.water), col = (255 << 24) | (w[2] << 16) | (w[1] << 8) | w[0];
-  for (var i = 0; i < a.length; i++) a[i] = R.wmask[i] ? col : 0; c.putImageData(im, 0, 0); }
+// The flood picture comes as an overview and 1024-pixel tiles (red: level index, green: gauge, blue: ground), so that
+// a phone never has to hold the whole area at full detail. A tile is painted again only when the levels change.
+function tile(key, url, w, h){ var t = R.tiles[key]; if (t) return t; t = R.tiles[key] = {key:key, state:0, w:w, h:h, stamp:0, used:0};
+  getImage(url).then(function(img){ var c = document.createElement("canvas"); c.width = w; c.height = h; var x = c.getContext("2d", {willReadFrequently:true});
+    x.drawImage(img, 0, 0); var px = x.getImageData(0, 0, w, h).data, n = w * h; t.lev = new Uint8Array(n); t.zone = new Uint8Array(n); t.gnd = new Uint8Array(n);
+    for (var i = 0, j = 0; i < n; i++, j += 4){ t.lev[i] = px[j]; t.zone[i] = px[j+1]; t.gnd[i] = px[j+2]; }
+    t.cv = c; t.ctx = x; t.im = x.createImageData(w, h); t.a = new Uint32Array(t.im.data.buffer); t.state = 1; draw(); }).catch(function(){ t.state = -1; });
+  return t; }
+function paint(t){ if (t.stamp === R.stamp) return; var a = t.a, lev = t.lev, zn = t.zone, g = t.gnd, n = a.length, K = R.kidx, L = R.L, W = R.colWater, D = R.colDepth, NZ = S.raster.no_zone,
+    g0 = S.raster.ground0_ft * 100, gs = S.raster.ground_step_ft * 100;
+  for (var i = 0; i < n; i++){ var gi = g[i]; if (gi === 0){ a[i] = W; continue; } var z = zn[i]; if (z === NZ || z >= K.length || lev[i] > K[z]){ a[i] = 0; continue; }
+    var d = L[z] - (g0 + (gi - 1) * gs); a[i] = D[d <= 50 ? 0 : d <= 100 ? 1 : d >= 1000 ? 10 : Math.ceil(d / 100)]; }
+  t.ctx.putImageData(t.im, 0, 0); t.stamp = R.stamp; }
 function resize(fit){ cv.style.aspectRatio = S.width_m + " / " + S.height_m; var r = cv.getBoundingClientRect(); cv.width = Math.round(r.width * DPR); cv.height = Math.round(r.height * DPR); R.w = r.width; R.h = r.height; if (fit) fitAll(); }
 function fitAll(){ var wu = S.width_m / S.unit_m, hu = S.height_m / S.unit_m; V.s = Math.min(R.w / wu, R.h / hu); V.ox = (R.w - wu * V.s) / 2; V.oy = (R.h - hu * V.s) / 2; }
 function zoomAt(x, y, k){ var wu = S.width_m / S.unit_m, min = Math.min(R.w / wu, R.h / (S.height_m / S.unit_m)) * 0.8, s = Math.max(min, Math.min(6, V.s * k)); k = s / V.s; V.ox = x - (x - V.ox) * k; V.oy = y - (y - V.oy) * k; V.s = s; draw(); $("pop").hidden = true; }
+function drawRaster(s, ox, oy, w, h){ if (!R.L) return;
+  var ra = S.raster, cu = ra.cell_m / S.unit_m, pc = s * cu, ov = ra.overview, o = R.over, r, c;
+  if (o && o.state === 1){ paint(o); ctx.imageSmoothingEnabled = pc * ov.factor < 3; ctx.drawImage(o.cv, ox, oy, ov.width * ov.factor * pc, ov.height * ov.factor * pc); }
+  if (ov.factor === 1 || pc * ov.factor <= 1.5) return;        // the overview is sharp enough
+  var ts = ra.tile, c0 = Math.max(0, Math.floor(-ox / pc / ts)), c1 = Math.min(ra.cols - 1, Math.floor((w - ox) / pc / ts)), r0 = Math.max(0, Math.floor(-oy / pc / ts)), r1 = Math.min(ra.rows - 1, Math.floor((h - oy) / pc / ts));
+  if ((c1 - c0 + 1) * (r1 - r0 + 1) > MAX_TILES) return;
+  ctx.imageSmoothingEnabled = pc < 3; R.tick++;
+  for (r = r0; r <= r1; r++) for (c = c0; c <= c1; c++){ var tw = Math.min(ts, ra.width - c * ts), th = Math.min(ts, ra.height - r * ts), t = tile(r + "_" + c, ra.dir + "/t_" + r + "_" + c + ".png", tw, th);
+    if (t.state !== 1) continue; paint(t); t.used = R.tick; var dx = ox + c * ts * pc, dy = oy + r * ts * pc;
+    ctx.fillStyle = C.land; ctx.fillRect(dx, dy, tw * pc, th * pc); ctx.drawImage(t.cv, dx, dy, tw * pc, th * pc); }
+  var live = Object.keys(R.tiles).filter(function(k){ return k !== "z0" && R.tiles[k].state === 1; });
+  if (live.length > MAX_TILES + 4){ live.sort(function(p, q){ return R.tiles[p].used - R.tiles[q].used; }).slice(0, live.length - MAX_TILES).forEach(function(k){ var t = R.tiles[k]; if (t.used === R.tick) return; t.cv.width = t.cv.height = 0; delete R.tiles[k]; }); }
+}
 function draw(){
-  if (!S) return;
+  if (!S || !A) return;
   var s = V.s, ox = V.ox, oy = V.oy, w = R.w, h = R.h, i, k, e, b;
   ctx.setTransform(DPR, 0, 0, DPR, 0, 0); ctx.fillStyle = C.land; ctx.fillRect(0, 0, w, h);
-  var cu = S.raster.cell_m / S.unit_m, rw = S.raster.width * cu * s, rh = S.raster.height * cu * s;
-  ctx.imageSmoothingEnabled = s * cu < 3; ctx.drawImage(R.waterCv, ox, oy, rw, rh); ctx.drawImage(R.floodCv, ox, oy, rw, rh);
+  drawRaster(s, ox, oy, w, h);
   var x0 = (0 - ox) / s, y0 = (0 - oy) / s, x1 = (w - ox) / s, y1 = (h - oy) / s, mpx = s / S.unit_m; // px per metre
   ctx.lineCap = "round"; ctx.lineJoin = "round";
   // road network: edges then surfaces when zoomed in; a thin dark network when zoomed out
@@ -450,25 +563,25 @@ function pick(px, py){ // a building under the pointer, else the nearest road pi
   return best < 0 ? null : {kind:"p", i:best};
 }
 function popup(px, py){ var hit = pick(px, py), p = $("pop"); if (!hit){ p.hidden = true; return; }
-  var NO = S.no_level, g, c, si, name, first, pd = S.ponded_ft, fd = S.flooded_ft;
+  var NO = S.no_level, g, c, si, name, first, pd = S.ponded_ft, fd = S.flooded_ft, scen = T.view === "scen", hist = T.view === "hist";
   if (hit.kind === "p"){ g = R.pg[hit.i] / 100; c = R.pc[hit.i] / 100; si = R.pst[hit.i]; name = S.roads.names[R.rname[R.proad[hit.i]]] || "Unnamed road"; first = Math.max(g + pd, c); }
   else { g = R.bg[hit.i] / 100; c = R.bc[hit.i] / 100; si = R.bst[hit.i]; name = R.bstate[hit.i] ? "Flooded Building" : "Building"; first = Math.max(g + fd, c); }
   var lv = R.L[si] / 100, d = lv >= c ? Math.max(0, lv - g) : 0, st = S.stations[si], never = (hit.kind === "p" ? R.pc : R.bc)[hit.i] === NO;
   var via = (hit.kind === "p" ? R.pvia : R.bvia), v = hit.kind === "b" ? R.val : null, h = "<b>" + name + "</b>";
   if (v && v.use[hit.i] !== 255) h += " <span class='u'>" + S.values.uses[v.use[hit.i]] + "</span>";
   h += "<br>Ground " + g.toFixed(2) + " ft NAVD88<br>" + (never ? "Water does not reach it at 10 ft or below" : (hit.kind === "p" ? "Ponds" : "Floods") + " once the water reaches " + first.toFixed(2) + " ft" + (via && via[hit.i] ? ", through the storm drains" : "")) + "<br>" +
-    (R.L[si] > -32000 ? "At the selected time: " + (d > 0 ? d.toFixed(2) + " ft of water" : "dry") + " (" + st.id + " at " + lv.toFixed(2) + " ft)" : st.id + ": no level");
+    (R.L[si] > -32000 ? (scen ? "At this level: " : "At the selected time: ") + (d > 0 ? d.toFixed(2) + " ft of water" : "dry") + " (" + (scen ? "water" : st.id) + " at " + lv.toFixed(2) + " ft)" : st.id + ": no level");
   if (v){ var V0 = S.values, i = hit.i, zi = v.zip[i], zh = zi === 255 ? null : V0.zhvi[zi], e = bDamage(i), pkI = R.pkI[si];
     h += "<span class='f'><i>Year Built:</i> " + (v.year[i] ? v.year[i] : "not on record") + "</span>" +
       "<span class='f'><i>" + V0.tax_year + " Tax Assessed Value:</i> " + (v.vt[i] ? fmtUSD(v.vt[i]) + (v.vb[i] ? " (parcel; this building " + fmtUSD(v.vb[i]) + ")" : "") : "no assessment record matched") + "</span>" +
       "<span class='f'><i>" + String(V0.zillow_month || "").slice(0, 4) + " Zillow Est. Avg. Value:</i> " + (!v.res[i] ? "not applicable (not a home)" : zh ? fmtUSD(zh) + " (typical home in ZIP " + V0.zips[zi] + ")" : "none for this ZIP code") + "</span>" +
-      "<span class='f'><i>Est. Damage at Max Forecast Depth:</i> " + (!v.res[i] ? "not estimated (the curve is for homes)" : !e ? "not estimated (no assessed building value)" :
-        e.depth <= 0 ? "$0 (stays dry in this forecast)" : fmtUSD(e.usd) + " (" + (e.frac > 0 ? (e.frac * 100).toFixed(1) + "% of the building; " : "") + e.depth.toFixed(2) + " ft of water" + (pkI >= 0 ? " " + fShort.format(tAt(pkI)) : "") + ", " + (e.above >= 0 ? e.above.toFixed(1) + " ft over" : (-e.above).toFixed(1) + " ft under") + (v.ec && v.ec[i] ? " the first floor of its elevation certificate, " + (v.ffh[i] / 10).toFixed(1) + " ft above the ground)" : " a first floor assumed " + (v.ffh[i] / 10).toFixed(0) + " ft above the ground)")) + "</span>"; }
+      "<span class='f'><i>" + (scen ? "Est. Damage at This Water Level:" : hist ? "Est. Damage at This Flood's Max Depth:" : "Est. Damage at Max Forecast Depth:") + "</i> " + (!v.res[i] ? "not estimated (the curve is for homes)" : !e ? "not estimated (no assessed building value)" :
+        e.depth <= 0 ? "$0 (stays dry)" : fmtUSD(e.usd) + " (" + (e.frac > 0 ? (e.frac * 100).toFixed(1) + "% of the building; " : "") + e.depth.toFixed(2) + " ft of water" + (pkI >= 0 ? " " + fShort.format(tAt(pkI)) : "") + ", " + (e.above >= 0 ? e.above.toFixed(1) + " ft over" : (-e.above).toFixed(1) + " ft under") + (v.ec && v.ec[i] ? " the first floor of its elevation certificate, " + (v.ffh[i] / 10).toFixed(1) + " ft above the ground)" : " a first floor assumed " + (v.ffh[i] / 10).toFixed(0) + " ft above the ground)")) + "</span>"; }
   p.innerHTML = h;
   p.hidden = false; var left = Math.min(px + 12, R.w - p.offsetWidth - 8), topp = py + 14; if (topp + p.offsetHeight > R.h - 8) topp = py - p.offsetHeight - 10;
   p.style.left = Math.max(8, left) + "px"; p.style.top = Math.max(8, topp) + "px"; }
 
-function stop(){ if (T.playing){ clearInterval(T.playing); T.playing = null; $("bPlay").textContent = "▶ Play 72 hours"; $("bPlay").setAttribute("aria-pressed", "false"); } }
+function stop(){ if (T.playing){ clearInterval(T.playing); T.playing = null; $("bPlay").textContent = playLabel(); $("bPlay").setAttribute("aria-pressed", "false"); } }
 function bind(){
   var pts = {}, moved = 0, pinch = 0;
   cv.addEventListener("pointerdown", function(e){ cv.setPointerCapture(e.pointerId); pts[e.pointerId] = [e.offsetX, e.offsetY]; moved = 0; cv.classList.add("drag"); pinch = 0; });
@@ -482,14 +595,18 @@ function bind(){
     else if (k === "ArrowLeft") V.ox += st; else if (k === "ArrowRight") V.ox -= st; else if (k === "ArrowUp") V.oy += st; else if (k === "ArrowDown") V.oy -= st; else return; e.preventDefault(); draw(); });
   $("zIn").onclick = function(){ zoomAt(R.w / 2, R.h / 2, 1.6); }; $("zOut").onclick = function(){ zoomAt(R.w / 2, R.h / 2, 1 / 1.6); }; $("zFit").onclick = function(){ fitAll(); draw(); };
   $("time").addEventListener("input", function(){ T.obs = false; T.i = +this.value; stop(); update(); });
-  $("bNow").onclick = function(){ stop(); T.obs = false; T.i = Math.max(0, Math.min(LV.n - 1, Math.round((Date.now() - LV.t0ms) / (LV.step_min * 60000)))); update(); };
-  $("bPeak").onclick = function(){ stop(); T.obs = false; T.i = R.peak; update(); };
-  $("bObs").onclick = function(){ stop(); T.obs = !T.obs; update(); };
-  $("bPlay").onclick = function(){ if (T.playing){ stop(); return; } T.obs = false; if (T.i >= LV.n - 1) T.i = 0; this.textContent = "❚❚ Pause"; this.setAttribute("aria-pressed", "true");
-    var stride = Math.max(1, Math.round(30 / LV.step_min)); T.playing = setInterval(function(){ T.i += stride; if (T.i >= LV.n - 1){ T.i = LV.n - 1; update(); stop(); return; } update(); }, 140); };
+  function fc(){ if (T.view !== "fc") use("fc"); stop(); }
+  $("bNow").onclick = function(){ fc(); T.obs = false; T.i = Math.max(0, Math.min(LV.n - 1, Math.round((Date.now() - LV.t0ms) / (LV.step_min * 60000)))); update(); };
+  $("bPeak").onclick = function(){ fc(); T.obs = false; T.i = R.peak; update(); };
+  $("bObs").onclick = function(){ fc(); T.obs = !T.obs; update(); };
+  $("bHist").onclick = function(){ use(T.view === "hist" ? "fc" : "hist"); };
+  $("bScen").onclick = function(){ use(T.view === "scen" ? "fc" : "scen"); };
+  $("evSel").onchange = function(){ use("hist", +this.value); };
+  $("bPlay").onclick = function(){ if (T.playing){ stop(); return; } T.obs = false; if (T.i >= A.n - 1) T.i = 0; this.textContent = "❚❚ Pause"; this.setAttribute("aria-pressed", "true");
+    var scen = T.view === "scen", stride = scen ? 1 : Math.max(1, Math.round(30 / A.step_min)); T.playing = setInterval(function(){ T.i += stride; if (T.i >= A.n - 1){ T.i = A.n - 1; update(); stop(); return; } update(); }, scen ? 320 : 140); };
   $("mode").querySelectorAll("button").forEach(function(b){ b.onclick = function(){ T.mode = b.dataset.v; $("mode").querySelectorAll("button").forEach(function(x){ x.setAttribute("aria-pressed", x === b); }); timeline(); charts(); update(); }; });
   var rt; window.addEventListener("resize", function(){ clearTimeout(rt); rt = setTimeout(function(){ var cx = (R.w / 2 - V.ox) / V.s, cy = (R.h / 2 - V.oy) / V.s; resize(false); V.ox = R.w / 2 - cx * V.s; V.oy = R.h / 2 - cy * V.s; charts(); draw(); }, 120); });
-  function retheme(){ readColors(); paintWater(); charts(); update(); }
+  function retheme(){ readColors(); chrome(); charts(); update(); }
   if (window.matchMedia) window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", retheme);
   new MutationObserver(retheme).observe(document.documentElement, {attributes:true, attributeFilter:["data-theme"]});
 }

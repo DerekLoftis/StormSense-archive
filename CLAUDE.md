@@ -168,6 +168,18 @@ project's shared folder (skill code, baselines, notes, station sheet, disclosure
   `store`). maps.nnva.gov goes down for minutes at a time around 3 AM ET: just run again. A HUC-12 no gauge measures is
   left out (`tether_overrides.csv` station `-`, prefix with `*`): `03010205*`, the Back Bay, North Landing and Northwest
   River watersheds south of the Great Bridge lock, which drain to Currituck Sound. Results per city: README "Numbers".
+- Map page (Derek's asks 2026-11-27): the flood picture is an overview plus 1024-pixel tiles (`page/tiles/`; level,
+  gauge and ground per 5 m cell) because one big picture did not draw on phones; depth is colored in Derek's eleven
+  blues (to 0.5 ft, then each foot to 10); views Now / Forecast peak (opens here) / Last observed / Historical Floods /
+  Scenario (one level for every gauge, -2 to 10 ft); the plot is titled "StormSense Prediction Plot / Anticipated
+  Impacts in the Next 72 Hours" with the nearest NOAA gauge's forecast on the left axis and roads and buildings on the
+  right (his layout: keep the two right axes). `python -m inundation.page --prepared <page dir> --work <work dir>`
+  redraws a prepared area's picture.
+- Historical floods (`history.py`, `events/<id>/`): the 72 hours around the highest water at Sewells Point for the 2026
+  Thanksgiving Day Nor'easter (from the archived runs, with every forecast), the 1933 Hurricane, Isabel 2003, Nor'Ida
+  2009, Irene 2011 and Matthew 2016 (NOAA CO-OPS, USGS since 2007; ft NAVD88). A gauge without its own record through
+  the peak follows the nearest one that has it. Add a storm as a row in `events/events.json` and run
+  `python -m inundation.history noaa --event <id>`.
 - Not wired yet: a workflow, Pages hosting and the push to the AGOL folder "StormSense CREST". Each area's prepared
   tables and file geodatabase are in the project's shared folder under `inundation/<area>/`.
 
@@ -235,7 +247,8 @@ project's shared folder (skill code, baselines, notes, station sheet, disclosure
   services.arcgis.com; since 2026-11-26 gisshare.norfolk.gov, orfmaps.norfolk.gov, data.norfolk.gov,
   services2/services3/services5/services6/services7.arcgis.com, tiles.arcgis.com, geo.vbgov.com, maps.nnva.gov,
   geo.hrsd.com, gis.hrpdcva.gov, property.jamescitycountyva.gov, files.zillowstatic.com and the USACE/HRPDC document
-  hosts). No Claude session reaches tidesandcurrents.noaa.gov or *.github.io; NOAA AWS buckets work.
+  hosts; since 2026-11-27 api.tidesandcurrents.noaa.gov and waterservices.usgs.gov). No Claude session reaches
+  tidesandcurrents.noaa.gov itself, tds.vims.edu or *.github.io; NOAA AWS buckets work.
 - GitHub Actions has full internet (except NOMADS ETSS paths, 403), so put blocked downloads in a
   workflow. Read live pages from a workflow, not the sandbox. A finished job's log is readable from a session with
   the GitHub MCP tools (`actions_list` list_workflow_jobs for the run, then `get_job_logs` with the job id and
