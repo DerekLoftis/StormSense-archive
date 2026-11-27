@@ -125,7 +125,8 @@ bridge layer (VDOT structures) would be better.
 | `tether.py` | HUC-12s, nearest gauge, overrides |
 | `prep.py` | step 1; writes `<name>_roads.csv.gz`, `<name>_buildings.csv.gz`, `<name>.gpkg` (`--gdb`: `<name>.gdb`), `<name>_tether.csv`, `page/` |
 | `status.py` | step 2; writes `<name>_roads_status.csv`, `<name>_buildings_status.csv` (+ `.geojson` with `--layers`), `<name>_summary.json`, `<name>_timeline.csv`, `page/levels.json` |
-| `page.py`, `templates/map.html` | the area's self-contained map page (no CDN, no map tiles): time slider through the 72 hours, counts, gauge table |
+| `page.py`, `templates/map.html` | the area's self-contained map page (no CDN, no map tiles): forecast, Historical Floods and Scenario views, the prediction plot, counts, gauge table; `python -m inundation.page --prepared <page dir> --work <work dir>` redraws an area's flood picture without a new `prep` |
+| `history.py`, `events/` | past floods: 72 hours of every gauge's record around the highest water at Sewells Point |
 
 Extra packages (not needed by the StormSense run): `pip install -r inundation/requirements.txt`.
 
@@ -140,6 +141,54 @@ python -m inundation.status --prepared prepared --name norfolk --site <StormSens
 `prep` downloads about 6 GB of DEM tiles for Norfolk (or pass local copies with `--dem`) and takes about
 12 minutes on 4 cores with 12 GB of memory (the pipes double the connectivity step). `--no-drainage`,
 `--no-barriers`, `--no-values` and `--no-certificates` leave those parts out. `status` takes seconds.
+
+## The map page
+
+- Flood picture: 5 m cells from the 1 m grids, each with the lowest level that reaches it, its gauge and its ground
+  (0.05 ft steps), so the page colors depth in Derek's eleven blues (up to 0.5 ft, then each foot to 10 ft). It is
+  written as `page/tiles/z0.png` (the whole area, at most 2048 pixels) plus 1024-pixel tiles the page loads as the
+  reader zooms in. One big picture (`extent.png`, before 2026-11-27) did not draw on phones. Cells in a watershed no
+  gauge measures are left empty.
+- Views: Now, Forecast peak (the page opens here), Last observed, Historical Floods, Scenario. Scenario sets one
+  water level for every gauge, -2 to 10 ft NAVD88 in 0.25 ft steps, and the roads, buildings and damage follow it; it
+  opens at the step nearest 7 ft above MLLW at Sewells Point.
+- "StormSense Prediction Plot / Anticipated Impacts in the Next 72 Hours": the forecast at the NOAA tide gauge nearest
+  the area's centre, one inside the area first (`static.json` `plot_gauge`: Sewells Point for Norfolk, Portsmouth and
+  Hampton, Yorktown for Newport News, Money Point for Chesapeake, the Bay Bridge Tunnel for Virginia Beach), with
+  its 10-90% band and NWS stages on the left axis, road miles and buildings on two right axes (Derek's layout,
+  2026-11-27).
+
+## Historical floods
+
+`events/events.json` lists the storms; each has `events/<id>/event.json` (peak, window, every gauge with its highest
+water, datum note) and `observations.csv.gz` (`gauge, date_time_z, water_level_ft_navd88`). The window is the 36 hours
+before and after the highest water at Sewells Point (NOAA 8638610, on record since 1927) within the storm's dates.
+
+| Storm | Highest water at Sewells Point | Gauges with a record |
+|---|---|---|
+| 1933 Hurricane | 6.41 ft NAVD88 (8.02 ft MLLW), 1933-08-23 14:00Z | 2 |
+| 2003 Hurricane Isabel | 6.28 ft NAVD88 (7.89 ft MLLW), 2003-09-18 21:00Z | 13 (4 on an estimated NAVD88) |
+| 2009 Nor'Ida | 6.13 ft NAVD88 (7.74 ft MLLW), 2009-11-12 23:24Z | 17 (3 USGS, 4 on an estimated NAVD88) |
+| 2011 Hurricane Irene | 5.94 ft NAVD88 (7.55 ft MLLW), 2011-08-27 23:54Z | 17 (3 USGS, 5 on an estimated NAVD88) |
+| 2016 Hurricane Matthew | 4.25 ft NAVD88 (5.86 ft MLLW), 2016-10-09 06:54Z | 28 (16 USGS, 2 on an estimated NAVD88) |
+| 2026 Thanksgiving Day Nor'easter | 5.99 ft NAVD88 (7.60 ft MLLW), 2026-11-26 15:18Z | 68 (so far, through 2026-11-27T12:12Z, with 15 forecast runs) |
+
+- `python -m inundation.history noaa --all` (or `--event <id>`): NOAA CO-OPS verified water levels for every Virginia
+  station, active or historic, plus StormSense's own NOAA gauges (6-minute, else hourly heights), and USGS tide gauges
+  (parameter 62620) for storms since 2007. A station NOAA has no NAVD88 for is read in MLLW and moved with StormSense's
+  offset (Money Point) or its own mean sea level plus the nearest station's NAVD88-to-mean-sea-level difference
+  (`navd_estimated` in `event.json`). Needs api.tidesandcurrents.noaa.gov and nwis.waterservices.usgs.gov (where USGS
+  keeps readings older than 120 days).
+- `python -m inundation.history stormsense --event 2026-thanksgiving-noreaster --runs ensemble_*.tar.gz`: StormSense's
+  own gauges from the archived runs' `observed_ft`, plus every run's published forecast (`forecasts.csv.gz`: `cycle,
+  station, date_time_z, forecast_ft_navd88, p10_ft, p90_ft`). `complete` is false until the 36 hours after the peak are
+  archived: run it again then. An ens72 table draws its `observed_ft` straight across a gauge's outage; twelve or more
+  readings in one line are taken as such a bridge and left out (`bridged_readings_left_out`: the Bay Bridge Tunnel
+  gauge was down from 3:36 AM to 2 PM EST on 26 Nov, through the peak).
+- On a page (`status --page` writes `events.json`), each of the area's gauges uses its own record where it has one
+  through the peak (more than 70% of the readings within 1.5 hours of it, and 60% of the window anyone recorded);
+  otherwise the nearest gauge that does. In 1933 that is Sewells Point for every place. The ground, roads and
+  buildings are today's.
 
 ## Numbers (run of 2026-11-26 00Z, a forecast major flood)
 
@@ -187,7 +236,9 @@ the page says which watersheds are missing. A gauge there (or a Currituck Sound 
 - Building rule: half the footprint under 0.5 ft (now) or 0.5 ft at the low side (`wet_low_ft`), Derek's call.
 - Low spots with no pipe to tidal water stay dry; rain is not in it.
 - Other buildings than homes get no damage estimate; contents are not estimated; first floor heights are assumed.
-- The water picture on the page is drawn at 5 m (roads and buildings use the 1 m DEM); 1 m needs tiles.
+- The water picture on the page is drawn at 5 m (roads and buildings use the 1 m DEM); the tiles would carry 1 m.
+- Historical floods use the tide gauges only (no high water marks, no rain), on today's ground. Chesapeake Bay
+  Bridge Tunnel's old station (8638863) and other historic stations are on an estimated NAVD88.
 - Hampton Roads: Suffolk, Poquoson, York, James City, Gloucester and Mathews are not configured yet (no pipes found
   for Suffolk or Poquoson; HRPDC's regional parcels carry values for Williamsburg, Gloucester, Isle of Wight, James
   City, York and Franklin too, but not for Hampton, Poquoson or Suffolk). Homes are picked by zoning patterns outside

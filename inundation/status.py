@@ -320,8 +320,27 @@ def main(argv=None):
         w.writerow(["time_utc", "station", "forecast_ft_navd88", "road_miles_ponded", "road_miles_flooded", "buildings_flooded"])
         w.writerows(timeline(roads, bldgs, levels, rskip, bskip))
     if a.page:
-        from . import page
-        page.write_levels(a.page, levels, summary)
+        from . import history, page, tether
+        plot, also = None, {}
+        if os.path.exists(os.path.join(a.page, "static.json")):
+            with open(os.path.join(a.page, "static.json")) as fh:
+                plot = (json.load(fh).get("plot_gauge") or {}).get("id")
+        if plot and plot not in levels:                 # the prediction plot's gauge, when nothing here is tethered to it
+            try:
+                also[plot] = station_levels(a.site, plot)
+            except Exception as e:
+                print(f"{plot}: no forecast read for the plot ({e})")
+        page.write_levels(a.page, {**levels, **also}, summary)
+        want = set(levels) | set(missing) | ({plot} if plot else set())
+        noaa = {}
+        with open(tether.STATIONS, newline="") as fh:
+            rows = [r for r in csv.DictReader(fh) if r["station"] in want and r["lat"]]
+        for r in rows:
+            noaa.update({r["station"]: q.split(":")[1] for q in r["obs"].split(";") if q.strip().startswith("coops:")})
+        events = history.for_page([{"station": r["station"], "lat": float(r["lat"]), "lon": float(r["lon"])} for r in rows], noaa, plot=plot)
+        with open(os.path.join(a.page, "events.json"), "w") as fh:
+            json.dump(events, fh, separators=(",", ":"))
+        print(f"{len(events['events'])} historical floods written for the page")
     print(json.dumps(summary["totals"]))
     print(f"{len(rkeep)} road pieces and {len(bkeep)} buildings written to {a.out}")
     return summary

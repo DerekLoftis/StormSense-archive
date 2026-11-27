@@ -3,9 +3,15 @@ from the gauges' forecast as the reader moves through the 72 hours.
 
 prep writes the parts that do not change (`write_static`): static.json (road pieces, road network,
 buildings, gauges; coordinates in half metres from the area's north-west corner, packed as base64 typed
-arrays), extent.png (a 5 m raster: red = index of the level at which the cell goes under, green = the
-gauge it is tethered to, blue = under water at an ordinary high tide) and index.html. Each forecast run then only writes
-levels.json (`write_levels`): every tethered gauge's forecast and last observation.
+arrays), tiles/ (a 5 m raster cut into 1024-pixel PNG tiles under a small overview, so a phone never has to
+hold the whole picture: red = index of the level at which the cell goes under, green = the gauge it is
+tethered to (255: no gauge), blue = the ground, 0 where it is under water at an ordinary high tide) and
+index.html. Each forecast run then only writes levels.json (`write_levels`): every tethered gauge's forecast
+and last observation, the plot gauge's forecast, and events.json (the historical floods, `history.for_page`).
+
+    python -m inundation.page --prepared <dir>/page --work <dir> [--title Norfolk]
+
+redraws the raster tiles and the page of an area already prepared, from the grids prep left in its work folder.
 """
 import base64
 import json
@@ -22,6 +28,10 @@ UNIT_M = 0.5
 CELL_M = 5
 NO_LEVEL = 32767
 WATER_FT = 1.25   # drawn as ordinary water: under water at about mean higher high water (1.15 ft NAVD88 at Sewells Point)
+TILE = 1024       # raster tile, pixels
+OVERVIEW_MAX = 2048
+GROUND0_FT, GROUND_STEP_FT = -2.5, 0.05     # the tiles' blue channel: 1..255 is the ground from -2.5 ft in 0.05 ft steps
+NO_ZONE = 255
 DISCLAIMER = ("StormSense(TM) Predictive Plots are computer-generated operational storm tide forecasts; "
               "the user assumes any and all risk.")
 
@@ -67,32 +77,114 @@ def road_class(mtfcc):
     return 2 if m.startswith("S1100") else 1 if m.startswith("S1200") else 0
 
 
-def raster(dem, cidx, origin, sts_xy, cell=CELL_M):
-    """5 m picture of the 1 m grids. Level index: the median over each block, so a cell shows wet once
-    half of it is. Water: wet at an ordinary high tide (WATER_FT). Zone: nearest gauge."""
+def raster(dem, cidx, origin, sts_xy, cell=CELL_M, hucs=None, fwd=None, forced=None, ids=None):
+    """5 m picture of the 1 m grids: (level index, gauge zone, ground code), each uint8 (rows, cols).
+    Level index and ground: the median over each block, so a cell shows wet once half of it is. Ground code 0:
+    wet at an ordinary high tide (WATER_FT). Zone: the nearest gauge, or the gauge tether_overrides.csv gives
+    the cell's HUC-12; NO_ZONE where no gauge stands for the water (never drawn flooded)."""
     from scipy.spatial import cKDTree
     h, w = (dem.shape[0] // cell) * cell, (dem.shape[1] // cell) * cell
     nh, nw = h // cell, w // cell
-    idx = np.empty((nh, nw), np.uint8)
-    rows = max(1, 1000 // cell)
-    for r in range(0, nh, rows):       # in strips, to keep memory flat
-        blk = np.asarray(cidx[r * cell:min(r + rows, nh) * cell, :w])
-        b = blk.reshape(-1, cell, nw, cell).transpose(0, 2, 1, 3).reshape(-1, nw, cell * cell)
-        idx[r:r + b.shape[0]] = np.partition(b, (cell * cell) // 2, axis=2)[:, :, (cell * cell) // 2]
-    water = idx <= int(np.searchsorted(depth.LEVELS_FT, WATER_FT))
+    idx, gnd, zone = np.empty((nh, nw), np.uint8), np.empty((nh, nw), np.uint8), np.empty((nh, nw), np.uint8)
+    rows, mid = max(1, 1000 // cell), (cell * cell) // 2
+    tree = cKDTree(sts_xy)
     cx = origin[0] + (np.arange(nw) + 0.5) * cell
-    cy = origin[1] - (np.arange(nh) + 0.5) * cell
-    gx, gy = np.meshgrid(cx, cy)
-    _, zone = cKDTree(sts_xy).query(np.column_stack([gx.ravel(), gy.ravel()]))
-    rgb = np.dstack([idx, zone.reshape(nh, nw).astype(np.uint8), np.where(water, 255, 0).astype(np.uint8)])
-    return rgb
+    for r in range(0, nh, rows):       # in strips, to keep memory flat
+        r1 = min(r + rows, nh)
+        b = np.asarray(cidx[r * cell:r1 * cell, :w]).reshape(-1, cell, nw, cell).transpose(0, 2, 1, 3).reshape(-1, nw, cell * cell)
+        idx[r:r1] = np.partition(b, mid, axis=2)[:, :, mid]
+        g = np.asarray(dem[r * cell:r1 * cell, :w], np.float32).reshape(-1, cell, nw, cell).transpose(0, 2, 1, 3).reshape(-1, nw, cell * cell)
+        g = np.partition(np.where(np.isfinite(g), g, 9999.0), mid, axis=2)[:, :, mid]
+        gnd[r:r1] = np.clip(np.round((g - GROUND0_FT) / GROUND_STEP_FT) + 1, 1, 255).astype(np.uint8)
+        gx, gy = np.meshgrid(cx, origin[1] - (np.arange(r, r1) + 0.5) * cell)
+        zone[r:r1] = tree.query(np.column_stack([gx.ravel(), gy.ravel()]))[1].reshape(r1 - r, nw)
+    gnd[idx <= int(np.searchsorted(depth.LEVELS_FT, WATER_FT))] = 0
+    if hucs and forced:
+        import shapely
+        from rasterio import features
+        from rasterio.transform import from_origin
+        from shapely.geometry import shape
+        from . import tether
+        tr = from_origin(origin[0], origin[1], cell, cell)
+        where = {st: i for i, st in enumerate(ids or [])}
+        for f in hucs:
+            st = tether.rule(f["properties"]["huc12"], forced)
+            if st is None or (st and st not in where):
+                continue
+            geom = shapely.transform(shapely.force_2d(shape(f["geometry"])), lambda c: np.column_stack(fwd(c[:, 0], c[:, 1])))
+            m = features.rasterize([(geom, 1)], out_shape=(nh, nw), transform=tr, fill=0, dtype="uint8").astype(bool)
+            zone[m] = where[st] if st else NO_ZONE
+    return idx, zone, gnd
+
+
+def write_raster(out, idx, zone, gnd, cell=CELL_M):
+    """tiles/z0.png (the whole area, thinned so that it fits OVERVIEW_MAX) and tiles/t_<row>_<col>.png at full
+    detail. Returns static.json's raster block."""
+    from PIL import Image
+    d = os.path.join(out, "tiles")
+    shutil.rmtree(d, ignore_errors=True)
+    os.makedirs(d)
+    nh, nw = idx.shape
+    f = 1
+    while max(nh, nw) / f > OVERVIEW_MAX:
+        f *= 2
+    if f > 1:                          # a block is wet once half of it is, as in the 5 m cells themselves
+        oh, ow = -(-nh // f), -(-nw // f)
+
+        def blocks(a, fill):
+            p = np.full((oh * f, ow * f), fill, np.uint8)
+            p[:nh, :nw] = a
+            return p.reshape(oh, f, ow, f).transpose(0, 2, 1, 3).reshape(oh, ow, f * f)
+        bi = blocks(idx, 255)
+        k = np.argpartition(bi, (f * f) // 2, axis=2)[:, :, (f * f) // 2][..., None]
+        over = np.dstack([np.take_along_axis(blocks(a, fill), k, axis=2)[..., 0] for a, fill in ((idx, 255), (zone, NO_ZONE), (gnd, 255))])
+    else:
+        over = np.dstack([idx, zone, gnd])
+    Image.fromarray(over, "RGB").save(os.path.join(d, "z0.png"), optimize=True)
+    rows, cols = -(-nh // TILE), -(-nw // TILE)
+    for r in range(rows):
+        for c in range(cols):
+            sl = (slice(r * TILE, min((r + 1) * TILE, nh)), slice(c * TILE, min((c + 1) * TILE, nw)))
+            Image.fromarray(np.dstack([idx[sl], zone[sl], gnd[sl]]), "RGB").save(os.path.join(d, f"t_{r}_{c}.png"), optimize=True)
+    return {"v": 2, "cell_m": cell, "width": int(nw), "height": int(nh), "tile": TILE, "rows": rows, "cols": cols,
+            "dir": "tiles", "overview": {"file": "tiles/z0.png", "factor": f, "width": int(over.shape[1]), "height": int(over.shape[0])},
+            "ground0_ft": GROUND0_FT, "ground_step_ft": GROUND_STEP_FT, "no_zone": NO_ZONE}
+
+
+NOAA_NAMES = {"8638610": "Sewells Point", "8639348": "Money Point", "8638901": "Chesapeake Bay Bridge Tunnel", "8637689": "Yorktown",
+              "8632200": "Kiptopeke", "8636580": "Windmill Point", "8635750": "Lewisetta", "8631044": "Wachapreague",
+              "8635027": "Dahlgren", "8594900": "Washington, DC", "8571421": "Bishops Head", "8577330": "Solomons Island"}
+
+
+def plot_gauge(lat, lon, path=None, inside=()):
+    """The NOAA tide gauge nearest a point, for the page's prediction plot, and Sewells Point's datum for the
+    readings in feet above MLLW: ({id, name, noaa_id, lat, lon, navd88_above_mllw_ft}, the same for SWPT).
+    inside: the area's own gauges within its frame; a NOAA gauge among them goes before any outside (Virginia
+    Beach's plot is the Bay Bridge Tunnel's, not Money Point's up the Elizabeth River)."""
+    import csv
+    from . import tether
+    best, ref = None, None
+    with open(path or tether.STATIONS, newline="") as fh:
+        for r in csv.DictReader(fh):
+            noaa = [p.split(":")[1] for p in r["obs"].split(";") if p.strip().startswith("coops:")]
+            if not noaa or not r["lat"] or r.get("alias_of") or r.get("suspect_obs"):
+                continue
+            g = {"id": r["station"], "name": NOAA_NAMES.get(noaa[0], r["name"].replace(" (IN MLLW)", "")), "noaa_id": noaa[0],
+                 "lat": float(r["lat"]), "lon": float(r["lon"]),
+                 "navd88_above_mllw_ft": float(r["navd88_above_mllw_ft"]) if r.get("navd88_above_mllw_ft") else None}
+            km = np.hypot((g["lon"] - lon) * np.cos(np.radians(lat)), g["lat"] - lat) * 111.2
+            key = (r["station"] not in inside, km)
+            if best is None or key < best[0]:
+                best = (key, g)
+            if r["station"] == "SWPT":
+                ref = g
+    return (best[1] if best else None), ref
 
 
 def write_static(out, name, title, bounds, epsg, pieces, road_cols, roads_raw, fwd, bgeoms, bldg_cols, dem, cidx,
-                 sts, sources, values=None):
+                 sts, sources, values=None, hucs=None, forced=None):
     """sts: [{station, name, lat, lon}] the gauges features are tethered to, in the order used for indices.
     values: {"tax_year", "firm_year", "zillow_month"} when the building table has the value.attach columns."""
-    from PIL import Image
     os.makedirs(out, exist_ok=True)
     x0, ytop = bounds[0], bounds[3]
     ux = lambda x: units(x, x0)                       # noqa: E731
@@ -151,7 +243,7 @@ def write_static(out, name, title, bounds, epsg, pieces, road_cols, roads_raw, f
             tol *= 2
             s = simplify(ring, tol)
         bcount.append(len(s)); bxy.append(np.column_stack([ux(s[:, 0]), uy(s[:, 1])]))
-    b = {"n": len(bkeep), "count": b64(bcount, "u1"), "xy": b64(np.vstack(bxy), "<u2"),
+    b = {"n": len(bkeep), "count": b64(bcount, "u1"), "xy": b64(np.vstack(bxy) if bxy else np.zeros((0, 2)), "<u2"),   # an inland town may have no building 10 ft of water reaches
          "ground": b64(hundredths(np.asarray(bc["ground_ft"])[bkeep]), "<i2"),
          "connect": b64(hundredths(np.asarray(bc["connect_ft"])[bkeep]), "<i2"),
          "station": b64([order[s] for s in np.asarray(bc["station"])[bkeep]], "u1"), "id": b64(bkeep, "<u4")}
@@ -183,8 +275,10 @@ def write_static(out, name, title, bounds, epsg, pieces, road_cols, roads_raw, f
         vdoc = {**values, "zips": zips, "zhvi": [zh.get(z) for z in zips], "uses": uses,
                 "damage": {"depth0": float(damage.DEPTH_FT[0]), "curves": [damage.STRUCTURE_PCT[k] for k in names], "citation": damage.CITATION}}
 
-    rgb = raster(dem, cidx, (x0, ytop), np.column_stack([sx, sy]))
-    Image.fromarray(rgb, "RGB").save(os.path.join(out, "extent.png"), optimize=True)
+    rdoc = write_raster(out, *raster(dem, cidx, (x0, ytop), np.column_stack([sx, sy]), hucs=hucs, fwd=fwd, forced=forced,
+                                     ids=[s["station"] for s in sts]))
+    plot, ref = plot_gauge(*centre(bounds, epsg), inside=[s["station"] for i, s in enumerate(sts)
+                                                          if bounds[0] <= sx[i] <= bounds[2] and bounds[1] <= sy[i] <= bounds[3]])
 
     ok_road = (np.asarray(rc["bridge"]) == 0) & (np.asarray(rc["station"]).astype(str) != "")      # no gauge: left out
     ok_bldg = (np.asarray(bc["over_water"]) == 0) & (np.asarray(bc["station"]).astype(str) != "")
@@ -196,7 +290,7 @@ def write_static(out, name, title, bounds, epsg, pieces, road_cols, roads_raw, f
         "stations": [{"id": s["station"], "name": s["name"], "x": int(ux([sx[i]])[0]), "y": int(uy([sy[i]])[0]),
                       "inside": bool(bounds[0] <= sx[i] <= bounds[2] and bounds[1] <= sy[i] <= bounds[3])} for i, s in enumerate(sts)],
         "pieces": p, "roads": r, "buildings": b, "values": vdoc,
-        "raster": {"file": "extent.png", "cell_m": CELL_M, "width": int(rgb.shape[1]), "height": int(rgb.shape[0])},
+        "raster": rdoc, "plot_gauge": plot, "mllw_ref": ref,
         "totals": {"road_miles": round(float(np.asarray(rc["length_m"])[ok_road].sum() / 1609.344), 1),
                    "road_pieces": int(ok_road.sum()), "buildings": int(ok_bldg.sum())},
         "prepared_utc": time.strftime("%Y-%m-%dT%H:%MZ", time.gmtime()), "sources": sources, "disclaimer": DISCLAIMER,
@@ -207,6 +301,12 @@ def write_static(out, name, title, bounds, epsg, pieces, road_cols, roads_raw, f
         shutil.copy(os.path.join(HERE, "..", "crest", "branding", logo), os.path.join(out, logo))
     write_index(out, title)
     return static
+
+
+def centre(bounds, epsg):
+    from pyproj import Transformer
+    lon, lat = Transformer.from_crs(epsg, 4326, always_xy=True).transform((bounds[0] + bounds[2]) / 2, (bounds[1] + bounds[3]) / 2)
+    return lat, lon
 
 
 def write_index(out, title):
@@ -244,3 +344,44 @@ def write_levels(out, levels, summary):
            "missing": summary.get("stations_without_forecast", [])}
     with open(os.path.join(out, "levels.json"), "w") as fh:
         json.dump(doc, fh, separators=(",", ":"))
+
+
+def main(argv=None):
+    """Redraw the raster tiles and the page of a prepared area from the grids in prep's work folder."""
+    import argparse
+    from pyproj import Transformer
+    from . import tether
+    ap = argparse.ArgumentParser(description=main.__doc__)
+    ap.add_argument("--prepared", required=True, help="the area's page folder (with static.json)")
+    ap.add_argument("--work", required=True, help="prep's work folder (dem_ft.npy, cidx.npy, cidx_piped.npy, huc12.geojson)")
+    ap.add_argument("--title")
+    a = ap.parse_args(argv)
+    with open(os.path.join(a.prepared, "static.json")) as fh:
+        st = json.load(fh)
+    bounds = (st["x0"], st["ytop"] - st["height_m"], st["x0"] + st["width_m"], st["ytop"])
+    fwd = Transformer.from_crs(4326, st["epsg"], always_xy=True).transform
+    known = {s["station"]: s for s in tether.stations()}
+    ids = [g["id"] for g in st["stations"]]
+    sx, sy = fwd(np.array([known[i]["lon"] for i in ids]), np.array([known[i]["lat"] for i in ids]))
+    dem = np.load(os.path.join(a.work, "dem_ft.npy"), mmap_mode="r")
+    piped = os.path.join(a.work, "cidx_piped.npy")
+    cidx = np.load(piped if os.path.exists(piped) else os.path.join(a.work, "cidx.npy"), mmap_mode="r")
+    hucs = None
+    if os.path.exists(os.path.join(a.work, "huc12.geojson")):
+        with open(os.path.join(a.work, "huc12.geojson")) as fh:
+            hucs = json.load(fh)["features"]
+    st["raster"] = write_raster(a.prepared, *raster(dem, cidx, (st["x0"], st["ytop"]), np.column_stack([sx, sy]), hucs=hucs, fwd=fwd,
+                                                    forced=tether.overrides(), ids=ids))
+    st["plot_gauge"], st["mllw_ref"] = plot_gauge(*centre(bounds, st["epsg"]), inside=[g["id"] for g in st["stations"] if g.get("inside")])
+    with open(os.path.join(a.prepared, "static.json"), "w") as fh:
+        json.dump(st, fh, separators=(",", ":"))
+    if os.path.exists(os.path.join(a.prepared, "extent.png")):
+        os.remove(os.path.join(a.prepared, "extent.png"))
+    write_index(a.prepared, a.title or st["title"])
+    r = st["raster"]
+    print(f"{st['name']}: {r['width']} x {r['height']} cells in {r['rows'] * r['cols']} tiles, overview 1/{r['overview']['factor']}; "
+          f"plot gauge {st['plot_gauge']['id']} ({st['plot_gauge']['name']})")
+
+
+if __name__ == "__main__":
+    main()

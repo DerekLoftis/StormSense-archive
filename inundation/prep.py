@@ -393,7 +393,8 @@ def main(argv=None):
         page.write_static(f"{a.out}/page", a.name, a.title or loc["properties"].get("NAME") or a.name, bounds, epsg, pieces,
                           road_cols, roads, fwd, bgeoms, bldg_cols, dem, cidx, [s for s in sts if s["station"] in used], sources,
                           values=None if not vsrc else {"tax_year": vsrc["tax_year"], "firm_year": vsrc.get("firm_year"), "certificates": n_cert, "home_rule": vsrc.get("residential_note"),
-                                                        "zillow_month": next(iter(zhvi.values()))[1] if zhvi else ""})
+                                                        "zillow_month": next(iter(zhvi.values()))[1] if zhvi else ""},
+                          hucs=hucs, forced=forced)
     with open(f"{a.out}/{a.name}_prep.json", "w") as fh:
         json.dump({"fips": a.fips, "name": a.name, "locality": loc["properties"].get("NAMELSAD"), "epsg": epsg,
                    "bounds": bounds, "levels_ft": [float(depth.LEVELS_FT[0]), float(depth.LEVELS_FT[-1]), 0.25],

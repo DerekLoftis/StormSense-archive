@@ -1,0 +1,46 @@
+{
+ "id": "1933-hurricane",
+ "name": "1933 Hurricane",
+ "source": "noaa",
+ "note": null,
+ "peak_time_z": "1933-08-23T14:00Z",
+ "peak_ft_navd88": 6.41,
+ "peak_gauge": "Sewells Point",
+ "window": [
+  "1933-08-22T02:00Z",
+  "1933-08-25T02:00Z"
+ ],
+ "datum": "ft NAVD88",
+ "gauges": {
+  "8594900": {
+   "name": "Washington",
+   "lat": 38.873333,
+   "lon": -77.02167,
+   "step_min": 60,
+   "agency": "NOAA CO-OPS",
+   "datum": "NAVD88 (NOAA)",
+   "navd88_above_msl_ft": -0.15,
+   "max_ft": 8.55,
+   "max_time_z": "1933-08-24T03:00Z",
+   "readings": 73,
+   "first_z": "1933-08-22T02:00Z",
+   "last_z": "1933-08-25T02:00Z"
+  },
+  "8638610": {
+   "name": "Sewells Point",
+   "lat": 36.94278,
+   "lon": -76.32861,
+   "step_min": 60,
+   "agency": "NOAA CO-OPS",
+   "datum": "NAVD88 (NOAA)",
+   "navd88_above_msl_ft": 0.25,
+   "max_ft": 6.41,
+   "max_time_z": "1933-08-23T14:00Z",
+   "readings": 73,
+   "first_z": "1933-08-22T02:00Z",
+   "last_z": "1933-08-25T02:00Z"
+  }
+ },
+ "made_utc": "2026-11-27T07:45Z",
+ "record": "NOAA CO-OPS verified water levels (api.tidesandcurrents.noaa.gov) and, since 2007, USGS tide gauges (waterservices.usgs.gov); ft NAVD88"
+}
