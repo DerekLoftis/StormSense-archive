@@ -210,8 +210,11 @@ project's shared folder (skill code, baselines, notes, station sheet, disclosure
   `prepare` = names, `missing` or `all`; release `inundation-prepared`), because a session cannot upload release assets.
   A locality that cannot be prepared does not keep the others off Pages (deploy's `!cancelled()`; the first publishing
   run, 27 Nov, built 17 localities and skipped the deploy). Newport News failed that day: the city's
-  `Operational/StormwaterManhole` service had no layers. Prep stops there on purpose (pipes without their manholes
-  fall apart into pieces whose ends count as openings); run `prepare` = newport_news again once the layer is back.
+  `Operational/StormwaterManhole` service had no layers, and pipes without their manholes fall apart into pieces
+  whose ends count as openings. Derek (27 Nov): build it anyway. A layer with `"saved"` in `drainage_sources.json`
+  that cannot be read comes from its copy under `inundation/saved_layers/` (the manholes as read 26 Nov; the log
+  warns and `<name>_prep.json` lists it under `drainage.saved_layers`); a layer without a copy still stops prep.
+  A manual run of `inundation.yml` from a branch prepares and builds but does not deploy (Pages takes main only).
 - Tidal water (2026-11-27): the largest body at -2 ft in the frame plus every body of 5 ha or more that runs off the
   frame's edge (`depth.tidal_seeds`; before that the Piankatank side of Gloucester and the York side of James City
   were land), except one leaving inside a watershed without a gauge (`prep.sea_cells`). `spread.sparse` keeps the

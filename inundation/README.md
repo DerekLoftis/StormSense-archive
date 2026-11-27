@@ -67,6 +67,13 @@ a wall stands). The system's line is burned into the terrain as cells water cann
 they enter the leveed area. The system is taken as closed and not overtopped up to 10 ft NAVD88; water can still
 come round the end of a wall over low ground (downtown Norfolk: from about 7.5 ft in this DEM).
 
+A layer its city has taken down: Newport News's stormwater manholes (`Operational/StormwaterManhole`) have answered
+"Layer not found" since 27 Nov 2026. The pipes there stop short of the manholes, so without them the networks fall
+apart and every loose end would count as an opening. `drainage_sources.json` names a copy for that layer (`"saved"`,
+`saved_layers/51700_stormwater_manhole.geojson.gz`: the 4,810 manholes as read on 26 Nov 2026); `drainage.fetch`
+uses it when the layer cannot be read, the log warns, and `<name>_prep.json` lists it under `drainage.saved_layers`.
+The live layer is used again as soon as it answers. A layer without a copy stops the preparation.
+
 `check_titan.py` compares the result with TITAN's own depth maps. Downtown Norfolk and the Hague, wet in both over
 wet in either: 0.35 over the surface only and 0.72 with the pipes and the floodwall at 5.5 ft NAVD88 (0.22 and 0.61
 at 4.0 ft, 0.68 and 0.77 at 6.5 ft). Two things the comparison found and fixed: without the floodwall downtown

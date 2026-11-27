@@ -557,3 +557,27 @@ def test_marks_on_a_page_are_the_tides_marks_inside_its_frame(tmp_path, monkeypa
     assert marks[1]["k"] == "s" and "o" not in marks[1] and marks[1]["s"] == 1
     assert 0 < marks[0]["x"] < 60000 and 0 < marks[0]["y"] < 60000      # page units of half a metre from the frame's corner
     assert history.marks_for_page("no-such-storm", frame, 6.3) == ([], [], 0)
+
+
+def test_a_layer_its_city_took_down_comes_from_the_saved_copy(monkeypatch):
+    from inundation import drainage, vgin
+    src = drainage.sources()["51700"]
+
+    def query(url, where, fields, log=None, geometry=True):
+        if "Manhole" in url:
+            raise RuntimeError(f"{url}/query: HTTP Error 404: Not Found")
+        return []
+    monkeypatch.setattr(vgin, "query", query)
+    monkeypatch.setattr(vgin, "count", lambda url, where: 0)
+    out = drainage.fetch(src)
+    assert len(out["structures"]) == out["saved"][0]["features"] > 4000
+    assert all(f["properties"]["_closed"] == 1 for f in out["structures"])      # manholes are never openings
+    assert out["saved"][0]["read_utc"].startswith("2026-11-26")
+    # a layer without a copy still stops the preparation
+    src = {"pipes": [{"url": "https://example.invalid/Manhole/0"}]}
+    try:
+        drainage.fetch(src)
+    except RuntimeError as e:
+        assert "404" in str(e)
+    else:
+        raise AssertionError("a layer that cannot be read and has no copy must fail")
