@@ -394,7 +394,7 @@ ABOUT = f"""<h3 style="margin:0 0 10px 0">StormSense CREST: Chart Review and Eva
 {P}<strong>How to use it.</strong> Click a station on the map, or pick it under <em>Station</em>, and every panel follows that gauge; click an empty part of the map (or clear <em>Station</em>) to return to all stations. <em>Guidance</em> chooses whose forecasts are listed and scored in the tiles. <em>Lead time</em> chooses the hours of each forecast that the skill numbers cover.</p>
 {P}<strong>Forecast archive.</strong> Every forecast issued in the last 30 days, newest first, and within one issue time the highest water relative to the NWS Action stage first. Each row gives the forecast's own peak and the flood category it reaches, then how it verified. Click a row to chart that forecast against the gauge. The dot is the forecast's skill: green good, amber fair, red no skill, gray not verified yet.</p>
 {P}<strong>Skill S</strong> = 0.25 [R² + e<sup>−|Bias|/σ</sup> + e<sup>−MAE/σ</sup> + e<sup>−RMSE/σ</sup>], where σ is the standard deviation of the observations in the scored window. S runs from 0 to 1: about 0.45 is no skill, 0.75 and above is good. Bias is forecast minus observed. Lead time counts from the gauge's last observation when the forecast was issued.</p>
-{P}<strong>Floods</strong> are the times the observed water reached the NWS Action stage or higher at gauges with NWS flood categories. Peak error is the forecast peak minus the observed peak, averaged over the forecasts that covered it. Times are UTC and water levels are feet above MLLW.</p>
+{P}<strong>Floods</strong> are the times the observed water reached the NWS Action stage or higher at gauges with NWS flood categories. Peak error is the forecast peak minus the observed peak, averaged over the forecasts that covered it. A flood still at flood level and near its highest at the gauge's last observation is listed with its highest water so far (marked +), and its peak errors follow once the peak has passed. Times are UTC and water levels are feet above MLLW.</p>
 {P}__DISCLAIMER__</p>
 {P}<a href="__BASE__" target="_blank" rel="noopener">CREST station reports</a> · <a href="https://www.vims.edu/people/loftis_jd/StormSense/" target="_blank" rel="noopener">StormSense at VIMS</a> · <a href="https://www.vims.edu/ccrm/research/modeling/" target="_blank" rel="noopener">W&amp;M VIMS Center for Coastal Resources Management</a></p>"""
 
@@ -523,8 +523,8 @@ return { attributes: { day: IIf(IsEmpty(day), '', Text(ToUTC(day), 'D MMM Y')) }
     hue = "Decode(d.category, " + ", ".join(f"'{k}', '{v}'" for k, v in FLOOD.items()) + ", '')"
     w.append(table("Flood table", "Observed floods (NWS Action or higher), newest first",
                    dataset(fl, order=["peak_time DESC"], limit=500,
-                           fields=["name", "peak_time", "peak_ft_mllw", "category", "peak_err_primary", "peak_err_petss",
-                                   "peak_err_nws"]),
+                           fields=["name", "peak_time", "peak_ft_mllw", "category", "status", "peak_err_primary",
+                                   "peak_err_petss", "peak_err_nws"]),
                    {"type": "features", "valueFields": ["name", "peak_time", "peak_ft_mllw", "category", "peak_err_primary",
                                                         "peak_err_petss", "peak_err_nws"]},
                    [column("Station", "name", align="left"), column("Peak (UTC)", "peak_time", align="left"),
@@ -532,15 +532,18 @@ return { attributes: { day: IIf(IsEmpty(day), '', Text(ToUTC(day), 'D MMM Y')) }
                     column("Published (ft)", "peak_err_primary"), column("P-ETSS (ft)", "peak_err_petss"),
                     column("NWS (ft)", "peak_err_nws")],
                    arcade="""var d = $datapoint;
+var more = IIf(d.status == 'In progress', '+', '');
 """ + cells([("name", "d.name", "left", None, None),
-             ("peak_time", "IIf(IsEmpty(d.peak_time), '–', Text(ToUTC(d.peak_time), 'D MMM Y HH:mm') + 'Z')", "left", None, None),
-             ("peak_ft_mllw", "num(d.peak_ft_mllw, '#,##0.00')", "right", None, None),
-             ("category", "d.category", "left", hue, None),
+             ("peak_time", "IIf(IsEmpty(d.peak_time), '–', Text(ToUTC(d.peak_time), 'D MMM HH:mm') + 'Z')", "left", None, None),
+             ("peak_ft_mllw", "num(d.peak_ft_mllw, '#,##0.00') + more", "right", None, None),
+             ("category", "d.category + more", "left", hue, None),
              ("peak_err_primary", "signed(d.peak_err_primary, '#,##0.00')", "right", None, None),
              ("peak_err_petss", "signed(d.peak_err_petss, '#,##0.00')", "right", None, None),
              ("peak_err_nws", "signed(d.peak_err_nws, '#,##0.00')", "right", None, None)]),
                    bottomCaption="<p>Published, P-ETSS and NWS: each one's mean peak error (forecast peak minus observed peak) "
-                                 "over the forecasts that covered the flood.</p>",
+                                 "over the forecasts that covered the flood. A + after the peak: the water was still at flood "
+                                 "level and near its highest at the gauge's last observation, so it may go higher and its errors "
+                                 "are not in yet.</p>",
                    events=[{"type": "selectionChanged", "actions": [
                        {"type": "flashGeometry", "targets": [{"targetId": wid("Map"), "by": "geometry", "requiresSelection": False}]}]}]))
 

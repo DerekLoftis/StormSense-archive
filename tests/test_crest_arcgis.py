@@ -93,6 +93,7 @@ class Portal:
         self.refuse_types = set(refuse_types)   # layer titles the portal will not publish with other than its own field types
         self.limit = None    # the largest file (bytes) this portal takes in one request; None: any size
         self.lost = set()    # titles whose first addItem makes the item and then answers with an error
+        self.slow = set()    # layer titles whose publish job the portal takes but does not finish in time
 
     def new(self, **item):
         self.n += 1
@@ -180,7 +181,7 @@ class Portal:
                                      "times": self.published.get(title, {}).get("times", 0) + 1}
             return {"services": [{"serviceItemId": svc["id"], "serviceurl": svc["url"], "jobId": "j"}]}
         if url.endswith("/status"):
-            return {"status": "completed"}
+            return {"status": "processing" if item["title"] in self.slow else "completed"}
         if url.endswith("/FeatureServer"):
             return {"capabilities": "Query"}
         if url.endswith("/FeatureServer/0"):
@@ -284,6 +285,25 @@ def test_upload_publishes_typed_layers_and_creates_the_dashboard_once(portal, tm
     assert arcgis_push.main(feeds) == 0
     assert web["writes"] == writes[0] + 1 and dash["writes"] > writes[1] and len(portal.items) == 2 * len(schema.FEEDS) + 2
     assert "::notice title=CREST dashboard::Rebuilt" in capsys.readouterr().out
+
+
+def test_a_slow_publish_is_reported_and_not_sent_a_second_time(portal, tmp_path, monkeypatch, capsys):
+    feeds = write_feeds(tmp_path / "feeds")
+    assert arcgis_push.main(feeds) == 0
+    capsys.readouterr()
+    portal.slow = {"CREST Daily Skill"}     # ArcGIS takes this layer's job and has not finished it in the time allowed
+    monkeypatch.setattr(arcgis_push, "WAIT_MIN", 1)
+    monkeypatch.setattr(arcgis_push.time, "sleep", lambda seconds: None)
+    assert arcgis_push.main(feeds) == 1
+    out = capsys.readouterr().out
+    # slow is not refused: no second publish with ArcGIS's own field types on top of the job still running
+    daily = portal.published["CREST Daily Skill"]
+    assert daily["times"] == 2 and daily["fields"]["S_primary"]["type"] == "esriFieldTypeDouble"
+    assert "::warning title=ArcGIS CREST Daily Skill::ArcGIS had not finished the publish after 1 minutes" in out
+    assert "field types were refused" not in out
+    # the layers after it were still updated, each line says how long its layer took, and the dashboard is left alone
+    assert all(v["times"] == 2 for v in portal.published.values())
+    assert re.search(r"CREST Changes: overwritten in \d+ s, item [0-9a-f]{32} https://", out) and "left as it is" in out
 
 
 def test_upload_falls_back_to_arcgis_types_and_reports_uneven_sharing(portal, tmp_path, capsys):

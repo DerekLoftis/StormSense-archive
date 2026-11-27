@@ -108,18 +108,28 @@ project's shared folder (skill code, baselines, notes, station sheet, disclosure
   `ARCGIS_PASSWORD` or `ARCGIS_API_KEY`): `crest/schema.py` is the one list of feed columns, types, labels and guidance
   colors (the pages' colors too); `crest/arcgis_push.py` overwrites seven hosted layers in place on every run, typed
   from the schema (Stations, Daily Skill, Flood Events, Leaderboard, Lead Decay, Forecasts, Changes; read-only;
-  Forecasts is ~15 MB, and a file over 5 MB that one request does not get in goes up in parts);
+  Forecasts is ~15 MB, and a file over 5 MB that one request does not get in goes up in parts; each layer's line in
+  the job log says how long it took, and a publish ArcGIS has not finished in 20 minutes is reported and left to
+  finish, never sent again);
   `crest/arcgis_dashboard.py` builds the web map and the ArcGIS Dashboards item "StormSense CREST Forecast Archive" and
   creates them once (edits made in ArcGIS are kept; the workflow's `dashboard` input, `CREST_DASHBOARD=rebuild`,
   writes them again). Sharing is Derek's: never change it from code. Check dashboard edits before a PR with
   `python tools/dashboard_preview.py --site <built site>` + `node tools/dashboard_preview.js` (the real Dashboards
   app against a local stand-in for the layers; nothing is published). What that taught is in arcgis_dashboard.py's
   docstring (Arcade number patterns need `#,##0`, dates print in local time unless Arcade formats them, ...).
+  The items are public (Derek, 2026-11-26): a session opens the real dashboard at
+  `https://www.arcgis.com/apps/dashboards/<dashboard item id>` (the org's own host is not reachable from a session).
 - Reads skill_scores/flood_scores.csv.gz (newest ensemble release), run tarballs (reduced to work/runs/<cycle>.json.gz,
   cached by actions/cache), obs-YYYY-MM day tarballs (`obs_<day>/6min/<ST>.csv`; the newest hours come from the run
   tarballs' own `observed_ft`, since the obs archive is daily), data/index/obs, NWPS levels. Periods 30d, 7d, each month;
   stations start on their `added` day. Default guidance = published fore72 (`primary`). Change markers:
   `crest/changes.csv` (add a row for each model or pipeline change). Derek's decisions 2026-11-25 are in the design doc.
+- Floods (`stats.events`): observed water at or above NWS Action, exceedances under 12 h apart are one flood. A flood
+  the gauge's record ends in is not over. With its highest water in the record's last 3 h it is `ongoing` (feed
+  `status` "In progress", "+" in the dashboard's table): the highest water so far is listed and no guidance's peak
+  error is given. After that it is `past_peak` ("Past peak"), scored against its highest water so far; below Action it
+  is "Ended". The daily run sees observations to about 12:18Z, so a flood on the run's morning is complete the next
+  morning.
 - Local test: `python -m crest.build --out /tmp/c --work /tmp/cw --scores scores.csv.gz --floods flood_scores.csv
   --picks picks_history.csv --runs ensemble_*.tar.gz --obs-dir <dir of ST.csv> --offline --stations SWPT`.
 
@@ -225,8 +235,10 @@ project's shared folder (skill code, baselines, notes, station sheet, disclosure
   geo.hrsd.com, gis.hrpdcva.gov, property.jamescitycountyva.gov, files.zillowstatic.com and the USACE/HRPDC document
   hosts). No Claude session reaches tidesandcurrents.noaa.gov or *.github.io; NOAA AWS buckets work.
 - GitHub Actions has full internet (except NOMADS ETSS paths, 403), so put blocked downloads in a
-  workflow. Read live pages from a workflow, not the sandbox; job logs and artifacts aren't readable
-  from the sandbox, but check-run annotations are.
+  workflow. Read live pages from a workflow, not the sandbox. A finished job's log is readable from a session with
+  the GitHub MCP tools (`actions_list` list_workflow_jobs for the run, then `get_job_logs` with the job id and
+  `return_content`; a job still running answers 404), and so are check-run annotations; artifacts are not, but a
+  public repo's release assets download.
 - Claude sessions can't create repos, buckets, releases (from the sandbox), delete branches or change repo
   settings: do release uploads inside workflows; ask Derek for the rest. Dispatching a workflow needs Derek's yes.
 

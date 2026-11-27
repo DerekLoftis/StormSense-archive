@@ -38,7 +38,7 @@ DAILY = [
 FLOODS = [
     ("station", "str", "Station"), ("name", "str", "Station name"), ("lon", "float", "Longitude"), ("lat", "float", "Latitude"),
     ("peak_time", "date", "Peak (UTC)"), ("peak_ft_mllw", "float", "Peak (ft MLLW)"), ("category", "str", "Flood category"),
-    ("summary", "str", "Summary", 400),
+    ("status", "str", "Flood status"), ("summary", "str", "Summary", 400),
 ] + [f for m in MAIN for f in ((f"peak_err_{m}", "float", f"Peak error (ft): {SHORT[m]}"),
                                (f"timing_err_min_{m}", "float", f"Timing error (min): {SHORT[m]}"),
                                (f"runs_{m}", "int", f"Forecasts: {SHORT[m]}"))]
