@@ -34,9 +34,9 @@ def _get(url, params, tries=4):
             if isinstance(d, dict) and d.get("error"):
                 raise RuntimeError(str(d["error"]))
             return d
-        except Exception:
-            if k == tries - 1:
-                raise
+        except Exception as e:
+            if k == tries - 1:                               # name the layer: "HTTP Error 404" alone does not say whose
+                raise RuntimeError(f"{url}: {e}") from e
             time.sleep(3 * (k + 1))
 
 

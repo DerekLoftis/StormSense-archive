@@ -208,6 +208,10 @@ project's shared folder (skill code, baselines, notes, station sheet, disclosure
   Pages at /StormSense-archive/inundation/ (release `inundation-pages`); Pages is one site per repo, so it and
   `crest.yml` each unpack the other's zip before deploying. Localities are prepared on Actions, once each (manual run,
   `prepare` = names, `missing` or `all`; release `inundation-prepared`), because a session cannot upload release assets.
+  A locality that cannot be prepared does not keep the others off Pages (deploy's `!cancelled()`; the first publishing
+  run, 27 Nov, built 17 localities and skipped the deploy). Newport News failed that day: the city's
+  `Operational/StormwaterManhole` service had no layers. Prep stops there on purpose (pipes without their manholes
+  fall apart into pieces whose ends count as openings); run `prepare` = newport_news again once the layer is back.
 - Tidal water (2026-11-27): the largest body at -2 ft in the frame plus every body of 5 ha or more that runs off the
   frame's edge (`depth.tidal_seeds`; before that the Piankatank side of Gloucester and the York side of James City
   were land), except one leaving inside a watershed without a gauge (`prep.sea_cells`). `spread.sparse` keeps the
