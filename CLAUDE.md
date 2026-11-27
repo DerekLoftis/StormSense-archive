@@ -26,6 +26,7 @@ project's shared folder (skill code, baselines, notes, station sheet, disclosure
 | Archive of the Latest site as published | `archive-latest.yml` here, `stormsense_<build time>.tar.xz` on `stormsense-YYYY-MM` | :50 hourly |
 | Gauge observations, one tarball per day | `archive-obs.yml` here, `obs_YYYY-MM-DD.tar.xz` on `obs-YYYY-MM` | 04:10 daily |
 | Harmonic tide refit | `harmonics.yml` here, commits `harmonics/<ST>.json` | 2nd of month |
+| Verified obs + rescoring (`archiver/verified.py`) | `verified.yml` here, release `verified-YYYY-MM` (final vs preliminary readings, every change > 0.1 ft, the month's runs rescored); `data/verified/status.csv`, `cadence.csv` | 10th monthly 05:30 (Derek 2026-11-27); each month rechecked until NOAA verifies / USGS approves all of it |
 | CREST review pages (`python -m crest.build`) | `crest.yml` here; releases `crest-data` (finished months), `crest-pages` (site zip); Pages at /StormSense-archive/crest/ once var `CREST_PAGES=true` | daily 13:40 via cron-job.org (GitHub cron 14:40 fallback) |
 
 - Publishing: the run force-pushes each site as one commit to the public repo's `site` branch and sends a

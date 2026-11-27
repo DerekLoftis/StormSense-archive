@@ -1,0 +1,82 @@
+# Once a month, re-reads NOAA CO-OPS verified and USGS approved gauge records for every month not yet
+# final, lists every reading changed by more than 0.1 ft, and rescores that month's forecasts on the
+# final readings (archiver/verified.py). The agencies publish no fixed lag, so each month is checked
+# again every month until all its readings are final; data/verified/status.csv and cadence.csv record
+# when that happened. Results go on release verified-YYYY-MM; the operational scores are not changed.
+name: Verified observations and rescoring
+
+on:
+  schedule:
+    - cron: "30 5 10 * *"   # the 10th, 05:30 UTC (away from the :20 runs and the 04:10 obs archive)
+  pull_request:  # a dry run: one month, two gauges, three runs; uploads and commits nothing
+    paths: [archiver/verified.py, .github/workflows/verified.yml]
+  workflow_dispatch:
+    inputs:
+      months:
+        description: "Months to check (YYYY-MM,...; empty = every month not yet final)"
+        required: false
+        default: ""
+      probe:
+        description: "Also record how final each of the last N months is at a few gauges"
+        required: false
+        default: "12"
+
+concurrency:
+  group: verified
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  verified:
+    runs-on: ubuntu-latest
+    timeout-minutes: 300
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install
+        run: pip install -q -r requirements.txt
+
+      - name: Check, compare and rescore
+        id: run
+        env:
+          GH_TOKEN: ${{ github.token }}
+          MONTHS: ${{ github.event.inputs.months }}
+          PROBE: ${{ github.event.inputs.probe || '12' }}
+          DRY: ${{ github.event_name == 'pull_request' }}
+        run: |
+          set -o pipefail
+          if [ "$DRY" = true ]; then
+            ARGS="--months 2026-10 --stations SWPT,USJT --max-runs 3 --probe 6 --probe-stations YRCG,USSF --state $RUNNER_TEMP/state"
+          else
+            ARGS="${MONTHS:+--months $MONTHS} --probe $PROBE"
+          fi
+          PYTHONPATH=. python archiver/verified.py --out out $ARGS 2>&1 | tee verified_log.txt
+          for f in out/summary_*.md; do [ -f "$f" ] && cat "$f" >> "$GITHUB_STEP_SUMMARY"; done
+          [ "$DRY" = true ] && cat $RUNNER_TEMP/state/*.csv >> "$GITHUB_STEP_SUMMARY" || true
+
+      - name: Upload to each month's release
+        if: steps.run.outputs.checked == 'true' && github.event_name != 'pull_request'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          while read -r TAG ASSET; do
+            gh release view "$TAG" >/dev/null 2>&1 || \
+              gh release create "$TAG" --title "Verified observations ${TAG#verified-}" \
+                --notes "NOAA CO-OPS verified and USGS approved readings next to the preliminary ones StormSense used, every change over 0.1 ft, and the month's forecasts rescored on the final readings. Updated each month until every gauge's month is final (data/verified/status.csv)."
+            gh release upload "$TAG" "$ASSET" --clobber
+          done < out/assets.txt
+
+      - name: Commit the status
+        if: github.event_name != 'pull_request'
+        run: |
+          git config user.name "stormsense-archive"
+          git config user.email "actions@users.noreply.github.com"
+          git add data/verified
+          git diff --cached --quiet || git commit -q -m "Verified observations checked $(date -u +%Y-%m-%d)"
+          for i in 1 2 3 4; do git pull --rebase -q && git push -q && break; sleep $((2**i)); done
