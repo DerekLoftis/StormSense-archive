@@ -16,6 +16,7 @@ import numpy as np
 
 HERE = os.path.dirname(__file__)
 STATIONS = os.path.join(HERE, "..", "stormsense", "stations.csv")
+DATUMS = os.path.join(HERE, "..", "stormsense", "data", "datums")
 OVERRIDES = os.path.join(HERE, "tether_overrides.csv")
 WBD = "https://services.arcgis.com/P3ePLMYs2RVChkJx/arcgis/rest/services/Watershed_Boundary_Dataset_HUC_12s/FeatureServer/0"
 
@@ -29,6 +30,19 @@ def stations(path=STATIONS):
                 continue
             out.append({"station": r["station"], "name": r["name"], "lat": float(r["lat"]), "lon": float(r["lon"])})
     return out
+
+
+def high_tide_ft(station, folder=None):
+    """Mean higher high water at a gauge, ft NAVD88, from its datum sheet (stormsense/data/datums); None without
+    one. From 0.21 ft at Windmill Point and 0.52 at Tangier to 1.15 at Sewells Point and 2.11 at Oyster."""
+    path = os.path.join(folder or DATUMS, f"{station}.json")
+    if not station or not os.path.exists(path):
+        return None
+    with open(path) as fh:
+        d = json.load(fh)
+    if d.get("MHHW") is None or d.get("NAVD88") is None:
+        return None
+    return float(d["MHHW"]) - float(d["NAVD88"])
 
 
 def huc12(bounds_lonlat):

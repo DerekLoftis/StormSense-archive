@@ -25,7 +25,8 @@ import numpy as np
 
 from . import FLOODED_FT, PIECE_M, PONDED_FT, barriers, damage, depth, drainage, ffe, page, segments, tether, value, vgin
 
-OVER_WATER_FT = 1.0   # ground below this (ft NAVD88; MHHW at Sewells Point is 1.15) cannot be a road surface
+OVER_WATER_FT = 1.0   # ground below this (ft NAVD88; MHHW at Sewells Point is 1.15) cannot be a road surface;
+                      # lower where the gauge's own mean higher high water is lower (over_water_ft)
 APPROACH_M = 60       # pieces of the same street this close to an over-water piece are on the bridge too
 RCL_BRIDGE = 2        # VGIN RCL SEG_TYPE of bridges and overpasses
 BUFFER_M = 500
@@ -128,15 +129,31 @@ def middle(a):
     return np.where(np.isfinite(m), m, np.nan)
 
 
-def bridges(pieces, ground):
+def over_water_ft(stations, high_tide=tether.high_tide_ft):
+    """For each place, by its gauge: ground below this is water or marsh under a deck or a pier, not a road or a
+    yard. OVER_WATER_FT, or the gauge's mean higher high water where that is lower: the bay's tide is small
+    (0.52 ft NAVD88 at Tangier, 0.21 at Windmill Point), and Tangier Island's lanes and yards lie at 0.7 to 1.5 ft.
+    With one limit of 1 ft, 1,219 of the island's 1,381 road pieces were bridges and 459 of 581 buildings piers."""
+    known = {}
+    out = np.full(len(stations), OVER_WATER_FT)
+    for i, st in enumerate(stations):
+        if st not in known:
+            h = high_tide(st) if st else None
+            known[st] = OVER_WATER_FT if h is None else min(OVER_WATER_FT, h)
+        out[i] = known[st]
+    return out
+
+
+def bridges(pieces, ground, limit=OVER_WATER_FT):
     """0 road on the ground; 1 the elevation model shows water or a cut under it (bridge deck, tunnel);
     2 a bridge or overpass in VGIN's own coding; 3 the same street within APPROACH_M of a 1 (the spans
-    over the banks, where the bare-earth model shows the shore under the deck)."""
+    over the banks, where the bare-earth model shows the shore under the deck). limit: ground below it is
+    water, one value or one per piece (over_water_ft)."""
     from scipy.spatial import cKDTree
     code = np.zeros(len(ground), np.int8)
     seg = np.array([int(t) if t is not None else -1 for t in pieces["SEG_TYPE"]])
     code[seg == RCL_BRIDGE] = 2
-    over = (ground < OVER_WATER_FT) | ~np.isfinite(ground)
+    over = (ground < limit) | ~np.isfinite(ground)
     code[over] = 1
     if over.any():
         xy = np.column_stack([pieces["xm"], pieces["ym"]])
@@ -407,6 +424,9 @@ def main(argv=None):
     okb = np.isfinite(bt["x"])
     bt["station"] = np.full(len(bldgs), "", dtype=object); bt["station_km"] = np.full(len(bldgs), np.nan)
     bt["station"][okb], bt["station_km"][okb] = tether.nearest(bt["x"][okb], bt["y"][okb], sts, fwd, bt["huc12"][okb], forced)
+    # with the gauges known: what is water under a deck or a pier, by each gauge's own high tide
+    rt["bridge"] = bridges(pieces, rt["ground_ft"], over_water_ft(rt["station"]))
+    bt["over_water"] = (bt["ground_ft"] < over_water_ft(bt["station"])).astype(int)
 
     lon, lat = inv(pieces["xm"], pieces["ym"])
     road_cols = {

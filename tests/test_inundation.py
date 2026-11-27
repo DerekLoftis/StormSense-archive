@@ -665,3 +665,27 @@ def test_a_locality_too_large_for_one_frame_is_prepared_in_boxes(tmp_path):
     assert (min(xs), min(ys), max(xs), max(ys)) == south
     from inundation import site
     assert len(site.outline(str(tmp_path), "o", {})) == 1
+
+
+def test_water_under_a_deck_is_judged_by_the_gauges_own_high_tide(tmp_path):
+    pytest.importorskip("scipy")
+    from inundation import prep, tether
+    with open(tmp_path / "LOWT.json", "w") as fh:
+        json.dump({"MHHW": 1.82, "NAVD88": 1.30}, fh)              # 0.52 ft NAVD88, Tangier's
+    with open(tmp_path / "HIGH.json", "w") as fh:
+        json.dump({"MHHW": 3.9, "NAVD88": 1.8}, fh)                # 2.1 ft: never above the 1 ft limit
+    with open(tmp_path / "NONE.json", "w") as fh:
+        json.dump({"NAVD88": 1.0}, fh)
+    tide = lambda st: tether.high_tide_ft(st, str(tmp_path))
+    assert tide("LOWT") == pytest.approx(0.52) and tide("NONE") is None and tide("GONE") is None and tide("") is None
+    limit = prep.over_water_ft(np.array(["LOWT", "HIGH", "NONE", "", "LOWT"], object), tide)
+    assert list(np.round(limit, 2)) == [0.52, 1.0, 1.0, 1.0, 0.52]
+    assert tether.high_tide_ft("SWPT") == pytest.approx(1.15, abs=0.02)      # the datum sheets the run uses
+    assert tether.high_tide_ft("PRTV") < 0.6
+    # an island lane at 0.8 ft is a road where the high tide is 0.52 ft and water under a deck where the limit is 1 ft
+    n = 6
+    pieces = {"SEG_TYPE": [None] * n, "xm": np.arange(n) * 100.0, "ym": np.zeros(n), "ST_FULL": ["MAIN ST"] * n,
+              "road": np.arange(n)}
+    ground = np.array([0.8, 0.8, 0.3, 0.8, 1.4, np.nan])
+    assert list(prep.bridges(pieces, ground)) == [1, 1, 1, 1, 0, 1]
+    assert list(prep.bridges(pieces, ground, np.full(n, 0.52))) == [0, 0, 1, 0, 0, 1]

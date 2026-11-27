@@ -226,7 +226,7 @@ function u32(hex, a){ var c = rgb(hex); return ((a << 24) | (c[2] << 16) | (c[1]
 function readColors(){ ["flooded","ponded","building","ink","muted","line","panel","navy"].forEach(function(k){ C[k] = tok("--" + k); }); R.colDepth = DEPTH.map(function(h){ return u32(h, 225); }); }
 function getJSON(u){ return fetch(u, {cache:"no-store"}).then(function(r){ if (!r.ok) throw new Error(u + " " + r.status); return r.json(); }); }
 function getImage(u){ return new Promise(function(ok, no){ var im = new Image(); im.onload = function(){ ok(im); }; im.onerror = function(){ no(new Error(u)); }; im.src = u; }); }
-function fmtMi(v){ return v >= 10 ? v.toFixed(1) : v.toFixed(2); }
+function fmtMi(v){ v = Math.max(0, v); return v >= 10 ? v.toFixed(1) : v.toFixed(2); }
 function fmtBig(v){ return v >= 1e9 ? "$" + (v / 1e9).toFixed(2) + " billion" : v >= 1e6 ? "$" + (v / 1e6).toFixed(v >= 1e7 ? 0 : 1) + " million" : v >= 1e4 ? "$" + Math.round(v / 1e3) + " thousand" : "$" + Math.round(v).toLocaleString("en-US"); }
 function tAt(i){ return new Date(A.t0ms + i * A.step_min * 60000); }
 function utc(d){ return d.toISOString().slice(11,16) + " UTC"; }

@@ -229,7 +229,7 @@ function bytes(b){ var s = atob(b), n = s.length, a = new Uint8Array(n); for (va
 function arr(b, Type){ var a = bytes(b); return new Type(a.buffer, 0, a.byteLength / Type.BYTES_PER_ELEMENT); }
 function getJSON(u){ return fetch(u, {cache:"no-store"}).then(function(r){ if (!r.ok) throw new Error(u + " " + r.status); return r.json(); }); }
 function getImage(u){ return new Promise(function(ok, no){ var im = new Image(); im.onload = function(){ ok(im); }; im.onerror = function(){ no(new Error(u)); }; im.src = u; }); }
-function fmtMi(v){ return v >= 10 ? v.toFixed(1) : v.toFixed(2); }
+function fmtMi(v){ v = Math.max(0, v); return v >= 10 ? v.toFixed(1) : v.toFixed(2); }
 var TZ = "America/New_York";
 var fTime = new Intl.DateTimeFormat("en-US", {timeZone:TZ, weekday:"short", month:"short", day:"numeric", hour:"numeric", minute:"2-digit", timeZoneName:"short"});
 var fTimeY = new Intl.DateTimeFormat("en-US", {timeZone:TZ, weekday:"short", month:"short", day:"numeric", year:"numeric", hour:"numeric", minute:"2-digit", timeZoneName:"short"});
