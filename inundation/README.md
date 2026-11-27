@@ -36,6 +36,13 @@ Nothing heavy happens per run: the rasters are only read in step 1.
   `noaa-nos-coastal-lidar-pds/dem/Chesapeake_Coned_update_DEM_2016_8656/` (EPSG:26918, m NAVD88). At each
   level, water covers the cells at or below it that are joined to tidal water, so a low spot behind higher ground
   stays dry until that ground is overtopped, or until a storm drain reaches it (next section).
+  Tidal water is the largest body of water at -2 ft in the locality's frame, and every other body of 5 hectares or
+  more that runs off the frame's edge (`depth.tidal_seeds`): an estuary that meets the first one outside the frame,
+  like the Piankatank north of Gloucester (frame: the York and Mobjack Bay) or the York north of James City (frame:
+  the James). Until 2026-11-27 only the largest body counted, and the second river's shore was land. A body that
+  leaves the frame inside a watershed no gauge stands for (below) is not tidal water (`prep.sea_cells`).
+- Memory: one byte per cell for the result plus the union-find's pages over low ground (`spread.sparse`; the frame
+  of King and Queen County is 2.96 billion cells and needed all 16 GB before the untouched pages were kept out).
 - Derek's 0.25 ft HUC-12 depth grids, once hosted (planned: mobjack.vims.edu `VIMS_PHYS`): sample each grid at the
   points and pass the depths to `depth.from_depth_stack`; everything after that is unchanged.
 
@@ -102,6 +109,12 @@ them in early 2026, year built for some, the site ZIP code, and no use codes. A 
 `use_from` reads the property class from the city's own parcel layer). These rules are read from the code counts,
 not from the localities' code tables, and the first flood map year is only set for Norfolk (elsewhere every assumed
 floor is 3 ft).
+
+## Building footprints
+
+VGIN's statewide footprints, by locality FIPS. VGIN publishes none for King and Queen County (November 2026): there
+the outlines of FEMA's USA Structures (Oak Ridge National Laboratory, traced from imagery) stand in
+(`vgin.buildings`), and the page's sources say so.
 
 ## Bridges, piers
 

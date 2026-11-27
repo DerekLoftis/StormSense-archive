@@ -272,6 +272,10 @@ def main(argv=None):
         lines, protected = barriers.shapes(bdoc, fwd)
         wall = barriers.cells(lines, dem.shape, origin)
         log(f"flood barriers: {len(lines)} systems, {len(wall[0]):,} wall cells, {len(protected)} leveed areas")
+    w, s = inv(bounds[0], bounds[1]); e, n = inv(bounds[2], bounds[3])
+    hucs = cached(f"{a.work}/huc12.geojson", lambda: {"type": "FeatureCollection", "features": tether.huc12((w, s, e, n))})["features"]
+    forced = tether.overrides()
+    sea = sea_cells(dem, origin, hucs, forced, fwd, log)
     net = None
     if dsrc:
         layers = cached(f"{a.work}/drainage.json", lambda: drainage.fetch(dsrc, log))
@@ -282,13 +286,13 @@ def main(argv=None):
         if os.path.exists(cidx_path) and os.path.exists(piped_path):
             surface, cidx = np.load(cidx_path, mmap_mode="r"), np.load(piped_path, mmap_mode="r")
         else:
-            surface, cidx = depth.connect_index(dem, log=log, links=drainage.links(net, dem, origin), blocked=wall, store=(cidx_path, piped_path))
+            surface, cidx = depth.connect_index(dem, seed=sea, log=log, links=drainage.links(net, dem, origin), blocked=wall, store=(cidx_path, piped_path))
             if not os.path.exists(piped_path):                    # the labelling method hands back arrays
                 np.save(cidx_path, surface); np.save(piped_path, cidx)
     elif os.path.exists(cidx_path):
         cidx = np.load(cidx_path, mmap_mode="r")
     else:
-        cidx = depth.connect_index(dem, log=log, blocked=wall, store=cidx_path)
+        cidx = depth.connect_index(dem, seed=sea, log=log, blocked=wall, store=cidx_path)
         if not os.path.exists(cidx_path):
             np.save(cidx_path, cidx)
 
@@ -322,11 +326,8 @@ def main(argv=None):
         log(f"values: {int(np.isfinite(vcols['value_bldg']).sum()):,} of {len(bldgs):,} buildings have an assessed building value "
             f"({vsrc['tax_year']}), {int(vcols['residential'].sum()):,} are homes")
 
-    w, s = inv(bounds[0], bounds[1]); e, n = inv(bounds[2], bounds[3])
-    hucs = cached(f"{a.work}/huc12.geojson", lambda: {"type": "FeatureCollection", "features": tether.huc12((w, s, e, n))})["features"]
     names = {f["properties"]["huc12"]: f["properties"]["name"].strip() for f in hucs}
     sts = tether.stations()
-    forced = tether.overrides()
     rt["huc12"] = tether.in_polygons(hucs, fwd, pieces["xm"], pieces["ym"])
     bt["huc12"] = tether.in_polygons(hucs, fwd, bt["x"], bt["y"])
     rt["station"], rt["station_km"] = tether.nearest(pieces["xm"], pieces["ym"], sts, fwd, rt["huc12"], forced)
@@ -376,7 +377,8 @@ def main(argv=None):
     if a.gdb:
         write_layers(f"{a.out}/{a.name}.gdb", pieces, road_cols, bgeoms, bldg_cols, epsg)
     sources = {"depth": "NOAA/USGS CoNED Chesapeake Bay topobathy, 1 m (2016)", "roads": "VGIN road centerlines (VBMP RCL)",
-               "buildings": "VGIN building footprints"}
+               "buildings": next((f["properties"]["FOOTPRINTS"] + " building outlines (VGIN has none here)" for f in bldgs[:1] if f["properties"].get("FOOTPRINTS")),
+                                 "VGIN building footprints")}
     if net is not None:
         sources["drainage"] = dsrc.get("source", "city stormwater layers")
     if bdoc["routes"]:
@@ -413,6 +415,26 @@ def main(argv=None):
                                                           "why": "no StormSense gauge stands for this water (tether_overrides.csv)"},
                    "prepared_utc": time.strftime("%Y-%m-%dT%H:%MZ", time.gmtime())}, fh, indent=1)
     log("wrote", a.out)
+
+
+def sea_cells(dem, origin, hucs, forced, fwd, log=lambda *_: None):
+    """The cells the water spreads from: one in each body of tidal water (depth.tidal_seeds: the largest, and every
+    estuary that leaves the grid and meets it outside). A body that leaves the grid inside a watershed no gauge
+    stands for (tether_overrides.csv `-`: Back Bay, the North Landing River, the Blackwater) is not the sea."""
+    from . import spread
+    cells = spread.seed_cells(dem, depth.LEVELS_FT[0])
+    keep = cells[:1]
+    if len(cells) > 1:
+        r, c = (np.array([q[i] for q in cells[1:]], float) for i in (0, 1))
+        huc = tether.in_polygons(hucs, fwd, origin[0] + c + 0.5, origin[1] - r - 0.5)
+        for q, h in zip(cells[1:], huc):
+            if tether.rule(h, forced) == "":
+                log(f"  water leaving the grid in {h} is not tidal water here (no gauge stands for it)")
+            else:
+                keep.append(q)
+    log(f"tidal water: {len(keep)} bod{'y' if len(keep) == 1 else 'ies'} at {depth.LEVELS_FT[0]:+.0f} ft"
+        + (" (the largest, and those that run off the grid's edge)" if len(keep) > 1 else ""))
+    return keep
 
 
 def write_outline(path, loc, tol_deg=0.0003):

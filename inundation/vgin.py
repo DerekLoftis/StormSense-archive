@@ -19,6 +19,8 @@ BUILDINGS = f"{BASE}/VA_Building_Footprints/FeatureServer/0"
 LOCALITIES = f"{BASE}/VA_Admin_Boundaries/FeatureServer/1"
 ROAD_FIELDS = "OBJECTID,RCL_ID,ST_FULL,MTFCC,SEG_TYPE,SEG_EXISTS,VDOT_RNAM,VDOT_FC,MFIPS"
 BUILDING_FIELDS = "OBJECTID,SOURCEFEATUREID,BUILDINGCLASS,NUMSTORIES,FIPS"
+USA_STRUCTURES = "https://services2.arcgis.com/FiaPA4ga0iQKduv3/arcgis/rest/services/USA_Structures_View/FeatureServer/0"
+USA_STRUCTURES_NAME = "FEMA USA Structures (Oak Ridge National Laboratory)"
 PAGE = 2000
 UA = {"User-Agent": "StormSense (VIMS)"}     # James City's server answers 403 to a client that does not name itself
 
@@ -76,9 +78,24 @@ def roads(fips, log=None):
 
 
 def buildings(fips, log=None):
+    """The locality's building footprints from VGIN. VGIN publishes none for King and Queen County (2026-11): where
+    it has none, the outlines of FEMA's USA Structures (ORNL, from imagery) stand in, with VGIN's property names
+    and `FOOTPRINTS` saying where they came from."""
     where = f"FIPS='{fips}'"
-    feats = query(BUILDINGS, where, BUILDING_FIELDS, log)
     n = count(BUILDINGS, where)
+    if n == 0 and count(USA_STRUCTURES, where):
+        feats = query(USA_STRUCTURES, where, "OBJECTID,BUILD_ID,FIPS", log)
+        n = count(USA_STRUCTURES, where)
+        if len(feats) != n:
+            raise RuntimeError(f"buildings (USA Structures): got {len(feats)} of {n}")
+        for f in feats:
+            p = f["properties"]
+            f["properties"] = {"OBJECTID": p.get("OBJECTID", f.get("id")), "SOURCEFEATUREID": str(p.get("BUILD_ID") or ""),
+                               "BUILDINGCLASS": None, "NUMSTORIES": None, "FIPS": fips, "FOOTPRINTS": USA_STRUCTURES_NAME}
+        if log:
+            log(f"  VGIN has no footprints for {fips}: {len(feats)} outlines from {USA_STRUCTURES_NAME}")
+        return feats
+    feats = query(BUILDINGS, where, BUILDING_FIELDS, log)
     if len(feats) != n:
         raise RuntimeError(f"buildings: got {len(feats)} of {n}")
     return feats

@@ -455,3 +455,55 @@ def test_a_gauge_without_a_forecast_follows_the_nearest_gauge_that_has_one(tmp_p
     assert follows == {"BRDH": "USBK"} and missing == ["NOPE"]            # Back River's nearest gauge is Brick Kiln Creek
     assert levels["BRDH"]["follows"] == "USBK" and levels["BRDH"]["station"] == "BRDH" and "follows" not in levels["USBK"]
     assert levels["BRDH"]["peak_ft"] == levels["USBK"]["peak_ft"] == 2.3 and len(said) == 2 and "follow USBK" in said[0]
+
+
+def two_estuaries():
+    """Sea on the west edge, a second estuary running off the south edge behind a ridge, and a pond inside."""
+    dem = np.full((40, 60), 30.0, np.float32)
+    dem[:, :5] = -6.0                          # the sea: the largest body
+    dem[:, 5:10] = 1.0                         # its shore
+    dem[25:, 30:40] = -4.0                     # an estuary that meets the sea outside the grid
+    dem[20:25, 30:40] = 2.0                    # its marsh
+    dem[5:10, 45:50] = -4.0                    # a pond: the sea has to reach it
+    dem[5:10, 50:55] = 2.0
+    return dem
+
+
+def test_every_estuary_that_runs_off_the_grid_is_tidal_water():
+    pytest.importorskip("scipy")
+    dem = two_estuaries()
+    seeds = depth.tidal_seeds(dem, min_m2=100)
+    assert len(seeds) == 2 and seeds[0][1] < 5 and seeds[1][0] == 39 and 30 <= seeds[1][1] < 40
+    assert len(depth.tidal_seeds(dem, min_m2=200)) == 1                  # too small to be an estuary: not a seed
+    lv = list(depth.LEVELS_FT)
+    for method in ("label", "spread"):
+        if method == "spread":
+            pytest.importorskip("numba")
+        one = depth.connect_index(dem, seed=seeds[0], method=method)
+        both = depth.connect_index(dem, seed=seeds, method=method)
+        assert one[30, 35] == depth.NEVER and one[22, 35] == depth.NEVER   # with the sea alone the estuary is land
+        assert both[30, 35] == 0 and both[22, 35] == lv.index(2.0)          # its marsh floods at 2 ft
+        assert both[7, 47] == depth.NEVER and both[7, 52] == depth.NEVER    # the pond is behind 30 ft of ground
+        assert both[3, 7] == one[3, 7] == lv.index(1.0)
+
+
+def test_water_leaving_the_grid_in_a_watershed_without_a_gauge_is_not_the_sea():
+    pytest.importorskip("scipy"); pytest.importorskip("shapely")
+    from inundation import prep
+    dem = np.full((400, 600), 30.0, np.float32)
+    dem[:, :200] = -6.0
+    dem[150:, 300:500] = -4.0                                             # 50,000 cells off the south edge
+    box = lambda x0, x1, code: {"type": "Feature", "properties": {"huc12": code, "name": code},     # noqa: E731
+                                "geometry": {"type": "Polygon", "coordinates": [[[x0, 0], [x1, 0], [x1, 400], [x0, 400], [x0, 0]]]}}
+    hucs = [box(0, 250, "020801010101"), box(250, 600, "030102050101")]
+    said = []
+    kept = prep.sea_cells(dem, (0, 400), hucs, {"03010205*": "-"}, flat, said.append)
+    assert len(kept) == 1 and kept[0][1] < 200 and "030102050101" in said[0]
+    assert len(prep.sea_cells(dem, (0, 400), hucs, {}, flat)) == 2
+
+
+def test_the_union_find_takes_memory_only_where_it_is_written():
+    from inundation import spread
+    a = spread.sparse(50_000_000, np.uint32)
+    a[7] = 9; a[-1] = 3
+    assert a.dtype == np.uint32 and len(a) == 50_000_000 and a[7] == 9 and a[-1] == 3 and a[1_000_000] == 0

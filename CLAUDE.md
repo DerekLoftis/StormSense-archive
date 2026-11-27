@@ -200,6 +200,11 @@ project's shared folder (skill code, baselines, notes, station sheet, disclosure
   Pages at /StormSense-archive/inundation/ (release `inundation-pages`); Pages is one site per repo, so it and
   `crest.yml` each unpack the other's zip before deploying. Localities are prepared on Actions, once each (manual run,
   `prepare` = names, `missing` or `all`; release `inundation-prepared`), because a session cannot upload release assets.
+- Tidal water (2026-11-27): the largest body at -2 ft in the frame plus every body of 5 ha or more that runs off the
+  frame's edge (`depth.tidal_seeds`; before that the Piankatank side of Gloucester and the York side of James City
+  were land), except one leaving inside a watershed without a gauge (`prep.sea_cells`). `spread.sparse` keeps the
+  union-find's untouched pages out of memory (King and Queen's frame is 2.96 billion cells). VGIN has no footprints
+  for King and Queen: FEMA USA Structures outlines stand in (`vgin.buildings`).
 - A gauge without a forecast in a run (BRDH on 27 Nov 2026) follows the nearest gauge that has one
   (`status.read_levels`; `stations_following` in the summary, `follows` in levels.json, named on the pages).
 - Not wired yet: the push to the AGOL folder "StormSense CREST". Each area's prepared tables and file geodatabase are
