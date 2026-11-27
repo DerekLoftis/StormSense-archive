@@ -99,6 +99,7 @@ jobs:
       NAME: ${{ matrix.area.name }}
       FIPS: ${{ matrix.area.fips }}
       TITLE: ${{ matrix.area.title }}
+      BOX: ${{ matrix.area.box }}
     steps:
       - name: Room for a county's 1 m elevation grid
         run: |
@@ -112,7 +113,7 @@ jobs:
       - name: Prepare
         run: |
           set -o pipefail
-          python -m inundation.prep --fips "$FIPS" --name "$NAME" --title "$TITLE" --out prepared --work work --no-gpkg --gdb 2>&1 | tee prep_log.txt
+          python -m inundation.prep --fips "$FIPS" --name "$NAME" --title "$TITLE" --box "$BOX" --out prepared --work work --no-gpkg --gdb 2>&1 | tee prep_log.txt
           df -h / | tail -1
       - name: Pack
         run: |

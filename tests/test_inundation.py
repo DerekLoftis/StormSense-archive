@@ -425,7 +425,16 @@ def test_statewide_curves_count_each_gauges_roads_and_buildings_at_every_level()
 def test_the_list_of_areas_names_each_locality_once_and_the_workflow_reads_it():
     from inundation import site
     rows = site.areas()
-    assert len({r["name"] for r in rows}) == len({r["fips"] for r in rows}) == len(rows) >= 18
+    assert len({r["name"] for r in rows}) == len(rows) >= 18
+    from inundation import prep
+    parts = {}
+    for r in rows:
+        parts.setdefault(r["fips"], []).append(prep.parse_box(r["box"]))
+    for fips, boxes in parts.items():                 # a locality once, or in parts that each have a box and share nothing
+        assert len(boxes) == 1 or all(boxes), fips
+        for i, a in enumerate(boxes):
+            for b in boxes[i + 1:]:
+                assert a[2] <= b[0] or b[2] <= a[0] or a[3] <= b[1] or b[3] <= a[1], (fips, a, b)
     assert all(r["fips"].startswith("51") and len(r["fips"]) == 5 and r["title"] and r["region"] for r in rows)
     assert all(r["name"] == r["name"].lower() and " " not in r["name"] for r in rows)       # a folder and a URL
     assert {"norfolk", "poquoson", "gloucester", "york"} <= {r["name"] for r in rows}
@@ -631,3 +640,28 @@ def test_the_frame_is_cut_back_to_the_roads_and_buildings():
              {"geometry": None}]
     bx, by = prep.first_points(feats, lambda lon, lat: (lon * 10, lat * 10))
     assert list(bx) == [10.0, 30.0] and list(by) == [20.0, 40.0]
+
+
+
+def test_a_locality_too_large_for_one_frame_is_prepared_in_boxes(tmp_path):
+    pytest.importorskip("shapely")
+    from inundation import prep
+    assert prep.parse_box("") is None and prep.parse_box(None) is None
+    assert prep.parse_box("-75.95 37.3 -75.0 37.75") == prep.parse_box("-75.95,37.3,-75.0,37.75") == (-75.95, 37.3, -75.0, 37.75)
+    with pytest.raises(ValueError):
+        prep.parse_box("-75 37.3 -75.95 37.75")
+    line = lambda lon, lat: {"geometry": {"type": "LineString", "coordinates": [[lon, lat], [lon + 0.5, lat + 0.5]]}}
+    feats = [line(1.0, 1.0), line(1.9, 1.9), line(2.0, 1.0), line(1.0, 2.0), {"geometry": None}]
+    south, north, east = (1.0, 1.0, 2.0, 2.0), (1.0, 2.0, 2.0, 3.0), (2.0, 1.0, 3.0, 3.0)
+    got = [prep.in_box(feats, b) for b in (south, north, east)]
+    assert got[0] == feats[:2] and got[1] == [feats[3]] and got[2] == [feats[2]]       # each one once, by where it starts
+    loc = {"properties": {"NAMELSAD": "Split County"},
+           "geometry": {"type": "Polygon", "coordinates": [[[0, 0], [4, 0], [4, 4], [0, 4], [0, 0]]]}}
+    prep.write_outline(str(tmp_path / "o_outline.geojson"), loc, box=south)
+    with open(tmp_path / "o_outline.geojson") as fh:
+        g = json.load(fh)["geometry"]
+    assert g["type"] == "MultiPolygon"
+    xs, ys = zip(*g["coordinates"][0][0])
+    assert (min(xs), min(ys), max(xs), max(ys)) == south
+    from inundation import site
+    assert len(site.outline(str(tmp_path), "o", {})) == 1

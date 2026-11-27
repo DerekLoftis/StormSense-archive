@@ -1,25 +1,27 @@
-fips,name,title,region
-51710,norfolk,Norfolk,Hampton Roads
-51740,portsmouth,Portsmouth,Hampton Roads
-51550,chesapeake,Chesapeake,Hampton Roads
-51810,virginia_beach,Virginia Beach,Hampton Roads
-51800,suffolk,Suffolk,Hampton Roads
-51093,isle_of_wight,Isle of Wight County,Hampton Roads
-51650,hampton,Hampton,Hampton Roads
-51700,newport_news,Newport News,Hampton Roads
-51735,poquoson,Poquoson,Hampton Roads
-51199,york,York County,Hampton Roads
-51830,williamsburg,Williamsburg,Hampton Roads
-51095,james_city,James City County,Hampton Roads
-51073,gloucester,Gloucester County,Middle Peninsula
-51115,mathews,Mathews County,Middle Peninsula
-51119,middlesex,Middlesex County,Middle Peninsula
-51097,king_and_queen,King and Queen County,Middle Peninsula
-51101,king_william,King William County,Middle Peninsula
-51057,essex,Essex County,Middle Peninsula
-51103,lancaster,Lancaster County,Northern Neck
-51133,northumberland,Northumberland County,Northern Neck
-51159,richmond_county,Richmond County,Northern Neck
-51193,westmoreland,Westmoreland County,Northern Neck
-51131,northampton,Northampton County,Eastern Shore
-51001,accomack,Accomack County,Eastern Shore
+fips,name,title,region,box
+51710,norfolk,Norfolk,Hampton Roads,
+51740,portsmouth,Portsmouth,Hampton Roads,
+51550,chesapeake,Chesapeake,Hampton Roads,
+51810,virginia_beach,Virginia Beach,Hampton Roads,
+51800,suffolk,Suffolk,Hampton Roads,
+51093,isle_of_wight,Isle of Wight County,Hampton Roads,
+51650,hampton,Hampton,Hampton Roads,
+51700,newport_news,Newport News,Hampton Roads,
+51735,poquoson,Poquoson,Hampton Roads,
+51199,york,York County,Hampton Roads,
+51830,williamsburg,Williamsburg,Hampton Roads,
+51095,james_city,James City County,Hampton Roads,
+51073,gloucester,Gloucester County,Middle Peninsula,
+51115,mathews,Mathews County,Middle Peninsula,
+51119,middlesex,Middlesex County,Middle Peninsula,
+51097,king_and_queen,King and Queen County,Middle Peninsula,
+51101,king_william,King William County,Middle Peninsula,
+51057,essex,Essex County,Middle Peninsula,
+51103,lancaster,Lancaster County,Northern Neck,
+51133,northumberland,Northumberland County,Northern Neck,
+51159,richmond_county,Richmond County,Northern Neck,
+51193,westmoreland,Westmoreland County,Northern Neck,
+51131,northampton,Northampton County,Eastern Shore,
+51001,accomack_north,Accomack County (North),Eastern Shore,-75.95 37.75 -75.0 38.2
+51001,accomack_south,Accomack County (South),Eastern Shore,-75.95 37.3 -75.0 37.75
+51001,tangier,Tangier Island,Eastern Shore,-76.06 37.76 -75.95 37.9

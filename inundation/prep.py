@@ -79,20 +79,47 @@ def land_bounds(bounds, xs, ys, margin=LAND_MARGIN_M):
             min(bounds[2], int(np.ceil(xs.max() + margin))), min(bounds[3], int(np.ceil(ys.max() + margin))))
 
 
+def first_lonlat(feature):
+    """The first point of a feature's geometry (lon, lat), or None without one."""
+    c = (feature.get("geometry") or {}).get("coordinates") or []
+    while c and isinstance(c[0], (list, tuple)):
+        if not isinstance(c[0][0], (list, tuple)):
+            return c[0][0], c[0][1]
+        c = c[0]
+    return None
+
+
 def first_points(features, transform):
     """One corner of each building's outline, in map coordinates: enough to know how far the buildings reach."""
-    lon, lat = [], []
-    for f in features:
-        c = (f.get("geometry") or {}).get("coordinates") or []
-        while c and isinstance(c[0], (list, tuple)):
-            if not isinstance(c[0][0], (list, tuple)):
-                lon.append(c[0][0]); lat.append(c[0][1])
-                break
-            c = c[0]
-    if not lon:
+    pts = [p for p in map(first_lonlat, features) if p is not None]
+    if not pts:
         return np.zeros(0), np.zeros(0)
-    x, y = transform(np.asarray(lon, float), np.asarray(lat, float))
+    lon, lat = np.asarray(pts, float).T
+    x, y = transform(lon, lat)
     return np.asarray(x), np.asarray(y)
+
+
+def parse_box(text):
+    """'west,south,east,north' in degrees as four floats, or None for an empty text."""
+    if not (text or "").strip():
+        return None
+    box = tuple(float(v) for v in text.replace(",", " ").split())
+    if len(box) != 4 or not (box[0] < box[2] and box[1] < box[3]):
+        raise ValueError(f"a box is west,south,east,north in degrees, not {text!r}")
+    return box
+
+
+def in_box(features, box):
+    """The features whose first point lies in the box (west and south edges in, east and north edges out, so that
+    boxes side by side share nothing and lose nothing). A locality too large for one frame is prepared as several
+    areas of inundation/areas.csv, each with its `box` (Accomack: north, south and Tangier Island)."""
+    w, s, e, n = box
+    keep = []
+    for f in features:
+        p = first_lonlat(f)
+        if p is not None and w <= p[0] < e and s <= p[1] < n:
+            keep.append(f)
+    return keep
 
 
 def middle(a):
@@ -262,6 +289,8 @@ def main(argv=None):
     ap.add_argument("--no-barriers", action="store_true", help="leave the floodwalls and levees of the National Levee Database out")
     ap.add_argument("--no-values", action="store_true", help="leave out parcels, assessed values and damage inputs")
     ap.add_argument("--no-certificates", action="store_true", help="leave out HRPDC's elevation certificates (first floors are all assumed)")
+    ap.add_argument("--box", default="", help="west,south,east,north in degrees: only the locality's roads and buildings "
+                    "that start inside (a part of a locality too large for one frame)")
     a = ap.parse_args(argv)
     from pyproj import Transformer
     os.makedirs(a.out, exist_ok=True); os.makedirs(a.work, exist_ok=True)
@@ -270,7 +299,8 @@ def main(argv=None):
     ring = np.asarray((loc["geometry"]["coordinates"][0] if loc["geometry"]["type"] == "Polygon"
                        else loc["geometry"]["coordinates"][0][0]), float)
     epsg = utm_epsg(ring[:, 0].mean())
-    write_outline(f"{a.out}/{a.name}_outline.geojson", loc)
+    box = parse_box(a.box)
+    write_outline(f"{a.out}/{a.name}_outline.geojson", loc, box=box)
     fwd = Transformer.from_crs(4326, epsg, always_xy=True).transform
     inv = Transformer.from_crs(epsg, 4326, always_xy=True).transform
     bounds = bounds_of(loc, fwd)
@@ -279,6 +309,11 @@ def main(argv=None):
     roads = cached(f"{a.work}/roads_raw.geojson", lambda: {"type": "FeatureCollection", "features": vgin.roads(a.fips)})["features"]
     bldgs = cached(f"{a.work}/buildings_raw.geojson", lambda: {"type": "FeatureCollection", "features": vgin.buildings(a.fips)})["features"]
     log(len(roads), "road segments,", len(bldgs), "buildings (VGIN)")
+    if box:
+        roads, bldgs = in_box(roads, box), in_box(bldgs, box)
+        log(f"inside {box}: {len(roads)} road segments, {len(bldgs)} buildings")
+        if not roads and not bldgs:
+            raise SystemExit(f"nothing of {a.fips} lies inside {box}")
     pieces = segments.split(roads, fwd)
     log(len(pieces["road"]), f"pieces of at most {PIECE_M:g} m,", round(pieces["length_m"].sum() / 1000, 1), "km")
     bx, by = first_points(bldgs, fwd)
@@ -438,6 +473,7 @@ def main(argv=None):
                           hucs=hucs, forced=forced)
     with open(f"{a.out}/{a.name}_prep.json", "w") as fh:
         json.dump({"fips": a.fips, "name": a.name, "locality": loc["properties"].get("NAMELSAD"), "epsg": epsg,
+                   **({"box": list(box)} if box else {}),
                    "bounds": bounds, "levels_ft": [float(depth.LEVELS_FT[0]), float(depth.LEVELS_FT[-1]), 0.25],
                    "depth_source": "NOAA/USGS CoNED Chesapeake Bay topobathy 1 m (2016), water joined to tidal water",
                    "roads": "VGIN VBMP_RCL", "buildings": "VGIN VA_Building_Footprints",
@@ -476,11 +512,15 @@ def sea_cells(dem, origin, hucs, forced, fwd, log=lambda *_: None):
     return keep
 
 
-def write_outline(path, loc, tol_deg=0.0003):
-    """The locality's boundary, thinned to about 30 m, for the map of all areas (inundation.site)."""
+def write_outline(path, loc, tol_deg=0.0003, box=None):
+    """The locality's boundary, thinned to about 30 m, for the map of all areas (inundation.site); with a box, the
+    part of it inside."""
     import shapely
     from shapely.geometry import mapping, shape
     g = shapely.simplify(shapely.force_2d(shape(loc["geometry"])), tol_deg)
+    if box:
+        g = shapely.intersection(shapely.make_valid(g), shapely.box(*box))
+        g = shapely.multipolygons([p for p in shapely.get_parts(g) if p.geom_type == "Polygon"])
     with open(path, "w") as fh:
         json.dump({"type": "Feature", "properties": {"name": loc["properties"].get("NAMELSAD")}, "geometry": mapping(g)}, fh)
 
