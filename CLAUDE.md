@@ -186,8 +186,9 @@ project's shared folder (skill code, baselines, notes, station sheet, disclosure
   right (his layout: keep the two right axes). `python -m inundation.page --prepared <page dir> --work <work dir>`
   redraws a prepared area's picture.
 - Historical floods (`history.py`, `events/<id>/`): the 72 hours around the highest water at Sewells Point for the 2026
-  Thanksgiving Day Nor'easter (from the archived runs, with every forecast), the 1933 Hurricane, Isabel 2003, Nor'Ida
-  2009, Irene 2011 and Matthew 2016 (NOAA CO-OPS, USGS since 2007; ft NAVD88). Run tarballs made before 2026-11-27
+  Thanksgiving Day Nor'easter (from the archived runs, with every forecast), Matthew 2016, Sandy 2012, Irene 2011,
+  Nor'Ida 2009, Isabel 2003 and the 1933 Hurricane (NOAA CO-OPS, USGS since 2007; ft NAVD88; the menu lists them
+  newest first, Derek 2026-11-27). Run tarballs made before 2026-11-27
   have `observed_ft` interpolated straight across a gauge's outage: `history.unbridged` takes those lines out. A gauge
   without its own record through the peak follows the nearest one that has it. Add a storm as a row in `events/events.json` and run
   `python -m inundation.history noaa --event <id>`.

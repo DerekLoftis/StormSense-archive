@@ -1,10 +1,11 @@
 [
  {"id": "2026-thanksgiving-noreaster", "name": "2026 Thanksgiving Day Nor'easter", "source": "stormsense",
   "search": ["2026-11-25", "2026-11-27"]},
- {"id": "1933-hurricane", "name": "1933 Hurricane", "search": ["1933-08-21", "1933-08-25"]},
- {"id": "2003-isabel", "name": "2003 Hurricane Isabel", "search": ["2003-09-17", "2003-09-20"]},
- {"id": "2009-norida", "name": "2009 Nor'Ida", "search": ["2009-11-10", "2009-11-15"]},
- {"id": "2011-irene", "name": "2011 Hurricane Irene", "search": ["2011-08-26", "2011-08-29"]},
  {"id": "2016-matthew", "name": "2016 Hurricane Matthew", "search": ["2016-10-07", "2016-10-10"],
-  "note": "Mostly rainfall-driven flooding, which a tide gauge does not measure: the map shows the tide's part only."}
+  "note": "Mostly rainfall-driven flooding, which a tide gauge does not measure: the map shows the tide's part only."},
+ {"id": "2012-sandy", "name": "2012 Hurricane Sandy", "search": ["2012-10-27", "2012-10-31"]},
+ {"id": "2011-irene", "name": "2011 Hurricane Irene", "search": ["2011-08-26", "2011-08-29"]},
+ {"id": "2009-norida", "name": "2009 Nor'Ida", "search": ["2009-11-10", "2009-11-15"]},
+ {"id": "2003-isabel", "name": "2003 Hurricane Isabel", "search": ["2003-09-17", "2003-09-20"]},
+ {"id": "1933-hurricane", "name": "1933 Hurricane", "search": ["1933-08-21", "1933-08-25"]}
 ]

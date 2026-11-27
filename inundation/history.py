@@ -45,8 +45,9 @@ MIN_COVER = 0.6         # ... and this share of the window that anyone recorded
 
 
 def events():
+    """The storms, newest first: the order of the pages' Historical Floods menu (Derek, 2026-11-27)."""
     with open(os.path.join(EVENTS, "events.json")) as fh:
-        return json.load(fh)
+        return sorted(json.load(fh), key=lambda e: e["search"][0], reverse=True)
 
 
 def parse(s):
