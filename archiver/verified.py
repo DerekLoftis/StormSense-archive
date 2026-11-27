@@ -186,13 +186,17 @@ def preliminary(days, work):
 
 def compare(pre, fin):
     """(merged frame, changes frame): every time either has, with change = final - preliminary."""
-    m = pd.concat([pre.rename("preliminary_ft"), fin["final_ft"], fin["status"]], axis=1)
+    m = pd.concat([pre.rename("preliminary_ft"), fin["final_ft"], fin["status"]], axis=1, sort=True)
     m["status"] = m["status"].fillna("-")
     m["change_ft"] = m["final_ft"] - m["preliminary_ft"]
     kind = np.where(m["preliminary_ft"].notna() & m["final_ft"].isna() & (m["status"] != "-"), "removed",
            np.where(m["preliminary_ft"].notna() & (m["status"] == "-"), "",
            np.where(m["preliminary_ft"].isna() & m["final_ft"].notna(), "added",
            np.where(m["change_ft"].abs() > CHANGE_FT, "changed", ""))))
+    # "added" only on days StormSense archived readings for (the archive starts 14 Oct 2026; a
+    # gauge's outage day is still compared, a day before the archive is not)
+    have = set(pre.index.floor("D")) if len(pre) else set()
+    kind = np.where((kind == "added") & ~np.isin(m.index.floor("D"), list(have)), "", kind)
     m["kind"] = kind
     final = m["status"].isin(["v", "a"])
     ch = m[(m["kind"] != "") & (final | (m["kind"] == "removed"))]
