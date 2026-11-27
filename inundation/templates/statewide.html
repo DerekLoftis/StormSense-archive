@@ -266,7 +266,8 @@ function setup(){
   readColors();
   $("disc").textContent = G.disclaimer;
   $("ramp").innerHTML = "<b>Water depth (ft)</b>" + DEPTH.map(function(h, i){ return '<span><i style="background:' + h + '"></i>' + (i === 0 ? "≤" : "") + DEPTH_LABEL[i] + "</span>"; }).join("");
-  $("areaNote").textContent = G.areas.length + " localities are prepared so far; more are added region by region. Counts are for the time or level selected above.";
+  var fol = []; for (var fid in LV.stations){ var ff = LV.stations[fid].follows; if (ff) fol.push(fid + " follows " + ff); }
+  $("areaNote").textContent = G.areas.length + " localities are prepared so far; more are added region by region. Counts are for the time or level selected above." + (fol.length ? " Gauges without a forecast in this run follow the nearest gauge that has one: " + fol.join(", ") + "." : "");
   initMap(); use("fc"); T.i = peakIndex(); bind(); update(); plotChart(); cursors();
 }
 

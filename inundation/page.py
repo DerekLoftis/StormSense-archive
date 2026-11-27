@@ -407,7 +407,7 @@ def write_levels(out, levels, summary):
     doc = {"made_utc": summary.get("made_utc"), "t0": t0.strftime("%Y-%m-%dT%H:%M:%SZ"), "step_min": step / 60, "n": n,
            "stations": {st: {"updated": lv["updated"], "guidance": lv["guidance"], "obs_ft": lv["obs_ft"],
                              "obs_time": lv["obs_time"].strftime("%Y-%m-%dT%H:%M:%SZ") if lv["obs_time"] else None,
-                             "flood_levels_ft": lv["flood_levels_ft"],
+                             "flood_levels_ft": lv["flood_levels_ft"], "follows": lv.get("follows"),
                              "f": on_grid(lv, "f"), "p10": on_grid(lv, "p10"), "p90": on_grid(lv, "p90")}
                         for st, lv in levels.items()},
            "missing": summary.get("stations_without_forecast", [])}

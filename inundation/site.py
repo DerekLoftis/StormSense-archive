@@ -127,12 +127,7 @@ def build(prepared, latest, out, log=print):
                     "values": bool(st.get("values")), "roads_total_mi": st["totals"]["road_miles"],
                     "buildings_total": st["totals"]["buildings"], "totals": summary["totals"]})
         summaries[name] = summary
-        for g in st["stations"]:
-            if g["id"] not in levels:
-                try:
-                    levels[g["id"]] = status.station_levels(latest, g["id"])
-                except Exception as e:
-                    log(f"{g['id']}: no forecast read ({e})")
+        levels.update(status.read_levels(latest, [g["id"] for g in st["stations"] if g["id"] not in levels], log=lambda *_: None)[0])
     if not doc:
         raise SystemExit(f"no prepared area under {prepared}")
     plot = "SWPT"       # Derek, 2026-11-27: the statewide map's forecast location is Sewells Point

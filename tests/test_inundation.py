@@ -441,3 +441,17 @@ def test_statewide_map_gets_a_small_far_view_of_an_area(tmp_path):
     assert b.shape == (300, 500, 3) and (b == a[1::3, 1::3]).all()          # cells are picked, never averaged
     raster["overview"].update(width=400, height=300)
     assert site.small_overview(str(tmp_path), raster) == raster["overview"]
+
+
+def test_a_gauge_without_a_forecast_follows_the_nearest_gauge_that_has_one(tmp_path):
+    os.makedirs(tmp_path / "fore72")
+    t0 = datetime(2026, 11, 27, 18, 0, tzinfo=timezone.utc)
+    rows = [{"date_time_z": (t0 + timedelta(hours=h)).strftime("%Y-%m-%dT%H:%M:%SZ"), "SSforecast_ft": 2.0 + h / 10} for h in range(4)]
+    for st in ("USBK", "SWPT"):
+        with open(tmp_path / "fore72" / f"{st}_fore72_NAVD.json", "w") as fh:
+            json.dump({"datum": "NAVD88", "units": "feet", "data": rows}, fh)
+    said = []
+    levels, follows, missing = status.read_levels(str(tmp_path), ["BRDH", "USBK", "NOPE"], log=said.append)
+    assert follows == {"BRDH": "USBK"} and missing == ["NOPE"]            # Back River's nearest gauge is Brick Kiln Creek
+    assert levels["BRDH"]["follows"] == "USBK" and levels["BRDH"]["station"] == "BRDH" and "follows" not in levels["USBK"]
+    assert levels["BRDH"]["peak_ft"] == levels["USBK"]["peak_ft"] == 2.3 and len(said) == 2 and "follow USBK" in said[0]

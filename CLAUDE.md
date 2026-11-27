@@ -200,6 +200,8 @@ project's shared folder (skill code, baselines, notes, station sheet, disclosure
   Pages at /StormSense-archive/inundation/ (release `inundation-pages`); Pages is one site per repo, so it and
   `crest.yml` each unpack the other's zip before deploying. Localities are prepared on Actions, once each (manual run,
   `prepare` = names, `missing` or `all`; release `inundation-prepared`), because a session cannot upload release assets.
+- A gauge without a forecast in a run (BRDH on 27 Nov 2026) follows the nearest gauge that has one
+  (`status.read_levels`; `stations_following` in the summary, `follows` in levels.json, named on the pages).
 - Not wired yet: the push to the AGOL folder "StormSense CREST". Each area's prepared tables and file geodatabase are
   also in the project's shared folder under `inundation/<area>/`.
 

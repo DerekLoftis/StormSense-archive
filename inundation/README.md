@@ -21,6 +21,9 @@ estimated damage.
 2. **Every forecast run** (`python -m inundation.status`): each tethered gauge's published fore72 (NAVD88) and
    last observation are compared with those levels: state now, at the forecast's highest water, at the 90% level,
    first and last time flooded, hours flooded, and an approximate chance of flooding within 72 hours.
+   A gauge the run published no forecast for (it is out, like Back River's after the 2026 Thanksgiving storm)
+   follows the nearest gauge that has one (`status.read_levels`), so its roads and buildings are not counted dry;
+   the summary lists it under `stations_following` and the pages name it.
 
 Nothing heavy happens per run: the rasters are only read in step 1.
 
