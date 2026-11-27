@@ -20,13 +20,14 @@ LOCALITIES = f"{BASE}/VA_Admin_Boundaries/FeatureServer/1"
 ROAD_FIELDS = "OBJECTID,RCL_ID,ST_FULL,MTFCC,SEG_TYPE,SEG_EXISTS,VDOT_RNAM,VDOT_FC,MFIPS"
 BUILDING_FIELDS = "OBJECTID,SOURCEFEATUREID,BUILDINGCLASS,NUMSTORIES,FIPS"
 PAGE = 2000
+UA = {"User-Agent": "StormSense (VIMS)"}     # James City's server answers 403 to a client that does not name itself
 
 
 def _get(url, params, tries=4):
     data = urllib.parse.urlencode(params).encode()
     for k in range(tries):
         try:
-            with urllib.request.urlopen(urllib.request.Request(url, data=data), timeout=180) as r:
+            with urllib.request.urlopen(urllib.request.Request(url, data=data, headers=UA), timeout=180) as r:
                 d = json.loads(r.read())
             if isinstance(d, dict) and d.get("error"):
                 raise RuntimeError(str(d["error"]))
