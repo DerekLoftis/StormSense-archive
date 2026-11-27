@@ -26,18 +26,52 @@ ZHVI_URL = "https://files.zillowstatic.com/research/public_csvs/zhvi/Zip_zhvi_uc
 
 
 def sources(path=None):
+    """value_sources.json by locality FIPS. An entry with "like": "<key>" starts from that entry (keys beginning
+    with "_" are shared templates) and overrides it one level deep."""
     with open(path or os.path.join(HERE, "value_sources.json")) as f:
-        return json.load(f)
+        raw = json.load(f)
+    out = {}
+    for k, v in raw.items():
+        base = raw.get(v.get("like"), {})
+        m = {**base, **v}
+        for kk in base:
+            if isinstance(base[kk], dict) and isinstance(v.get(kk), dict):
+                m[kk] = {**base[kk], **v[kk]}
+        out[k] = m
+    return out
 
 
 def fetch_parcels(src, log=None):
     from . import vgin
     p = src["parcels"]
-    feats = vgin.query(p["url"], p.get("where", "1=1"), p["key"], log)
+    feats = vgin.query(p["url"], p.get("where", "1=1"), p.get("fields", p["key"]), log)
     n = vgin.count(p["url"], p.get("where", "1=1"))
     if len(feats) != n:
         raise RuntimeError(f"parcels: got {len(feats)} of {n}")
     return feats
+
+
+def records_from_parcels(parcels, src):
+    """The same records where the parcel layer itself carries the values (assessment type "parcels")."""
+    cols = src["assessment"]["columns"]
+    return [{ours: f["properties"].get(theirs, "") for ours, theirs in cols.items()} for f in parcels]
+
+
+def fetch_use(src):
+    """{parcel key: use code} from a second layer, for a locality whose value layer has no use or zoning
+    ("use_from": {"url", "key", "use"}; Chesapeake: the city's own parcels carry the property class)."""
+    from . import vgin
+    u = src["use_from"]
+    feats = vgin.query(u["url"], u.get("where", "1=1"), f"{u['key']},{u['use']}", geometry=False)
+    return {str(f["properties"].get(u["key"]) or "").strip(): str(f["properties"].get(u["use"]) or "").strip() for f in feats}
+
+
+def add_use(records, uses):
+    """Put the use codes of fetch_use on the records that have none."""
+    for r in records:
+        if not str(r.get("use") or "").strip():
+            r["use"] = uses.get(str(r.get("key") or "").strip(), "")
+    return records
 
 
 def fetch_assessment(src):
@@ -85,6 +119,7 @@ def roll(records, src):
 
     Values are summed; the year built, use and class come from the record with the largest improvement value."""
     res_words = [w.lower() for w in src.get("residential_uses", [])]
+    res_pats = [re.compile(p, re.I) for p in src.get("residential_patterns", [])]     # for localities with zoning codes only
     kinds = [(k, [re.compile(p, re.I) for p in src.get(k + "_classes", [])]) for k in ("split_level", "two_story", "one_story")]
     out = {}
     for r in records:
@@ -100,11 +135,11 @@ def roll(records, src):
         if (impr if np.isfinite(impr) else 0.0) > o["best"]:
             o["best"] = impr if np.isfinite(impr) else 0.0
             o["year"] = year if 1600 < year < 2100 else np.nan
-            o["use"], o["cls"] = str(r.get("use", "")).strip(), str(r.get("class", "")).strip()
-            o["zip"] = str(r.get("zip", "")).strip()[:5]
+            o["use"], o["cls"] = str(r.get("use") or "").strip(), str(r.get("class") or "").strip()
+            o["zip"] = str(r.get("zip") or "").strip()[:5]
     for o in out.values():
         u = o["use"].lower()
-        o["residential"] = bool(u) and any(w in u for w in res_words)
+        o["residential"] = bool(u) and (any(w in u for w in res_words) or any(p.search(o["use"]) for p in res_pats))
         o["curve"] = next((k for k, pats in kinds if any(p.search(o["cls"]) for p in pats)), "")
     return out
 
@@ -149,7 +184,7 @@ def attach(bgeoms, parcels, transform, rolled, src, zhvi=None):
         if not curve and o["living"] > 0 and parcel_area[parcel[i]] > 0:    # living area against the footprints, in ft2
             curve = "two_story" if o["living"] / (parcel_area[parcel[i]] * 10.7639) >= 1.6 else "one_story"
         cols["use"][i], cols["year_built"][i], cols["curve"][i] = o["use"], o["year"], curve or "one_story"
-        cols["residential"][i] = int(o["residential"])
+        cols["residential"][i] = int(o["residential"] and area[i] <= src.get("home_max_footprint_m2", np.inf))
         cols["value_total"][i] = o["total"] if o["total"] > 0 else np.nan
         cols["value_impr"][i] = o["impr"] if o["impr"] > 0 else np.nan
         cols["value_bldg"][i] = round(o["impr"] * share) if o["impr"] > 0 else np.nan

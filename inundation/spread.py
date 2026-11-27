@@ -9,6 +9,8 @@ per cell are kept in memory and the DEM stays on disk.
 
 Needs numba (in inundation/requirements.txt); depth.connect_index uses this when numba is there and labels otherwise.
 """
+import os
+
 import numpy as np
 
 DRY = 127            # own level number of a cell the water never covers: above the top level, no data, or a wall
@@ -21,14 +23,14 @@ except ImportError:                                  # pragma: no cover
     njit = None
 
 
-def own_level(dem_ft, levels, blocked=None, rows=2048):
+def own_level(dem_ft, levels, blocked=None, rows=2048, path=None):
     """uint8 per cell: the number of the lowest level at or above the ground (DRY where none). Reads the DEM in
-    strips, so a memory-mapped DEM never has to fit in memory."""
+    strips, so a memory-mapped DEM never has to fit in memory. `path` keeps the result in a file as well."""
     lev = np.asarray(levels, np.float64)
     if len(lev) >= DRY:
         raise ValueError("too many levels")
     h, w = dem_ft.shape
-    g = np.empty((h, w), np.uint8)
+    g = np.empty((h, w), np.uint8) if path is None else np.lib.format.open_memmap(path, "w+", np.uint8, (h, w))
     for r in range(0, h, rows):
         a = np.asarray(dem_ft[r:r + rows], np.float64)
         k = np.searchsorted(lev, a, side="left")          # NaN sorts last: beyond the top level
@@ -145,12 +147,22 @@ if njit is not None:
         return wet
 
 
-def connect_index(dem_ft, levels, seed=None, log=None, links=None, blocked=None):
-    """See depth.connect_index: the index over the surface, or (surface, with pipes) when links are given."""
+BIG = 1_200_000_000      # cells: above this the working grid of levels is kept in a file next to the results
+
+
+def connect_index(dem_ft, levels, seed=None, log=None, links=None, blocked=None, store=None):
+    """See depth.connect_index: the index over the surface, or (surface, with pipes) when links are given.
+
+    store = path of the surface result, or (surface path, piped path) with links: each result is written to its
+    .npy file as soon as it is ready and handed back memory-mapped, so only one of them is in memory at a time
+    (5 to 6 bytes per cell instead of 7, which is what lets Virginia Beach's 1.9 billion cells fit in 16 GB).
+    """
     if njit is None:
         raise ImportError("numba is not installed")
     h, w = dem_ft.shape
-    g = own_level(dem_ft, levels, blocked)
+    paths = [store] if isinstance(store, str) else list(store or [])
+    tmp = paths[0] + ".levels.tmp.npy" if paths and h * w > BIG else None
+    g = own_level(dem_ft, levels, blocked, path=tmp)
     if seed is None:
         seed = seed_cell(dem_ft, levels[0])
     n_nets = 0
@@ -167,8 +179,21 @@ def connect_index(dem_ft, levels, seed=None, log=None, links=None, blocked=None)
     n = _spread(g, out, parent, seed[0], seed[1], len(levels), empty, empty, 0, False)
     if log:
         log(f"  over the surface: {n:,} cells reached through {levels[-1]:+.2f} ft")
+    def keep(a, i):                       # to its file and back as a memory map, or as it is
+        if len(paths) <= i:
+            return a
+        np.save(paths[i], a)
+        return np.load(paths[i], mmap_mode="r")
+
+    def done():
+        if tmp:
+            os.remove(tmp)                # the working grid of levels; the map stays valid until it is dropped
+
     if links is None:
+        out = keep(out, 0)
+        done()
         return out
+    out = keep(out, 0)
     cell = lr.astype(np.int64) * w + lc
     order = np.argsort(cell, kind="stable")
     g[lr, lc] |= OPENING
@@ -176,4 +201,7 @@ def connect_index(dem_ft, levels, seed=None, log=None, links=None, blocked=None)
     m = _spread(g, piped, parent, seed[0], seed[1], len(levels), cell[order], net[order], n_nets, True)
     if log:
         log(f"  with the pipes: {m - n:,} more cells")
+    del parent
+    piped = keep(piped, 1)
+    done()
     return out, piped

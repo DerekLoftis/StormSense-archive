@@ -23,7 +23,7 @@ import time
 
 import numpy as np
 
-from . import FLOODED_FT, PIECE_M, PONDED_FT, barriers, damage, depth, drainage, page, segments, tether, value, vgin
+from . import FLOODED_FT, PIECE_M, PONDED_FT, barriers, damage, depth, drainage, ffe, page, segments, tether, value, vgin
 
 OVER_WATER_FT = 1.0   # ground below this (ft NAVD88; MHHW at Sewells Point is 1.15) cannot be a road surface
 APPROACH_M = 60       # pieces of the same street this close to an over-water piece are on the bridge too
@@ -113,6 +113,9 @@ def road_table(pieces, dem, cidx, origin, surface=None):
     }
 
 
+BAND_ROWS = 4096
+
+
 def building_table(features, transform, dem, cidx, origin, levels=depth.LEVELS_FT, surface=None):
     """Ground (median and low side) and connect level over each footprint, from the cells it touches."""
     from rasterio import features as rfeat
@@ -127,18 +130,32 @@ def building_table(features, transform, dem, cidx, origin, levels=depth.LEVELS_F
                                            lambda c: np.column_stack(transform(c[:, 0], c[:, 1]))))
         except Exception:
             geoms.append(None)
-    ids = rfeat.rasterize(((g, i + 1) for i, g in enumerate(geoms) if g is not None and not g.is_empty),
-                          out_shape=dem.shape, transform=from_origin(origin[0], origin[1], 1, 1),
-                          fill=0, all_touched=True, dtype="int32")
-    cell = np.flatnonzero(ids)
-    b = ids.ravel()[cell] - 1
-    del ids
-    z = dem.ravel()[cell]
-    ci = cidx.ravel()[cell]
+    # the footprints are burned into the grid in bands of rows, so a city of two billion cells needs no grid of its own
+    real = np.array([i for i, g in enumerate(geoms) if g is not None and not g.is_empty], int)
+    tree = shapely.STRtree([geoms[i] for i in real]) if len(real) else None
+    h, w = dem.shape
+    bs, zs, cis, sis = [], [], [], []
+    for r0 in range(0, h if tree is not None else 0, BAND_ROWS):
+        r1 = min(r0 + BAND_ROWS, h)
+        hit = np.sort(real[tree.query(shapely.box(origin[0], origin[1] - r1, origin[0] + w, origin[1] - r0))])
+        if not len(hit):
+            continue
+        ids = rfeat.rasterize(((geoms[i], i + 1) for i in hit), out_shape=(r1 - r0, w),
+                              transform=from_origin(origin[0], origin[1] - r0, 1, 1), fill=0, all_touched=True, dtype="int32")
+        cell = np.flatnonzero(ids)
+        bs.append(ids.ravel()[cell] - 1)
+        del ids
+        zs.append(np.asarray(dem[r0:r1]).ravel()[cell])
+        cis.append(np.asarray(cidx[r0:r1]).ravel()[cell])
+        if surface is not None:
+            sis.append(np.asarray(surface[r0:r1]).ravel()[cell])
+    b = np.concatenate(bs) if bs else np.zeros(0, int)
+    z = np.concatenate(zs) if zs else np.zeros(0, np.float32)
+    ci = np.concatenate(cis) if cis else np.zeros(0, np.uint8)
     c = np.where(ci == depth.NEVER, np.inf, levels[np.minimum(ci, len(levels) - 1)])
     ok = np.isfinite(z)
     if surface is not None:
-        si = surface.ravel()[cell]
+        si = np.concatenate(sis) if sis else np.zeros(0, np.uint8)
         cs = np.where(si == depth.NEVER, np.inf, levels[np.minimum(si, len(levels) - 1)])[ok]
     b, z, c = b[ok], z[ok], c[ok]
     count = np.bincount(b, minlength=n)
@@ -212,6 +229,7 @@ def main(argv=None):
     ap.add_argument("--no-drainage", action="store_true", help="leave the stormwater pipes out (surface water only)")
     ap.add_argument("--no-barriers", action="store_true", help="leave the floodwalls and levees of the National Levee Database out")
     ap.add_argument("--no-values", action="store_true", help="leave out parcels, assessed values and damage inputs")
+    ap.add_argument("--no-certificates", action="store_true", help="leave out HRPDC's elevation certificates (first floors are all assumed)")
     a = ap.parse_args(argv)
     from pyproj import Transformer
     os.makedirs(a.out, exist_ok=True); os.makedirs(a.work, exist_ok=True)
@@ -240,8 +258,10 @@ def main(argv=None):
     else:
         tiles = a.dem or ["/vsicurl/" + u for u in depth.coned_tiles(bounds)]
         log("elevation tiles:", ", ".join(os.path.basename(t) for t in tiles))
-        dem, _ = depth.read_dem(tiles, bounds)
-        np.save(dem_path, dem)
+        dem, _ = depth.read_dem(tiles, bounds, into=dem_path + ".part.npy")      # built on disk: a city is 1 to 8 GB
+        dem.flush(); del dem
+        os.replace(dem_path + ".part.npy", dem_path)
+        dem = np.load(dem_path, mmap_mode="r")
     if dem.shape != (bounds[3] - bounds[1], bounds[2] - bounds[0]):
         raise SystemExit(f"{dem_path} does not match the area's bounds; delete it and run again")
     wall, protected, bdoc = None, [], {"routes": [], "areas": []}
@@ -261,25 +281,43 @@ def main(argv=None):
         if os.path.exists(cidx_path) and os.path.exists(piped_path):
             surface, cidx = np.load(cidx_path, mmap_mode="r"), np.load(piped_path, mmap_mode="r")
         else:
-            surface, cidx = depth.connect_index(np.asarray(dem), log=log, links=drainage.links(net, dem, origin), blocked=wall)
-            np.save(cidx_path, surface); np.save(piped_path, cidx)
+            surface, cidx = depth.connect_index(dem, log=log, links=drainage.links(net, dem, origin), blocked=wall, store=(cidx_path, piped_path))
+            if not os.path.exists(piped_path):                    # the labelling method hands back arrays
+                np.save(cidx_path, surface); np.save(piped_path, cidx)
     elif os.path.exists(cidx_path):
         cidx = np.load(cidx_path, mmap_mode="r")
     else:
-        cidx = depth.connect_index(np.asarray(dem), log=log, blocked=wall)
-        np.save(cidx_path, cidx)
+        cidx = depth.connect_index(dem, log=log, blocked=wall, store=cidx_path)
+        if not os.path.exists(cidx_path):
+            np.save(cidx_path, cidx)
 
     rt = road_table(pieces, dem, cidx, origin, surface)
     bt, bgeoms = building_table(bldgs, fwd, dem, cidx, origin, surface=surface)
     log("ground and connect levels read")
     vsrc = None if a.no_values else value.sources().get(a.fips)
-    vcols = {}
+    vcols, n_cert = {}, 0
     if vsrc:
         parcels = cached(f"{a.work}/parcels.geojson", lambda: {"type": "FeatureCollection", "features": value.fetch_parcels(vsrc)})["features"]
-        records = cached(f"{a.work}/assessment.json", lambda: value.fetch_assessment(vsrc))
+        if vsrc["assessment"]["type"] == "parcels":           # the parcel layer carries the values itself
+            records = value.records_from_parcels(parcels, vsrc)
+            if vsrc.get("use_from"):                          # the use codes are in another layer
+                value.add_use(records, cached(f"{a.work}/use_codes.json", lambda: value.fetch_use(vsrc)))
+        else:
+            records = cached(f"{a.work}/assessment.json", lambda: value.fetch_assessment(vsrc))
         zhvi = cached(f"{a.work}/zhvi.json", lambda: {k: list(v) for k, v in value.fetch_zhvi().items()})
         vcols = value.attach(bgeoms, parcels, fwd, value.roll(records, vsrc), vsrc, zhvi)
-        vcols["first_floor_ft"] = damage.first_floor_ft(vcols["year_built"], vsrc["firm_year"])
+        vcols["first_floor_ft"] = damage.first_floor_ft(vcols["year_built"], vsrc.get("firm_year"))
+        vcols["floor_source"] = np.full(len(bldgs), "", object)
+        if not a.no_certificates:                             # surveyed first floors where HRPDC has the certificate
+            certs = cached(f"{a.work}/elevation_certificates.geojson", lambda: {"type": "FeatureCollection", "features": ffe.fetch()})["features"]
+            floor = ffe.attach(certs, bgeoms, fwd)
+            has = np.isfinite(floor) & np.isfinite(bt["ground_ft"])
+            vcols["ffe_navd_ft"] = np.where(has, floor, np.nan)
+            vcols["first_floor_ft"] = np.where(has, np.maximum(floor - bt["ground_ft"], 0), vcols["first_floor_ft"])
+            vcols["floor_source"][has] = "certificate"
+            n_cert = int(has.sum())
+            log(f"first floors: {n_cert:,} buildings have an elevation certificate (HRPDC), median "
+                f"{np.median(vcols['first_floor_ft'][has]) if n_cert else float('nan'):.1f} ft above the ground")
         log(f"values: {int(np.isfinite(vcols['value_bldg']).sum()):,} of {len(bldgs):,} buildings have an assessed building value "
             f"({vsrc['tax_year']}), {int(vcols['residential'].sum()):,} are homes")
 
@@ -309,7 +347,7 @@ def main(argv=None):
     f2, f6 = "%.2f", "%.6f"
     fmt = {"ground_ft": f2, "low_ft": f2, "connect_ft": f2, "ponded_ft": f2, "flooded_ft": f2, "wet_low_ft": f2,
            "length_m": f2, "lon": f6, "lat": f6, "station_km": f2, "area_m2": "%.0f", "connect_surface_ft": f2,
-           "year_built": "%.0f", "value_total": "%.0f", "value_impr": "%.0f", "value_bldg": "%.0f", "zhvi": "%.0f", "first_floor_ft": "%.0f"}
+           "year_built": "%.0f", "value_total": "%.0f", "value_impr": "%.0f", "value_bldg": "%.0f", "zhvi": "%.0f", "first_floor_ft": "%.1f", "ffe_navd_ft": "%.2f"}
     write_csv(f"{a.out}/{a.name}_roads.csv.gz", road_cols, fmt)
     write_csv(f"{a.out}/{a.name}_buildings.csv.gz", bldg_cols, fmt)
 
@@ -320,13 +358,17 @@ def main(argv=None):
         for hh, ss, kk in zip(h, st, km):
             r = rows.setdefault((hh, ss), {"road_pieces": 0, "buildings": 0, "max_km": 0.0})
             r[kind] += 1
-            r["max_km"] = max(r["max_km"], kk)
+            r["max_km"] = max(r["max_km"], kk if np.isfinite(kk) else 0.0)
     stn = {s["station"]: s["name"] for s in sts}
     with open(f"{a.out}/{a.name}_tether.csv", "w") as fh:
         fh.write("huc12,huc12_name,station,station_name,road_pieces,buildings,farthest_km,forced\n")
         for (hh, ss), r in sorted(rows.items()):
-            fh.write(f"{hh},{names.get(hh, '')},{ss},\"{stn.get(ss, '')}\",{r['road_pieces']},{r['buildings']},"
-                     f"{r['max_km']:.1f},{'yes' if forced.get(hh) == ss else ''}\n")
+            fh.write(f"{hh},{names.get(hh, '')},{ss},\"{stn.get(ss, '') if ss else 'no gauge: left out'}\",{r['road_pieces']},{r['buildings']},"
+                     f"{r['max_km']:.1f},{'yes' if tether.rule(hh, forced) == ss else ''}\n")
+    ungauged = sorted({names.get(hh, hh) for (hh, ss) in rows if ss == ""})
+    n_ungauged = {k: sum(r[k] for (hh, ss), r in rows.items() if ss == "") for k in ("road_pieces", "buildings")}
+    if ungauged:
+        log(f"no gauge for {n_ungauged['road_pieces']:,} road pieces and {n_ungauged['buildings']:,} buildings in {', '.join(ungauged)}: left out")
 
     if not a.no_gpkg:
         write_layers(f"{a.out}/{a.name}.gpkg", pieces, road_cols, bgeoms, bldg_cols, epsg)
@@ -342,11 +384,15 @@ def main(argv=None):
         sources["values"] = f"{vsrc['assessment']['name']}; {vsrc['tax_year_note']}"
         sources["zillow"] = "Zillow Home Value Index by ZIP code (typical home value), " + (next(iter(zhvi.values()))[1] if zhvi else "")
         sources["damage"] = damage.CITATION
+        if n_cert:
+            sources["first_floors"] = f"{ffe.SOURCE}: {n_cert:,} buildings"
     if not a.no_page:
-        used = sorted(set(rt["station"]) | set(bt["station"][okb]))
+        used = sorted((set(rt["station"]) | set(bt["station"][okb])) - {""})
+        if ungauged:
+            sources["ungauged"] = ", ".join(ungauged)
         page.write_static(f"{a.out}/page", a.name, a.title or loc["properties"].get("NAME") or a.name, bounds, epsg, pieces,
                           road_cols, roads, fwd, bgeoms, bldg_cols, dem, cidx, [s for s in sts if s["station"] in used], sources,
-                          values=None if not vsrc else {"tax_year": vsrc["tax_year"], "firm_year": vsrc["firm_year"],
+                          values=None if not vsrc else {"tax_year": vsrc["tax_year"], "firm_year": vsrc.get("firm_year"), "certificates": n_cert, "home_rule": vsrc.get("residential_note"),
                                                         "zillow_month": next(iter(zhvi.values()))[1] if zhvi else ""})
     with open(f"{a.out}/{a.name}_prep.json", "w") as fh:
         json.dump({"fips": a.fips, "name": a.name, "locality": loc["properties"].get("NAMELSAD"), "epsg": epsg,
@@ -357,8 +403,12 @@ def main(argv=None):
                    "piece_m": PIECE_M, "ponded_ft": PONDED_FT, "flooded_ft": FLOODED_FT,
                    "drainage": None if net is None else {"source": dsrc.get("source"), **net["counts"]},
                    "barriers": sorted({str(f["properties"].get("SYSTEM_NAME")) for f in bdoc["routes"]}),
-                   "values": None if not vsrc else {"tax_year": vsrc["tax_year"], "note": vsrc["tax_year_note"], "firm_year": vsrc["firm_year"],
-                                                    "assessment": vsrc["assessment"]["name"], "damage_curves": damage.CITATION},
+                   "values": None if not vsrc else {"tax_year": vsrc["tax_year"], "note": vsrc["tax_year_note"], "firm_year": vsrc.get("firm_year"),
+                                                    "assessment": vsrc["assessment"]["name"], "damage_curves": damage.CITATION,
+                                                    "elevation_certificates": n_cert, "first_floor_source": ffe.SOURCE if n_cert else None,
+                                                    "home_rule": vsrc.get("residential_note")},
+                   "ungauged": None if not ungauged else {"huc12": ungauged, **n_ungauged,
+                                                          "why": "no StormSense gauge stands for this water (tether_overrides.csv)"},
                    "prepared_utc": time.strftime("%Y-%m-%dT%H:%MZ", time.gmtime())}, fh, indent=1)
     log("wrote", a.out)
 

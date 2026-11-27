@@ -102,7 +102,7 @@ def write_static(out, name, title, bounds, epsg, pieces, road_cols, roads_raw, f
 
     # road pieces that can go under by the top level and are not on a bridge
     rc = road_cols
-    keep = np.flatnonzero((np.asarray(rc["bridge"]) == 0) & np.isfinite(rc["connect_ft"]))
+    keep = np.flatnonzero((np.asarray(rc["bridge"]) == 0) & np.isfinite(rc["connect_ft"]) & (np.asarray(rc["station"], object) != ""))
     pxy = np.column_stack([ux(pieces["x0"][keep]), uy(pieces["y0"][keep]), ux(pieces["x1"][keep]), uy(pieces["y1"][keep])])
     p = {"n": int(len(keep)), "xy": b64(pxy, "<u2"), "ground": b64(hundredths(rc["ground_ft"][keep]), "<i2"),
          "connect": b64(hundredths(rc["connect_ft"][keep]), "<i2"),
@@ -137,7 +137,7 @@ def write_static(out, name, title, bounds, epsg, pieces, road_cols, roads_raw, f
 
     # buildings that can go under and do not stand in the water
     bc = bldg_cols
-    bkeep = [i for i in np.flatnonzero(np.isfinite(bc["connect_ft"]) & (np.asarray(bc["over_water"]) == 0))
+    bkeep = [i for i in np.flatnonzero(np.isfinite(bc["connect_ft"]) & (np.asarray(bc["over_water"]) == 0) & (np.asarray(bc["station"], object) != ""))
              if bgeoms[i] is not None and not bgeoms[i].is_empty]
     bcount, bxy = [], []
     for i in bkeep:
@@ -176,7 +176,8 @@ def write_static(out, name, title, bounds, epsg, pieces, road_cols, roads_raw, f
         b.update(year=b64(np.where(np.isfinite(yr), yr, 0), "<u2"), vtotal=money("value_total"), vbldg=money("value_bldg"),
                  res=b64(np.asarray(bc["residential"])[bkeep], "u1"),
                  curve=b64([names.index(c) if c in names else 0 for c in np.asarray(bc["curve"])[bkeep]], "u1"),
-                 ffh=b64(np.nan_to_num(np.asarray(bc["first_floor_ft"], float)[bkeep], nan=3), "u1"),
+                 ffh=b64(np.clip(np.round(10 * np.nan_to_num(np.asarray(bc["first_floor_ft"], float)[bkeep], nan=3)), 0, 255), "u1"),   # tenths of a foot
+                 ec=b64(np.asarray([v == "certificate" for v in np.asarray(bc.get("floor_source", np.full(len(bc["first_floor_ft"]), "")), object)[bkeep]], int), "u1"),
                  zip=b64([zi.get(z, 255) for z in np.asarray(bc["zip"])[bkeep]], "u1"),
                  use=b64([ui.get(u, 255) for u in use], "u1"))
         vdoc = {**values, "zips": zips, "zhvi": [zh.get(z) for z in zips], "uses": uses,
@@ -185,7 +186,8 @@ def write_static(out, name, title, bounds, epsg, pieces, road_cols, roads_raw, f
     rgb = raster(dem, cidx, (x0, ytop), np.column_stack([sx, sy]))
     Image.fromarray(rgb, "RGB").save(os.path.join(out, "extent.png"), optimize=True)
 
-    ok_road = np.asarray(rc["bridge"]) == 0
+    ok_road = (np.asarray(rc["bridge"]) == 0) & (np.asarray(rc["station"]).astype(str) != "")      # no gauge: left out
+    ok_bldg = (np.asarray(bc["over_water"]) == 0) & (np.asarray(bc["station"]).astype(str) != "")
     static = {
         "name": name, "title": title, "epsg": epsg, "x0": x0, "ytop": ytop, "unit_m": UNIT_M,
         "width_m": bounds[2] - bounds[0], "height_m": bounds[3] - bounds[1],
@@ -196,7 +198,7 @@ def write_static(out, name, title, bounds, epsg, pieces, road_cols, roads_raw, f
         "pieces": p, "roads": r, "buildings": b, "values": vdoc,
         "raster": {"file": "extent.png", "cell_m": CELL_M, "width": int(rgb.shape[1]), "height": int(rgb.shape[0])},
         "totals": {"road_miles": round(float(np.asarray(rc["length_m"])[ok_road].sum() / 1609.344), 1),
-                   "road_pieces": int(ok_road.sum()), "buildings": int((np.asarray(bc["over_water"]) == 0).sum())},
+                   "road_pieces": int(ok_road.sum()), "buildings": int(ok_bldg.sum())},
         "prepared_utc": time.strftime("%Y-%m-%dT%H:%MZ", time.gmtime()), "sources": sources, "disclaimer": DISCLAIMER,
     }
     with open(os.path.join(out, "static.json"), "w") as fh:
