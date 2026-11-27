@@ -24,7 +24,7 @@ import numpy as np
 from . import FLOODED_FT, PONDED_FT, damage, depth
 
 HERE = os.path.dirname(__file__)
-UNIT_M = 0.5
+UNIT_M = 0.5      # the page's coordinates are whole units in 16 bits: half a metre reaches 32.7 km (unit_for)
 CELL_M = 5
 NO_LEVEL = 32767
 WATER_FT = 1.25   # drawn as ordinary water: under water at about mean higher high water (1.15 ft NAVD88 at Sewells Point)
@@ -40,8 +40,17 @@ def b64(a, dtype):
     return base64.b64encode(np.ascontiguousarray(a, dtype=dtype).tobytes()).decode()
 
 
-def units(v, origin):
-    return np.clip(np.round((np.asarray(v, float) - origin) / UNIT_M), 0, 65535).astype(np.uint16)
+def units(v, origin, unit=UNIT_M):
+    return np.clip(np.round((np.asarray(v, float) - origin) / unit), 0, 65535).astype(np.uint16)
+
+
+def unit_for(bounds):
+    """The page's coordinate unit in metres: half a metre, doubled until the frame's longer side fits in 16 bits
+    (a county 40 km long drew everything past 32.7 km on one line)."""
+    side, unit = max(bounds[2] - bounds[0], bounds[3] - bounds[1]), UNIT_M
+    while side / unit > 65535:
+        unit *= 2
+    return unit
 
 
 def hundredths(a):
@@ -187,15 +196,16 @@ def write_static(out, name, title, bounds, epsg, pieces, road_cols, roads_raw, f
     values: {"tax_year", "firm_year", "zillow_month"} when the building table has the value.attach columns."""
     os.makedirs(out, exist_ok=True)
     x0, ytop = bounds[0], bounds[3]
-    ux = lambda x: units(x, x0)                       # noqa: E731
-    uy = lambda y: units(-(np.asarray(y, float) - ytop), 0)   # noqa: E731  (y runs down the page)
+    unit = unit_for(bounds)
+    ux = lambda x: units(x, x0, unit)                       # noqa: E731
+    uy = lambda y: units(-(np.asarray(y, float) - ytop), 0, unit)   # noqa: E731  (y runs down the page)
     order = {s["station"]: i for i, s in enumerate(sts)}
     sx, sy = fwd(np.array([s["lon"] for s in sts]), np.array([s["lat"] for s in sts]))
 
     # road pieces that can go under by the top level and are not on a bridge
     rc = road_cols
     keep = np.flatnonzero((np.asarray(rc["bridge"]) == 0) & np.isfinite(rc["connect_ft"]) & (np.asarray(rc["station"], object) != ""))
-    pxy = np.column_stack([ux(pieces["x0"][keep]), uy(pieces["y0"][keep]), ux(pieces["x1"][keep]), uy(pieces["y1"][keep])])
+    pxy = piece_xy(pieces, keep, ux, uy)
     p = {"n": int(len(keep)), "xy": b64(pxy, "<u2"), "ground": b64(hundredths(rc["ground_ft"][keep]), "<i2"),
          "connect": b64(hundredths(rc["connect_ft"][keep]), "<i2"),
          "station": b64([order[s] for s in rc["station"][keep]], "u1"),
@@ -206,22 +216,12 @@ def write_static(out, name, title, bounds, epsg, pieces, road_cols, roads_raw, f
         p["via"] = b64(np.asarray(rc["via_pipes"])[keep], "u1")
 
     # the whole road network, thinned, as the map's background
-    counts, coords, cls, names = [], [], [], []
     road_of_piece = np.asarray(pieces["road"])
     on_bridge = np.bincount(road_of_piece, weights=(np.asarray(rc["bridge"]) > 0), minlength=len(roads_raw))
     n_piece = np.maximum(np.bincount(road_of_piece, minlength=len(roads_raw)), 1)
-    for i, f in enumerate(roads_raw):
-        g = f.get("geometry") or {}
-        parts = [g["coordinates"]] if g.get("type") == "LineString" else g.get("coordinates", []) if g.get("type") == "MultiLineString" else []
-        for part in parts:
-            c = np.asarray(part, float)[:, :2]
-            if len(c) < 2:
-                continue
-            x, y = fwd(c[:, 0], c[:, 1])
-            s = simplify(np.column_stack([x, y]), 1.0)
-            counts.append(len(s)); coords.append(np.column_stack([ux(s[:, 0]), uy(s[:, 1])]))
-            cls.append(road_class(f["properties"].get("MTFCC")) + (4 if on_bridge[i] / n_piece[i] > 0.5 else 0))
-        names.append(str(f["properties"].get("ST_FULL") or "").strip())
+    counts, coords, of = road_lines(roads_raw, fwd, ux, uy)
+    cls = [road_class(roads_raw[i]["properties"].get("MTFCC")) + (4 if on_bridge[i] / n_piece[i] > 0.5 else 0) for i in of]
+    names = [str(f["properties"].get("ST_FULL") or "").strip() for f in roads_raw]
     uniq = sorted(set(names))
     where = {n: i for i, n in enumerate(uniq)}
     r = {"n": len(counts), "count": b64(counts, "<u2"), "xy": b64(np.vstack(coords), "<u2"), "cls": b64(cls, "u1"),
@@ -231,19 +231,8 @@ def write_static(out, name, title, bounds, epsg, pieces, road_cols, roads_raw, f
     bc = bldg_cols
     bkeep = [i for i in np.flatnonzero(np.isfinite(bc["connect_ft"]) & (np.asarray(bc["over_water"]) == 0) & (np.asarray(bc["station"], object) != ""))
              if bgeoms[i] is not None and not bgeoms[i].is_empty]
-    bcount, bxy = [], []
-    for i in bkeep:
-        g = bgeoms[i]
-        if g.geom_type == "MultiPolygon":
-            g = max(g.geoms, key=lambda q: q.area)
-        ring = np.asarray(g.exterior.coords)[:, :2]
-        tol = 0.4
-        s = simplify(ring, tol)
-        while len(s) > 255:
-            tol *= 2
-            s = simplify(ring, tol)
-        bcount.append(len(s)); bxy.append(np.column_stack([ux(s[:, 0]), uy(s[:, 1])]))
-    b = {"n": len(bkeep), "count": b64(bcount, "u1"), "xy": b64(np.vstack(bxy) if bxy else np.zeros((0, 2)), "<u2"),   # an inland town may have no building 10 ft of water reaches
+    bcount, bxy = outlines(bgeoms, bkeep, ux, uy)
+    b = {"n": len(bkeep), "count": b64(bcount, "u1"), "xy": b64(bxy, "<u2"),
          "ground": b64(hundredths(np.asarray(bc["ground_ft"])[bkeep]), "<i2"),
          "connect": b64(hundredths(np.asarray(bc["connect_ft"])[bkeep]), "<i2"),
          "station": b64([order[s] for s in np.asarray(bc["station"])[bkeep]], "u1"), "id": b64(bkeep, "<u4")}
@@ -283,7 +272,7 @@ def write_static(out, name, title, bounds, epsg, pieces, road_cols, roads_raw, f
     ok_road = (np.asarray(rc["bridge"]) == 0) & (np.asarray(rc["station"]).astype(str) != "")      # no gauge: left out
     ok_bldg = (np.asarray(bc["over_water"]) == 0) & (np.asarray(bc["station"]).astype(str) != "")
     static = {
-        "name": name, "title": title, "epsg": epsg, "x0": x0, "ytop": ytop, "unit_m": UNIT_M,
+        "name": name, "title": title, "epsg": epsg, "x0": x0, "ytop": ytop, "unit_m": unit,
         "width_m": bounds[2] - bounds[0], "height_m": bounds[3] - bounds[1],
         "levels": {"start": float(depth.LEVELS_FT[0]), "step": 0.25, "n": int(len(depth.LEVELS_FT))},
         "ponded_ft": PONDED_FT, "flooded_ft": FLOODED_FT, "no_level": NO_LEVEL,
@@ -301,6 +290,86 @@ def write_static(out, name, title, bounds, epsg, pieces, road_cols, roads_raw, f
         shutil.copy(os.path.join(HERE, "..", "crest", "branding", logo), os.path.join(out, logo))
     write_index(out, title)
     return static
+
+
+def piece_xy(pieces, keep, ux, uy):
+    return np.column_stack([ux(pieces["x0"][keep]), uy(pieces["y0"][keep]), ux(pieces["x1"][keep]), uy(pieces["y1"][keep])])
+
+
+def road_lines(roads_raw, fwd, ux, uy):
+    """The whole road network, thinned: vertex counts, coordinates and the feature each line belongs to."""
+    counts, coords, of = [], [], []
+    for i, f in enumerate(roads_raw):
+        g = f.get("geometry") or {}
+        parts = [g["coordinates"]] if g.get("type") == "LineString" else g.get("coordinates", []) if g.get("type") == "MultiLineString" else []
+        for part in parts:
+            c = np.asarray(part, float)[:, :2]
+            if len(c) < 2:
+                continue
+            x, y = fwd(c[:, 0], c[:, 1])
+            s = simplify(np.column_stack([x, y]), 1.0)
+            counts.append(len(s)); coords.append(np.column_stack([ux(s[:, 0]), uy(s[:, 1])])); of.append(i)
+    return counts, coords, of
+
+
+def outlines(bgeoms, bkeep, ux, uy):
+    count, xy = [], []
+    for i in bkeep:
+        g = bgeoms[i]
+        if g.geom_type == "MultiPolygon":
+            g = max(g.geoms, key=lambda q: q.area)
+        ring = np.asarray(g.exterior.coords)[:, :2]
+        tol = 0.4
+        s = simplify(ring, tol)
+        while len(s) > 255:
+            tol *= 2
+            s = simplify(ring, tol)
+        count.append(len(s)); xy.append(np.column_stack([ux(s[:, 0]), uy(s[:, 1])]))
+    return count, (np.vstack(xy) if xy else np.zeros((0, 2)))      # an inland town may have no building 10 ft of water reaches
+
+
+def reshape(page_dir, work):
+    """Write a prepared page's coordinates again (road pieces, road lines, building outlines, gauges) in the unit
+    its frame needs, from prep's saved downloads. Levels, values and the tiles are left as they are."""
+    import shapely
+    from pyproj import Transformer
+    from shapely.geometry import shape
+    from . import segments, tether
+    with open(os.path.join(page_dir, "static.json")) as fh:
+        st = json.load(fh)
+    bounds = (st["x0"], st["ytop"] - st["height_m"], st["x0"] + st["width_m"], st["ytop"])
+    unit = unit_for(bounds)
+    ux = lambda x: units(x, st["x0"], unit)                             # noqa: E731
+    uy = lambda y: units(-(np.asarray(y, float) - st["ytop"]), 0, unit)   # noqa: E731
+    fwd = Transformer.from_crs(4326, st["epsg"], always_xy=True).transform
+
+    def arr(b, dtype):
+        return np.frombuffer(base64.b64decode(b), dtype)
+    with open(os.path.join(work, "roads_raw.geojson")) as fh:
+        roads_raw = json.load(fh)["features"]
+    pieces = segments.split(roads_raw, fwd)
+    p, r, b = st["pieces"], st["roads"], st["buildings"]
+    p["xy"] = b64(piece_xy(pieces, arr(p["id"], "<u4"), ux, uy), "<u2")
+    counts, coords, _ = road_lines(roads_raw, fwd, ux, uy)
+    if len(counts) != r["n"]:
+        raise SystemExit(f"{st['name']}: the saved roads no longer match the page ({len(counts)} lines, the page has {r['n']})")
+    r["count"], r["xy"] = b64(counts, "<u2"), b64(np.vstack(coords), "<u2")
+    with open(os.path.join(work, "buildings_raw.geojson")) as fh:
+        raw = json.load(fh)["features"]
+    bkeep = arr(b["id"], "<u4")
+    geoms = {int(i): shapely.transform(shapely.force_2d(shape(raw[i]["geometry"])), lambda c: np.column_stack(fwd(c[:, 0], c[:, 1])))
+             for i in bkeep}
+    count, xy = outlines(geoms, [int(i) for i in bkeep], ux, uy)
+    b["count"], b["xy"] = b64(count, "u1"), b64(xy, "<u2")
+    known = {s["station"]: s for s in tether.stations()}
+    for g in st["stations"]:
+        x, y = fwd(known[g["id"]]["lon"], known[g["id"]]["lat"])
+        g["x"], g["y"] = int(ux([x])[0]), int(uy([y])[0])
+    st["unit_m"] = unit
+    with open(os.path.join(page_dir, "static.json"), "w") as fh:
+        json.dump(st, fh, separators=(",", ":"))
+    write_index(page_dir, st["title"])
+    return unit
 
 
 def centre(bounds, epsg):
@@ -355,7 +424,11 @@ def main(argv=None):
     ap.add_argument("--prepared", required=True, help="the area's page folder (with static.json)")
     ap.add_argument("--work", required=True, help="prep's work folder (dem_ft.npy, cidx.npy, cidx_piped.npy, huc12.geojson)")
     ap.add_argument("--title")
+    ap.add_argument("--shapes", action="store_true", help="only write the page's coordinates again (page.reshape); needs no grids")
     a = ap.parse_args(argv)
+    if a.shapes:
+        print(f"{a.prepared}: coordinates written in units of {reshape(a.prepared, a.work)} m")
+        return
     with open(os.path.join(a.prepared, "static.json")) as fh:
         st = json.load(fh)
     bounds = (st["x0"], st["ytop"] - st["height_m"], st["x0"] + st["width_m"], st["ytop"])

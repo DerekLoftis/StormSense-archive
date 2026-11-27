@@ -484,7 +484,7 @@ function paint(t){ if (t.stamp === R.stamp) return; var a = t.a, lev = t.lev, zn
   t.ctx.putImageData(t.im, 0, 0); t.stamp = R.stamp; }
 function resize(fit){ cv.style.aspectRatio = S.width_m + " / " + S.height_m; var r = cv.getBoundingClientRect(); cv.width = Math.round(r.width * DPR); cv.height = Math.round(r.height * DPR); R.w = r.width; R.h = r.height; if (fit) fitAll(); }
 function fitAll(){ var wu = S.width_m / S.unit_m, hu = S.height_m / S.unit_m; V.s = Math.min(R.w / wu, R.h / hu); V.ox = (R.w - wu * V.s) / 2; V.oy = (R.h - hu * V.s) / 2; }
-function zoomAt(x, y, k){ var wu = S.width_m / S.unit_m, min = Math.min(R.w / wu, R.h / (S.height_m / S.unit_m)) * 0.8, s = Math.max(min, Math.min(6, V.s * k)); k = s / V.s; V.ox = x - (x - V.ox) * k; V.oy = y - (y - V.oy) * k; V.s = s; draw(); $("pop").hidden = true; }
+function zoomAt(x, y, k){ var wu = S.width_m / S.unit_m, min = Math.min(R.w / wu, R.h / (S.height_m / S.unit_m)) * 0.8, s = Math.max(min, Math.min(12 * S.unit_m, V.s * k)); k = s / V.s; V.ox = x - (x - V.ox) * k; V.oy = y - (y - V.oy) * k; V.s = s; draw(); $("pop").hidden = true; }
 function drawRaster(s, ox, oy, w, h){ if (!R.L) return;
   var ra = S.raster, cu = ra.cell_m / S.unit_m, pc = s * cu, ov = ra.overview, o = R.over, r, c;
   if (o && o.state === 1){ paint(o); ctx.imageSmoothingEnabled = pc * ov.factor < 3; ctx.drawImage(o.cv, ox, oy, ov.width * ov.factor * pc, ov.height * ov.factor * pc); }

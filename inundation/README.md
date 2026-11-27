@@ -125,7 +125,7 @@ bridge layer (VDOT structures) would be better.
 | `tether.py` | HUC-12s, nearest gauge, overrides |
 | `prep.py` | step 1; writes `<name>_roads.csv.gz`, `<name>_buildings.csv.gz`, `<name>.gpkg` (`--gdb`: `<name>.gdb`), `<name>_tether.csv`, `page/` |
 | `status.py` | step 2; writes `<name>_roads_status.csv`, `<name>_buildings_status.csv` (+ `.geojson` with `--layers`), `<name>_summary.json`, `<name>_timeline.csv`, `page/levels.json` |
-| `page.py`, `templates/map.html` | the area's self-contained map page (no CDN, no map tiles): forecast, Historical Floods and Scenario views, the prediction plot, counts, gauge table; `python -m inundation.page --prepared <page dir> --work <work dir>` redraws an area's flood picture without a new `prep` |
+| `page.py`, `templates/map.html` | the area's self-contained map page (no CDN, no map tiles): forecast, Historical Floods and Scenario views, the prediction plot, counts, gauge table; `python -m inundation.page --prepared <page dir> --work <work dir>` redraws an area's flood picture without a new `prep`; with `--shapes` it only writes the page's coordinates again (they are whole units in 16 bits, half a metre each, doubled for a frame longer than 32.7 km) |
 | `history.py`, `events/` | past floods: 72 hours of every gauge's record around the highest water at Sewells Point |
 
 Extra packages (not needed by the StormSense run): `pip install -r inundation/requirements.txt`.

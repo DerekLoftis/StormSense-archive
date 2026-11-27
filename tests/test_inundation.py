@@ -384,3 +384,14 @@ def test_a_line_drawn_across_an_outage_is_not_a_record():
     assert kept == tide[:41] + tide[150:]
     short = [(a[0] + timedelta(minutes=6 * k), round(a[1] + (tide[46][1] - a[1]) * k / 6, 3)) for k in range(1, 6)]
     assert history.unbridged(tide[:41] + short + tide[46:]) == tide[:41] + short + tide[46:]   # half an hour's fill is left alone
+
+
+def test_page_coordinates_fit_a_long_county():
+    """Half-metre units in 16 bits end at 32.7 km: Gloucester (42 km) drew everything past that on one line."""
+    from inundation import page
+    assert page.unit_for((0, 0, 16000, 17500)) == 0.5
+    assert page.unit_for((0, 0, 36915, 42325)) == 1.0
+    assert page.unit_for((0, 0, 70000, 140000)) == 4.0
+    unit = page.unit_for((0, 0, 36915, 42325))
+    far = page.units([42000.0], 0, unit)
+    assert far[0] == 42000 and far[0] < 65535
