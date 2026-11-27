@@ -326,6 +326,8 @@ def test_plot_gauge_is_the_nearest_noaa_tide_gauge():
     assert g["id"] in ("SWPT", "MNPT") and g["noaa_id"] in ("8638610", "8639348")
     assert ref["id"] == "SWPT" and ref["name"] == "Sewells Point" and abs(ref["navd88_above_mllw_ft"] - 1.61) < 0.02
     assert page.plot_gauge(37.25, -76.50)[0]["id"] != g["id"]         # Gloucester Point is not Norfolk's gauge
+    assert page.plot_gauge(36.75, -76.02)[0]["id"] == "MNPT"          # Virginia Beach's centre is nearest Money Point ...
+    assert page.plot_gauge(36.75, -76.02, inside=["CBBT", "BBIV"])[0]["id"] == "CBBT"   # ... but its own NOAA gauge goes first
 
 
 def test_a_past_flood_gives_each_gauge_its_own_record_or_the_nearest(tmp_path, monkeypatch):
@@ -369,3 +371,16 @@ def test_a_past_flood_gives_each_gauge_its_own_record_or_the_nearest(tmp_path, m
     ev = history.for_page([{"station": "SWPT", "lat": 36.943, "lon": -76.329}], coops_of={"SWPT": "8638610"}, plot="SWPT")["events"][0]
     assert [r["cycle"] for r in ev["runs"]] == ["2003-09-18T00Z", "2003-09-18T18Z"] and ev["runs_at"] == "SWPT"
     assert ev["runs"][1]["max_ft"] == 6.0 and ev["runs"][1]["f"][0] is None and len(ev["runs"][0]["f"]) == 721
+
+
+def test_a_line_drawn_across_an_outage_is_not_a_record():
+    from inundation import history
+    t0 = datetime(2026, 11, 26, 6, 0, tzinfo=timezone.utc)
+    tide = [(t0 + timedelta(minutes=6 * k), round(2.5 * np.sin(k / 119 * 2 * np.pi) + 0.004 * ((k * 7) % 5 - 2), 3)) for k in range(240)]
+    assert history.unbridged(tide) == tide                             # a gauge's own readings stay, even near mid-tide
+    a, b = tide[40], tide[150]                                         # the gauge is down for eleven hours ...
+    line = [(a[0] + timedelta(minutes=6 * k), round(a[1] + (b[1] - a[1]) * k / 110, 3)) for k in range(1, 110)]
+    kept = history.unbridged(tide[:41] + line + tide[150:])            # ... and the table draws a line across
+    assert kept == tide[:41] + tide[150:]
+    short = [(a[0] + timedelta(minutes=6 * k), round(a[1] + (tide[46][1] - a[1]) * k / 6, 3)) for k in range(1, 6)]
+    assert history.unbridged(tide[:41] + short + tide[46:]) == tide[:41] + short + tide[46:]   # half an hour's fill is left alone

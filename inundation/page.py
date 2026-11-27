@@ -156,9 +156,11 @@ NOAA_NAMES = {"8638610": "Sewells Point", "8639348": "Money Point", "8638901": "
               "8635027": "Dahlgren", "8594900": "Washington, DC", "8571421": "Bishops Head", "8577330": "Solomons Island"}
 
 
-def plot_gauge(lat, lon, path=None):
+def plot_gauge(lat, lon, path=None, inside=()):
     """The NOAA tide gauge nearest a point, for the page's prediction plot, and Sewells Point's datum for the
-    readings in feet above MLLW: ({id, name, noaa_id, lat, lon, navd88_above_mllw_ft}, the same for SWPT)."""
+    readings in feet above MLLW: ({id, name, noaa_id, lat, lon, navd88_above_mllw_ft}, the same for SWPT).
+    inside: the area's own gauges within its frame; a NOAA gauge among them goes before any outside (Virginia
+    Beach's plot is the Bay Bridge Tunnel's, not Money Point's up the Elizabeth River)."""
     import csv
     from . import tether
     best, ref = None, None
@@ -171,8 +173,9 @@ def plot_gauge(lat, lon, path=None):
                  "lat": float(r["lat"]), "lon": float(r["lon"]),
                  "navd88_above_mllw_ft": float(r["navd88_above_mllw_ft"]) if r.get("navd88_above_mllw_ft") else None}
             km = np.hypot((g["lon"] - lon) * np.cos(np.radians(lat)), g["lat"] - lat) * 111.2
-            if best is None or km < best[0]:
-                best = (km, g)
+            key = (r["station"] not in inside, km)
+            if best is None or key < best[0]:
+                best = (key, g)
             if r["station"] == "SWPT":
                 ref = g
     return (best[1] if best else None), ref
@@ -274,7 +277,8 @@ def write_static(out, name, title, bounds, epsg, pieces, road_cols, roads_raw, f
 
     rdoc = write_raster(out, *raster(dem, cidx, (x0, ytop), np.column_stack([sx, sy]), hucs=hucs, fwd=fwd, forced=forced,
                                      ids=[s["station"] for s in sts]))
-    plot, ref = plot_gauge(*centre(bounds, epsg))
+    plot, ref = plot_gauge(*centre(bounds, epsg), inside=[s["station"] for i, s in enumerate(sts)
+                                                          if bounds[0] <= sx[i] <= bounds[2] and bounds[1] <= sy[i] <= bounds[3]])
 
     ok_road = (np.asarray(rc["bridge"]) == 0) & (np.asarray(rc["station"]).astype(str) != "")      # no gauge: left out
     ok_bldg = (np.asarray(bc["over_water"]) == 0) & (np.asarray(bc["station"]).astype(str) != "")
@@ -368,7 +372,7 @@ def main(argv=None):
             hucs = json.load(fh)["features"]
     st["raster"] = write_raster(a.prepared, *raster(dem, cidx, (st["x0"], st["ytop"]), np.column_stack([sx, sy]), hucs=hucs, fwd=fwd,
                                                     forced=tether.overrides(), ids=ids))
-    st["plot_gauge"], st["mllw_ref"] = plot_gauge(*centre(bounds, st["epsg"]))
+    st["plot_gauge"], st["mllw_ref"] = plot_gauge(*centre(bounds, st["epsg"]), inside=[g["id"] for g in st["stations"] if g.get("inside")])
     with open(os.path.join(a.prepared, "static.json"), "w") as fh:
         json.dump(st, fh, separators=(",", ":"))
     if os.path.exists(os.path.join(a.prepared, "extent.png")):

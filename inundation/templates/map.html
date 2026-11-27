@@ -321,7 +321,7 @@ function chrome(){ var v = T.view, E = A.ev, pg = S.plot_gauge, top = S.levels.s
   $("plotTitle").textContent = v === "hist" ? "StormSense Historical Flood" : v === "scen" ? "StormSense Scenario Builder" : "StormSense Prediction Plot";
   $("plotSub").textContent = v === "hist" ? E.name + ": 36 Hours Before and After the Peak" : v === "scen" ? "Impacts at Each Water Level, " + S.levels.start + " to " + top + " ft NAVD88" : "Anticipated Impacts in the Next 72 Hours";
   var key = "", sw = function(c, t, box){ return '<span><span class="sw' + (box ? " box" : "") + '" style="background:' + c + '"></span>' + t + "</span>"; };
-  if (v !== "scen" && R.plot) key += sw(C.navy, (v === "hist" ? "Water level recorded" + (R.plot.own === false ? " at " + R.plot.from + ", standing in for " : " at ") : "StormSense forecast at ") + (pg ? pg.name : "the gauge") + " (ft NAVD88, left axis)");
+  if (v !== "scen" && R.plot) key += sw(C.navy, (v === "hist" ? "Water level recorded" + (R.plot.own === false && pg && R.plot.from !== pg.name ? " at " + R.plot.from + ", standing in for " : " at ") : "StormSense forecast at ") + (pg ? pg.name : "the gauge") + " (ft NAVD88, left axis)");
   if (v === "hist" && E.runs && R.plot) key += '<span><span class="sw dash"></span>' + E.runs.length + " StormSense forecasts issued before the peak (later runs darker)</span>";
   key += sw(C.flooded, "Road miles flooded") + sw(C.ponded, "Road miles ponded") + sw(C.building, "Buildings flooded" + (v === "scen" ? " (right axis)" : " (far right axis)"), true);
   $("plotKey").innerHTML = key;
@@ -387,7 +387,7 @@ function update(){
     $("when").innerHTML = fTimeY.format(dh) + "<small>" + utc(dh) + " · " + (Math.abs(hp) < 0.05 ? "the peak at Sewells Point" : hp < 0 ? (-hp).toFixed(1) + " h before the peak" : hp.toFixed(1) + " h after the peak") + "</small>"; }
   else { var d0 = tAt(T.i), lead = (d0 - Date.now()) / 3600000;
     $("when").innerHTML = fTime.format(d0) + "<small>" + utc(d0) + (R.nowOk ? " · " + (Math.abs(lead) < 0.2 ? "now" : lead > 0 ? "in " + lead.toFixed(lead < 10 ? 1 : 0) + " h" : (-lead).toFixed(1) + " h ago") : "") + "</small>"; }
-  $("lvlNote").textContent = T.view === "scen" || !pg || pv == null ? "" : pg.name + " at the selected time: " + pv.toFixed(2) + " ft NAVD88" + (mllw(pv, pg) ? " (" + mllw(pv, pg) + ")" : "") + (R.plot.own === false ? ", taken from " + R.plot.from : "") + ".";
+  $("lvlNote").textContent = T.view === "scen" || !pg || pv == null ? "" : pg.name + " at the selected time: " + pv.toFixed(2) + " ft NAVD88" + (mllw(pv, pg) ? " (" + mllw(pv, pg) + ")" : "") + (R.plot.own === false && R.plot.from !== pg.name ? ", taken from " + R.plot.from : "") + ".";
   $("time").value = T.i; $("bObs").setAttribute("aria-pressed", T.obs);
   $("time").setAttribute("aria-valuetext", T.view === "scen" ? scenLevel(T.i).toFixed(2) + " feet NAVD88" : fTime.format(tAt(T.i)));
   gauges(); cursors(); draw(); $("pop").hidden = true;

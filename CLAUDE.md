@@ -177,7 +177,8 @@ project's shared folder (skill code, baselines, notes, station sheet, disclosure
   redraws a prepared area's picture.
 - Historical floods (`history.py`, `events/<id>/`): the 72 hours around the highest water at Sewells Point for the 2026
   Thanksgiving Day Nor'easter (from the archived runs, with every forecast), the 1933 Hurricane, Isabel 2003, Nor'Ida
-  2009, Irene 2011 and Matthew 2016 (NOAA CO-OPS, USGS since 2007; ft NAVD88). A gauge without its own record through
+  2009, Irene 2011 and Matthew 2016 (NOAA CO-OPS, USGS since 2007; ft NAVD88). The run tarballs' `observed_ft` is
+  interpolated straight across a gauge's outage (no gap limit in `station.py`): `history.unbridged` takes those lines out. A gauge without its own record through
   the peak follows the nearest one that has it. Add a storm as a row in `events/events.json` and run
   `python -m inundation.history noaa --event <id>`.
 - Not wired yet: a workflow, Pages hosting and the push to the AGOL folder "StormSense CREST". Each area's prepared
@@ -247,7 +248,8 @@ project's shared folder (skill code, baselines, notes, station sheet, disclosure
   services.arcgis.com; since 2026-11-26 gisshare.norfolk.gov, orfmaps.norfolk.gov, data.norfolk.gov,
   services2/services3/services5/services6/services7.arcgis.com, tiles.arcgis.com, geo.vbgov.com, maps.nnva.gov,
   geo.hrsd.com, gis.hrpdcva.gov, property.jamescitycountyva.gov, files.zillowstatic.com and the USACE/HRPDC document
-  hosts; since 2026-11-27 api.tidesandcurrents.noaa.gov and waterservices.usgs.gov). No Claude session reaches
+  hosts; since 2026-11-27 api.tidesandcurrents.noaa.gov, waterservices.usgs.gov and nwis.waterservices.usgs.gov, where USGS
+  serves readings older than 120 days). No Claude session reaches
   tidesandcurrents.noaa.gov itself, tds.vims.edu or *.github.io; NOAA AWS buckets work.
 - GitHub Actions has full internet (except NOMADS ETSS paths, 403), so put blocked downloads in a
   workflow. Read live pages from a workflow, not the sandbox. A finished job's log is readable from a session with

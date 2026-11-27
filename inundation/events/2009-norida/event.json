@@ -211,8 +211,47 @@
    "readings": 721,
    "first_z": "2009-11-11T11:24Z",
    "last_z": "2009-11-14T11:24Z"
+  },
+  "ALEV": {
+   "name": "Four Mile Run above Highway 1 at Alexandria",
+   "lat": 38.840277777778,
+   "lon": -77.053333333333,
+   "step_min": 6,
+   "agency": "USGS 01652545",
+   "datum": "NAVD88 (USGS, parameter 62620)",
+   "max_ft": 3.05,
+   "max_time_z": "2009-11-13T21:36Z",
+   "readings": 721,
+   "first_z": "2009-11-11T11:24Z",
+   "last_z": "2009-11-14T11:24Z"
+  },
+  "AXTV": {
+   "name": "Potomac River at Alexandria",
+   "lat": 38.805277777778,
+   "lon": -77.038333333333,
+   "step_min": 6,
+   "agency": "USGS 0165258890",
+   "datum": "NAVD88 (USGS, parameter 62620)",
+   "max_ft": 3.27,
+   "max_time_z": "2009-11-13T21:24Z",
+   "readings": 721,
+   "first_z": "2009-11-11T11:24Z",
+   "last_z": "2009-11-14T11:24Z"
+  },
+  "RICV": {
+   "name": "James River (VA) at Richmond Locks",
+   "lat": 37.525,
+   "lon": -77.421111111111,
+   "step_min": 6,
+   "agency": "USGS 02037705",
+   "datum": "NAVD88 (USGS, parameter 62620)",
+   "max_ft": 9.38,
+   "max_time_z": "2009-11-14T08:30Z",
+   "readings": 721,
+   "first_z": "2009-11-11T11:24Z",
+   "last_z": "2009-11-14T11:24Z"
   }
  },
- "made_utc": "2026-11-27T07:56Z",
+ "made_utc": "2026-11-27T17:07Z",
  "record": "NOAA CO-OPS verified water levels (api.tidesandcurrents.noaa.gov) and, since 2007, USGS tide gauges (waterservices.usgs.gov); ft NAVD88"
 }

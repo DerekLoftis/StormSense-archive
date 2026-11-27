@@ -106,14 +106,17 @@ def datums(station):
     return _DATUMS[station]
 
 
-NWIS = "https://waterservices.usgs.gov/nwis/iv/?format=json&sites={site}&parameterCd=62620&startDT={a}&endDT={b}"
+# readings older than 120 days are served by nwis.waterservices.usgs.gov (waterservices.usgs.gov redirects there)
+NWIS = "https://nwis.waterservices.usgs.gov/nwis/iv/?format=json&sites={site}&parameterCd=62620&startDT={a}&endDT={b}"
 
 
 def usgs(site, a, b):
-    """[(time, ft NAVD88)] of a USGS tide gauge (parameter 62620), thinned to six minutes; [] when it has none."""
+    """[(time, ft NAVD88)] of a USGS tide gauge (parameter 62620), thinned to six minutes; [] when it has none.
+    A service that cannot be reached raises: that is not the same as a gauge without a record."""
+    body = _get(NWIS.format(site=site, a=a.strftime("%Y-%m-%dT%H:%MZ"), b=b.strftime("%Y-%m-%dT%H:%MZ")))
     try:
-        js = json.loads(_get(NWIS.format(site=site, a=a.strftime("%Y-%m-%dT%H:%MZ"), b=b.strftime("%Y-%m-%dT%H:%MZ"))))
-    except Exception:
+        js = json.loads(body)
+    except ValueError:
         return []
     out = {}
     for ts in js.get("value", {}).get("timeSeries", []):
@@ -225,7 +228,11 @@ def fetch_noaa(ev, stations, log=print, own=None, usgs_sites=None):
         rows += [(sid, t, v - off) for t, v in rec]
     if usgs_sites and peak_t.year >= 2007:
         for st, (site, name, lat, lon) in sorted(usgs_sites.items()):
-            rec = usgs(site, w0, w1)
+            try:
+                rec = usgs(site, w0, w1)
+            except Exception as e:
+                log(f"{ev['id']}: USGS gauges not read ({e}); NOAA's only")
+                break
             if len(rec) >= 24:
                 gauges[st] = {"name": name, "lat": lat, "lon": lon, "step_min": 6, "agency": f"USGS {site}", "datum": "NAVD88 (USGS, parameter 62620)"}
                 rows += [(st, t, v) for t, v in rec]
@@ -235,6 +242,35 @@ def fetch_noaa(ev, stations, log=print, own=None, usgs_sites=None):
     log(f"{ev['id']}: Sewells Point {peak_ft:.2f} ft NAVD88 at {iso(peak_t)}, {len(doc['gauges'])} gauges: "
         + ", ".join(f"{g['name']} {g['max_ft']:.2f}" + ("*" if g.get("navd_estimated") else "") for g in doc["gauges"].values()))
     return doc
+
+
+BRIDGE_N = 12           # this many readings in one straight line are a gap the run's table drew across
+
+
+def unbridged(rec):
+    """[(time, ft)] without the straight lines an ens72 table draws across an outage: its observed_ft is interpolated
+    onto the six-minute clock with no limit, so a gauge that was down through a storm's peak would otherwise seem to
+    have recorded a slow, steady rise. The readings at both ends of a line are kept."""
+    rec = sorted(rec)
+    if len(rec) < BRIDGE_N:
+        return rec
+    v = np.array([x for _, x in rec])
+    sec = np.array([(t - rec[0][0]).total_seconds() for t, _ in rec])
+    even = np.abs(np.diff(sec, 2)) < 1                     # equal time steps
+    line = even & (np.abs(np.diff(v, 2)) <= 0.0021)        # three readings in a line, to the table's three decimals
+    drop = np.zeros(len(rec), bool)
+    i = 0
+    while i < len(line):
+        if not line[i]:
+            i += 1
+            continue
+        j = i
+        while j < len(line) and line[j]:
+            j += 1
+        if j - i + 2 >= BRIDGE_N:                          # readings i .. j+1 are collinear
+            drop[i + 1:j + 1] = True
+        i = j
+    return [r for r, d in zip(rec, drop) if not d]
 
 
 def fetch_stormsense(ev, tarballs, stations_csv, log=print):
@@ -263,7 +299,17 @@ def fetch_stormsense(ev, tarballs, stations_csv, log=print):
     sw = [(parse(t), v) for (st, t), v in obs.items() if st == "SWPT" and a <= parse(t) <= b + timedelta(days=1)]
     peak_t, peak_ft = max(sw, key=lambda r: r[1])
     w0, w1 = peak_t - timedelta(hours=HALF_H), peak_t + timedelta(hours=HALF_H)
-    rows = [(st, parse(t), v) for (st, t), v in obs.items() if w0 <= parse(t) <= w1]
+    by = {}
+    for (st, t), v in obs.items():
+        if w0 - timedelta(hours=6) <= parse(t) <= w1 + timedelta(hours=6):
+            by.setdefault(st, []).append((parse(t), v))
+    rows, bridged = [], {}
+    for st, rec in by.items():
+        kept = [r for r in unbridged(rec) if w0 <= r[0] <= w1]
+        n = sum(w0 <= t <= w1 for t, _ in rec) - len(kept)
+        if n:
+            bridged[st] = n
+        rows += [(st, t, v) for t, v in kept]
     gauges = {st: {"name": sts[st]["name"], "lat": float(sts[st]["lat"]), "lon": float(sts[st]["lon"]), "step_min": 6,
                    "agency": "StormSense gauge record (" + sts[st]["obs"].split(";")[0].split(":")[0] + ")"}
               for st in {r[0] for r in rows} if st in sts and sts[st]["lat"] and not sts[st].get("alias_of")}
@@ -278,7 +324,9 @@ def fetch_stormsense(ev, tarballs, stations_csv, log=print):
         w.writerows(sorted(keep))
     last = max(r[1] for r in rows)
     doc = write_event(ev, peak_t, peak_ft, rows, gauges, {
-        "record": "StormSense's own gauge observations as archived with each forecast run (ensemble_<cycle>.tar.gz), NAVD88",
+        "record": "StormSense's own gauge observations as archived with each forecast run (ensemble_<cycle>.tar.gz), NAVD88; "
+                  "the straight lines those tables draw across a gauge's outage are left out",
+        "bridged_readings_left_out": {k: bridged[k] for k in sorted(bridged) if k in gauges},
         "forecasts": {"file": "forecasts.csv.gz", "cycles": cycles, "what": "the published StormSense fore72 (primary) of each run, "
                       "with its 10% and 90% lines, for every gauge"},
         "complete": bool(last >= w1 - timedelta(minutes=30)), "observed_through_z": iso(last)})

@@ -153,8 +153,10 @@ python -m inundation.status --prepared prepared --name norfolk --site <StormSens
   water level for every gauge, -2 to 10 ft NAVD88 in 0.25 ft steps, and the roads, buildings and damage follow it; it
   opens at the step nearest 7 ft above MLLW at Sewells Point.
 - "StormSense Prediction Plot / Anticipated Impacts in the Next 72 Hours": the forecast at the NOAA tide gauge nearest
-  the area's centre (`static.json` `plot_gauge`) with its 10-90% band and NWS stages on the left axis, road miles and
-  buildings on two right axes (Derek's layout, 2026-11-27).
+  the area's centre, one inside the area first (`static.json` `plot_gauge`: Sewells Point for Norfolk, Portsmouth and
+  Hampton, Yorktown for Newport News, Money Point for Chesapeake, the Bay Bridge Tunnel for Virginia Beach), with
+  its 10-90% band and NWS stages on the left axis, road miles and buildings on two right axes (Derek's layout,
+  2026-11-27).
 
 ## Historical floods
 
@@ -165,21 +167,24 @@ before and after the highest water at Sewells Point (NOAA 8638610, on record sin
 | Storm | Highest water at Sewells Point | Gauges with a record |
 |---|---|---|
 | 1933 Hurricane | 6.41 ft NAVD88 (8.02 ft MLLW), 1933-08-23 14:00Z | 2 |
-| 2003 Hurricane Isabel | 6.28 ft NAVD88 (7.89 ft MLLW), 2003-09-18 21:00Z | 13 |
-| 2009 Nor'Ida | 6.13 ft NAVD88 (7.74 ft MLLW), 2009-11-12 23:24Z | 14 |
-| 2011 Hurricane Irene | 5.94 ft NAVD88 (7.55 ft MLLW), 2011-08-27 23:54Z | 9 |
-| 2016 Hurricane Matthew | 4.25 ft NAVD88 (5.86 ft MLLW), 2016-10-09 06:54Z | 10 |
-| 2026 Thanksgiving Day Nor'easter | 5.99 ft NAVD88 (7.60 ft MLLW), 2026-11-26 15:18Z | 68 so far, with 14 forecast runs |
+| 2003 Hurricane Isabel | 6.28 ft NAVD88 (7.89 ft MLLW), 2003-09-18 21:00Z | 13 (4 on an estimated NAVD88) |
+| 2009 Nor'Ida | 6.13 ft NAVD88 (7.74 ft MLLW), 2009-11-12 23:24Z | 17 (3 USGS, 4 on an estimated NAVD88) |
+| 2011 Hurricane Irene | 5.94 ft NAVD88 (7.55 ft MLLW), 2011-08-27 23:54Z | 17 (3 USGS, 5 on an estimated NAVD88) |
+| 2016 Hurricane Matthew | 4.25 ft NAVD88 (5.86 ft MLLW), 2016-10-09 06:54Z | 28 (16 USGS, 2 on an estimated NAVD88) |
+| 2026 Thanksgiving Day Nor'easter | 5.99 ft NAVD88 (7.60 ft MLLW), 2026-11-26 15:18Z | 68 (so far, through 2026-11-27T12:12Z, with 15 forecast runs) |
 
 - `python -m inundation.history noaa --all` (or `--event <id>`): NOAA CO-OPS verified water levels for every Virginia
   station, active or historic, plus StormSense's own NOAA gauges (6-minute, else hourly heights), and USGS tide gauges
   (parameter 62620) for storms since 2007. A station NOAA has no NAVD88 for is read in MLLW and moved with StormSense's
   offset (Money Point) or its own mean sea level plus the nearest station's NAVD88-to-mean-sea-level difference
-  (`navd_estimated` in `event.json`). Needs api.tidesandcurrents.noaa.gov and waterservices.usgs.gov.
+  (`navd_estimated` in `event.json`). Needs api.tidesandcurrents.noaa.gov and nwis.waterservices.usgs.gov (where USGS
+  keeps readings older than 120 days).
 - `python -m inundation.history stormsense --event 2026-thanksgiving-noreaster --runs ensemble_*.tar.gz`: StormSense's
   own gauges from the archived runs' `observed_ft`, plus every run's published forecast (`forecasts.csv.gz`: `cycle,
   station, date_time_z, forecast_ft_navd88, p10_ft, p90_ft`). `complete` is false until the 36 hours after the peak are
-  archived: run it again then.
+  archived: run it again then. An ens72 table draws its `observed_ft` straight across a gauge's outage; twelve or more
+  readings in one line are taken as such a bridge and left out (`bridged_readings_left_out`: the Bay Bridge Tunnel
+  gauge was down from 3:36 AM to 2 PM EST on 26 Nov, through the peak).
 - On a page (`status --page` writes `events.json`), each of the area's gauges uses its own record where it has one
   through the peak (more than 70% of the readings within 1.5 hours of it, and 60% of the window anyone recorded);
   otherwise the nearest gauge that does. In 1933 that is Sewells Point for every place. The ground, roads and
