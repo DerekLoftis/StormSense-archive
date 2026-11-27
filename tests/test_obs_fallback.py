@@ -14,7 +14,7 @@ def test_stale_source_filled_by_next(monkeypatch):
         if src == "nwis":
             t = np.array([b - timedelta(hours=10) + timedelta(minutes=6 * i) for i in range(20)])
             return t, np.ones(20)
-        t = np.array([b - timedelta(hours=12) + timedelta(minutes=6 * i) for i in range(120)])
+        t = np.array([b - timedelta(hours=12) + timedelta(minutes=6 * i) for i in range(121)])
         keep = (t >= a) & (t <= b_)
         return t[keep], np.full(keep.sum(), 2.0)
 
