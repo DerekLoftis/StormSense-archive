@@ -689,3 +689,35 @@ def test_water_under_a_deck_is_judged_by_the_gauges_own_high_tide(tmp_path):
     ground = np.array([0.8, 0.8, 0.3, 0.8, 1.4, np.nan])
     assert list(prep.bridges(pieces, ground)) == [1, 1, 1, 1, 0, 1]
     assert list(prep.bridges(pieces, ground, np.full(n, 0.52))) == [0, 0, 1, 0, 0, 1]
+
+
+def test_fema_outlines_fill_in_where_vgin_has_no_footprint(monkeypatch):
+    pytest.importorskip("shapely")
+    from inundation import prep, vgin
+    sq = lambda x, y, d=0.0001: {"type": "Polygon", "coordinates": [[[x, y], [x + d, y], [x + d, y + d], [x, y + d], [x, y]]]}
+    footprints = [{"properties": {"OBJECTID": 1, "SOURCEFEATUREID": "a"}, "geometry": sq(-76.3, 37.9)},
+                  {"properties": {"OBJECTID": 2, "SOURCEFEATUREID": "b"}, "geometry": None}]
+    fema = [{"properties": {"OBJECTID": 7, "BUILD_ID": 70}, "geometry": sq(-76.30005, 37.90005)},      # the same house
+            {"properties": {"OBJECTID": 8, "BUILD_ID": 80}, "geometry": sq(-76.29988, 37.9)},        # 2 m beside it
+            {"properties": {"OBJECTID": 9, "BUILD_ID": 90}, "geometry": sq(-76.2995, 37.9)},         # the neighbour's
+            {"properties": {"OBJECTID": 10, "BUILD_ID": 100}, "geometry": None}]
+    assert [f["properties"]["OBJECTID"] for f in vgin.untouched(fema, footprints)] == [9]
+    assert [f["properties"]["OBJECTID"] for f in vgin.untouched(fema, [])] == [7, 8, 9]
+    copy = lambda fs: json.loads(json.dumps(fs))
+    monkeypatch.setattr(vgin, "count", lambda layer, where: len(footprints if layer == vgin.BUILDINGS else fema))
+    monkeypatch.setattr(vgin, "query", lambda layer, where, fields, log=None: copy(footprints if layer == vgin.BUILDINGS else fema))
+    said = []
+    got = vgin.buildings("51133", said.append)
+    assert [f["properties"]["OBJECTID"] for f in got] == [1, 2, 9] and got[2]["properties"]["FOOTPRINTS"] == vgin.USA_STRUCTURES_NAME
+    assert got[2]["properties"]["SOURCEFEATUREID"] == "90" and "1 outlines away from any VGIN footprint" in said[-1]
+    assert prep.building_source(got) == f"VGIN building footprints, and 1 {vgin.USA_STRUCTURES_NAME} outlines where VGIN has no footprint"
+    assert prep.building_source(got[:2]) == "VGIN building footprints"
+    assert prep.building_source(got[2:]).endswith("(VGIN has none here)")
+
+    def down(layer, where):                                   # FEMA's service out: VGIN's footprints alone, and the log says so
+        if layer == vgin.USA_STRUCTURES:
+            raise RuntimeError("HTTP 503")
+        return len(footprints)
+    monkeypatch.setattr(vgin, "count", down)
+    said = []
+    assert len(vgin.buildings("51133", said.append)) == 2 and "WARNING" in said[-1]

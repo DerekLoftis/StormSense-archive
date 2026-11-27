@@ -324,8 +324,8 @@ def main(argv=None):
     log(loc["properties"].get("NAMELSAD"), "EPSG", epsg, "bounds", bounds)
 
     roads = cached(f"{a.work}/roads_raw.geojson", lambda: {"type": "FeatureCollection", "features": vgin.roads(a.fips)})["features"]
-    bldgs = cached(f"{a.work}/buildings_raw.geojson", lambda: {"type": "FeatureCollection", "features": vgin.buildings(a.fips)})["features"]
-    log(len(roads), "road segments,", len(bldgs), "buildings (VGIN)")
+    bldgs = cached(f"{a.work}/buildings_raw.geojson", lambda: {"type": "FeatureCollection", "features": vgin.buildings(a.fips, log)})["features"]
+    log(len(roads), "road segments,", len(bldgs), "buildings:", building_source(bldgs))
     if box:
         roads, bldgs = in_box(roads, box), in_box(bldgs, box)
         log(f"inside {box}: {len(roads)} road segments, {len(bldgs)} buildings")
@@ -437,6 +437,7 @@ def main(argv=None):
     bldg_cols = {
         "building": np.arange(len(bldgs)), "vgin_oid": [f["properties"].get("OBJECTID") for f in bldgs],
         "source_id": [f["properties"].get("SOURCEFEATUREID") for f in bldgs],
+        "outline": ["FEMA" if f["properties"].get("FOOTPRINTS") else "VGIN" for f in bldgs],
         "lon": np.where(okb, blon, np.nan), "lat": np.where(okb, blat, np.nan),
         **{k: v for k, v in bt.items() if k not in ("x", "y")}, **vcols}
     f2, f6 = "%.2f", "%.6f"
@@ -470,8 +471,7 @@ def main(argv=None):
     if a.gdb:
         write_layers(f"{a.out}/{a.name}.gdb", pieces, road_cols, bgeoms, bldg_cols, epsg)
     sources = {"depth": "NOAA/USGS CoNED Chesapeake Bay topobathy, 1 m (2016)", "roads": "VGIN road centerlines (VBMP RCL)",
-               "buildings": next((f["properties"]["FOOTPRINTS"] + " building outlines (VGIN has none here)" for f in bldgs[:1] if f["properties"].get("FOOTPRINTS")),
-                                 "VGIN building footprints")}
+               "buildings": building_source(bldgs)}
     if net is not None:
         sources["drainage"] = dsrc.get("source", "city stormwater layers")
     if bdoc["routes"]:
@@ -498,6 +498,7 @@ def main(argv=None):
                    "depth_source": "NOAA/USGS CoNED Chesapeake Bay topobathy 1 m (2016), water joined to tidal water",
                    "roads": "VGIN VBMP_RCL", "buildings": "VGIN VA_Building_Footprints",
                    "road_segments": len(roads), "road_pieces": int(len(lon)), "buildings_n": len(bldgs),
+                   "buildings_fema": sum(1 for f in bldgs if f["properties"].get("FOOTPRINTS")),
                    "piece_m": PIECE_M, "ponded_ft": PONDED_FT, "flooded_ft": FLOODED_FT,
                    "drainage": None if net is None else {"source": dsrc.get("source"), **net["counts"],
                                                          **({"saved_layers": layers["saved"]} if layers.get("saved") else {})},
@@ -530,6 +531,16 @@ def sea_cells(dem, origin, hucs, forced, fwd, log=lambda *_: None):
     log(f"tidal water: {len(keep)} bod{'y' if len(keep) == 1 else 'ies'} at {depth.LEVELS_FT[0]:+.0f} ft"
         + (" (the largest, and those that run off the grid's edge)" if len(keep) > 1 else ""))
     return keep
+
+
+def building_source(bldgs):
+    """Where the building outlines came from, in words (the page and <name>_prep.json say it)."""
+    other = [f["properties"]["FOOTPRINTS"] for f in bldgs if f["properties"].get("FOOTPRINTS")]
+    if not other:
+        return "VGIN building footprints"
+    if len(other) == len(bldgs):
+        return other[0] + " building outlines (VGIN has none here)"
+    return f"VGIN building footprints, and {len(other):,} {other[0]} outlines where VGIN has no footprint"
 
 
 def write_outline(path, loc, tol_deg=0.0003, box=None):
