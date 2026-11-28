@@ -866,6 +866,7 @@ def prep_areas():
 def test_a_river_without_its_bed_is_tidal_water_and_a_pit_is_not(tmp_path):
     """Richmond and Petersburg: the elevation data has the tidal river as the water's surface (0 to 2 ft), and the
     only ground below the lowest level is a quarry pit. The pit is not the sea; the river is lowered and becomes it."""
+    pytest.importorskip("scipy")
     from inundation import prep, spread
     dem = np.full((1200, 300), 25.0, np.float32)
     dem[:, 100:160] = (0.8 + 0.0005 * np.arange(1200, dtype=np.float32))[::-1, None]     # the river as the lidar met
@@ -887,8 +888,9 @@ def test_a_river_without_its_bed_is_tidal_water_and_a_pit_is_not(tmp_path):
     assert prep.tidal_surface(np.load(path, mmap_mode="r"), path) is None           # a second run finds the river
     keep = prep.sea_cells(low, (0, 1200), [], {}, None, lambda *a: said.append(" ".join(map(str, a))))
     assert len(keep) == 1 and 100 <= keep[0][1] < 160 and any("is a pit" in s for s in said)
-    out = spread.connect_index(low, depth.LEVELS_FT, seed=keep)
-    assert out[200, 130] == 0 and out[200, 240] == depth.NEVER
+    if spread.njit is not None:                 # the spreading itself needs numba
+        out = spread.connect_index(low, depth.LEVELS_FT, seed=keep)
+        assert out[200, 130] == 0 and out[200, 240] == depth.NEVER
     # a large grid is looked over on every 8th cell and lowered cell by cell
     big = np.full((7200, 7000), 25.0, np.float32)
     big[:, 3000:3101] = 0.8
