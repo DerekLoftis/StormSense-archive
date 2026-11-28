@@ -811,6 +811,12 @@ def test_the_pages_carry_what_derek_asked_of_the_maps():
         assert "World_Imagery" in html and "World_Street_Map" in html
     assert 'data-b="plain"' in page and "function drawBase" in page and "function lonlat" in page
     assert "function selectGauge" in state and "fitBounds" in state and "function declutter" in state
+    for html in (page, state):                                        # Derek, 2026-11-28: datum and units, water depth, boundaries
+        assert all(k in html for k in ('id="datum"', 'data-v="MLLW"', 'id="units"', 'data-v="m"', 'pref("datum"', 'pref("units"',
+                                       '"stormsense-" + key', 'id="lBathy" checked', "function scenSet", "(m ? 3 : 10)"))
+        assert html.index('id="datum"') < html.index('id="units"') < html.index('id="modeBox"')     # before the forecast buttons
+    assert 'id="lZones" checked' in page and 'id="lZones">' in state  # boundaries: on for a locality, off on the overview
+    assert 'id="scope"' in state and "function setScope" in state and "setScope(id)" in state      # counts follow the gauge
     from inundation import tether
     sts = tether.stations()
     assert {"navd88_above_mllw_ft", "noaa"} <= set(sts[0]) and any(s["noaa"] for s in sts) and not all(s["noaa"] for s in sts)
@@ -1061,3 +1067,79 @@ def test_every_drain_and_value_source_is_a_locality_on_the_map():
         for m in v.get("more", []):
             assert m["key"] and m["columns"] and not {"owner", "name"} & {c.lower() for c in m["columns"].values()}, k
 
+
+
+def test_tidal_water_keeps_its_bed_in_the_tiles_and_land_its_ground(tmp_path):
+    """Derek, 2026-11-28: the water must be drawn when nothing is flooded, so a cell wet at an ordinary high tide
+    carries how deep its bed lies, on a scale of its own."""
+    pytest.importorskip("scipy")
+    from inundation import page
+    wi = page.water_index()
+    assert depth.LEVELS_FT[wi] == page.WATER_FT
+    dem = np.full((20, 30), 5.0, np.float32)
+    cidx = np.full((20, 30), 30, np.uint8)
+    dem[:, :10], cidx[:, :10] = -6.0, 0                               # a channel 6 ft below NAVD88
+    dem[:, 10:15], cidx[:, 10:15] = 1.0, wi                           # marsh that the ordinary high tide just covers
+    dem[:, 15:20], cidx[:, 15:20] = 1.3, wi + 1                       # ground one level higher is land
+    idx, zone, gnd = page.raster(dem, cidx, (0.0, 20.0), [(0.0, 0.0), (30.0, 0.0)], cell=5)
+    assert idx[0].tolist() == [0, 0, wi, wi + 1, 30, 30] and zone[0].tolist() == [0, 0, 0, 1, 1, 1]
+    bed = lambda code: page.BED0_FT - (code - 1) * page.BED_STEP_FT
+    ground = lambda code: page.GROUND0_FT + (code - 1) * page.GROUND_STEP_FT
+    assert abs(bed(int(gnd[0, 0])) + 6.0) <= page.BED_STEP_FT / 2 and abs(bed(int(gnd[0, 2])) - 1.0) <= page.BED_STEP_FT / 2
+    assert abs(ground(int(gnd[0, 3])) - 1.3) < 1e-6 and abs(ground(int(gnd[0, 5])) - 5.0) < 1e-6
+    assert bed(255) < -13.9 and bed(1) == page.BED0_FT > page.WATER_FT                    # the scale's two ends
+    deep = np.full((5, 5), -40.0, np.float32)
+    assert page.raster(deep, np.zeros((5, 5), np.uint8), (0.0, 5.0), [(0.0, 0.0)], cell=5)[2].tolist() == [[255]]
+    Image = pytest.importorskip("PIL.Image")
+    r = page.write_raster(str(tmp_path), idx, zone, gnd)
+    assert (r["v"], r["water_index"], r["bed0_ft"], r["bed_step_ft"]) == (3, wi, page.BED0_FT, page.BED_STEP_FT)
+    assert Image.open(tmp_path / r["overview"]["file"]).size == (6, 4)
+
+
+def test_the_line_between_two_gauges_areas_is_drawn_once_and_specks_are_not():
+    from inundation import page
+    zone = np.zeros((40, 60), np.uint8)
+    zone[:, 30:] = 1
+    zone[20:, 30:35] = 0                                              # the line steps 5 cells east half way down
+    zone[5, 5] = 1                                                    # one stray cell of the thinned overview
+    zone[30:, :6] = page.NO_ZONE                                      # a watershed no gauge stands for
+    lines = page.zone_lines(zone)
+    assert len(lines) == 2
+    main = max(lines, key=len)
+    assert main.tolist() == [[30.0, 0.0], [30.0, 20.0], [35.0, 20.0], [35.0, 40.0]]         # thinned to its corners
+    z = page.zones(zone, 10)
+    assert sorted(len(l) for l in z["lines"]) == [6, 8] and [30 * 10, 0] == max(z["lines"], key=len)[:2]
+    assert sorted(l["s"] for l in z["labels"]) == [0, 1]              # the left-out watershed gets no label
+    for l in z["labels"]:
+        assert zone[l["y"] // 10, l["x"] // 10] == l["s"]             # each label stands inside its own area
+    assert page.zones(np.zeros((40, 60), np.uint8), 10) == {"lines": [], "labels": []}      # one gauge: nothing to draw
+
+
+def test_gauge_boundaries_on_the_map_of_all_areas_stop_at_the_localitys_outline():
+    pytest.importorskip("shapely")
+    pyproj = pytest.importorskip("pyproj")
+    from inundation import site
+    inv = pyproj.Transformer.from_crs(32618, 4326, always_xy=True).transform
+    x0, ytop = 370000.0, 4110000.0
+    ring = [list(inv(x0 + x, ytop - y)) for x, y in ((1000, 1000), (3000, 1000), (3000, 3000), (1000, 3000), (1000, 1000))]
+    st = {"epsg": 32618, "x0": x0, "ytop": ytop, "unit_m": 0.5,
+          "zones": {"lines": [[4000, 0, 4000, 10000], [9000, 0, 9000, 10000]], "labels": []}}       # at x = 2 km and 4.5 km
+    got = site.zone_outline(st, [ring])
+    assert len(got) == 1 and len(got[0]) == 2                         # the second line runs outside the locality
+    fwd = pyproj.Transformer.from_crs(4326, 32618, always_xy=True).transform
+    (ax, ay), (bx, by) = (fwd(*p) for p in got[0])
+    assert abs(ax - (x0 + 2000)) < 2 and abs(bx - (x0 + 2000)) < 2 and sorted(round(ytop - v, -1) for v in (ay, by)) == [1000, 3000]
+    assert site.zone_outline({"epsg": 32618}, [ring]) == []
+
+
+def test_levels_carry_each_gauges_mllw_offset_for_the_datum_buttons(tmp_path):
+    from inundation import page, tether
+    t0 = datetime(2026, 11, 28, 0, 0, tzinfo=timezone.utc)
+    lv = {"t": [t0 + timedelta(minutes=6 * k) for k in range(3)], "f": [1.0, 1.1, 1.2], "p10": [0.8, 0.9, 1.0],
+          "p90": [1.2, 1.3, 1.4], "updated": "2026-11-28 00:20 UTC", "guidance": "petss", "obs_ft": 0.9, "obs_time": t0,
+          "flood_levels_ft": {"action": 2.4}}
+    page.write_levels(str(tmp_path), {"SWPT": lv, "NOPE": dict(lv)}, {"made_utc": "x"})
+    with open(tmp_path / "levels.json") as fh:
+        doc = json.load(fh)
+    want = {s["station"]: s["navd88_above_mllw_ft"] for s in tether.stations()}["SWPT"]
+    assert doc["stations"]["SWPT"]["mllw"] == want and 1.0 < want < 2.5 and doc["stations"]["NOPE"]["mllw"] is None

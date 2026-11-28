@@ -108,6 +108,10 @@ select{font:inherit;font-size:13.5px;color:var(--ink);background:var(--panel);bo
 .ramp b{font-weight:600;margin-right:8px;font-size:12.5px;align-self:center}
 .ramp span{display:flex;flex-direction:column;align-items:center;gap:2px;min-width:27px}
 .ramp i{display:block;width:100%;height:11px;border-radius:2px}
+.layers label{display:inline-flex;align-items:center;gap:6px;cursor:pointer}
+.layers input{margin:0;accent-color:var(--navy)}
+.sw.zone{background:none;border-top:2px dashed #7d8791;height:0;border-radius:0}
+.ctl{display:inline-flex;align-items:center;white-space:nowrap}
 @media (prefers-reduced-motion:reduce){*{scroll-behavior:auto}}
 </style>
 
@@ -133,7 +137,13 @@ select{font:inherit;font-size:13.5px;color:var(--ink);background:var(--panel);bo
       <button id="bScen" type="button" aria-pressed="false">Scenario</button>
     </span>
     <button id="bPlay" type="button" aria-pressed="false">▶ Play 72 hours</button>
-    <span id="modeBox"><span class="lbl">Forecast</span><span class="seg" id="mode" role="group" aria-label="Forecast line">
+    <span class="ctl"><span class="lbl">Datum</span><span class="seg" id="datum" role="group" aria-label="Vertical datum of the water levels">
+      <button type="button" data-v="MLLW" aria-pressed="false">MLLW</button>
+      <button type="button" data-v="NAVD" aria-pressed="true">NAVD88</button></span></span>
+    <span class="ctl"><span class="lbl">Units</span><span class="seg" id="units" role="group" aria-label="Units">
+      <button type="button" data-v="ft" aria-pressed="true">Feet</button>
+      <button type="button" data-v="m" aria-pressed="false">Meters</button></span></span>
+    <span id="modeBox" class="ctl"><span class="lbl">Forecast</span><span class="seg" id="mode" role="group" aria-label="Forecast line">
       <button type="button" data-v="p10" aria-pressed="false">Low (10%)</button>
       <button type="button" data-v="f" aria-pressed="true">Forecast</button>
       <button type="button" data-v="p90" aria-pressed="false">High (90%)</button></span></span>
@@ -147,9 +157,9 @@ select{font:inherit;font-size:13.5px;color:var(--ink);background:var(--panel);bo
   </div>
 
   <div class="strip">
-    <div class="tile"><span class="k"><span class="sw" style="background:var(--flooded)"></span>Roads flooded</span><span class="v" id="vFlood">–</span><span class="d">more than 0.5 ft of water</span></div>
-    <div class="tile"><span class="k"><span class="sw" style="background:var(--ponded)"></span>Roads ponded</span><span class="v" id="vPond">–</span><span class="d">0.25 to 0.5 ft of water</span></div>
-    <div class="tile"><span class="k"><span class="sw box" style="background:var(--building)"></span>Buildings flooded</span><span class="v" id="vBldg">–</span><span class="d">more than 0.5 ft over the ground at the building</span></div>
+    <div class="tile"><span class="k"><span class="sw" style="background:var(--flooded)"></span>Roads flooded</span><span class="v" id="vFlood">–</span><span class="d" id="dFlood">more than 0.5 ft of water</span></div>
+    <div class="tile"><span class="k"><span class="sw" style="background:var(--ponded)"></span>Roads ponded</span><span class="v" id="vPond">–</span><span class="d" id="dPond">0.25 to 0.5 ft of water</span></div>
+    <div class="tile"><span class="k"><span class="sw box" style="background:var(--building)"></span>Buildings flooded</span><span class="v" id="vBldg">–</span><span class="d" id="dBldg">more than 0.5 ft over the ground at the building</span></div>
     <div class="tile" id="tDmg" hidden><span class="k"><span class="sw box" style="background:var(--building)"></span>Est. damage to homes</span><span class="v" id="vDmg">–</span><span class="d" id="dDmg">at the forecast's highest water</span></div>
   </div>
 
@@ -167,14 +177,18 @@ select{font:inherit;font-size:13.5px;color:var(--ink);background:var(--panel);bo
         <div class="attr" id="attr" hidden>Esri, Maxar, Earthstar Geographics</div>
         <div class="pop" id="pop" hidden></div>
       </div>
-      <div class="ramp" id="ramp" aria-label="Water depth in feet, by color"></div>
+      <div class="chips layers">
+        <label id="lBathyBox"><input type="checkbox" id="lBathy" checked>Water depth in the rivers, creeks and bay</label>
+        <label id="lZonesBox"><input type="checkbox" id="lZones" checked><span class="sw zone"></span>Gauge boundaries: which gauge each place follows</label>
+      </div>
+      <div class="ramp" id="ramp" aria-label="Water depth by color"></div>
       <div class="chips" id="gkeys" aria-label="Gauge colors: the NWS flood category of each gauge"></div>
       <p class="note" id="baseNote" hidden></p>
       <div class="chips">
-        <span><span class="sw" style="background:var(--flooded)"></span>Road under more than 0.5 ft</span>
-        <span><span class="sw" style="background:var(--ponded)"></span>Ponded, 0.25 to 0.5 ft</span>
-        <span><span class="sw box" style="background:var(--building)"></span>Flood Affected Structure, in more than 0.5 ft</span>
-        <span class="plainOnly"><span class="sw box" style="background:var(--map-water)"></span>Tidal water at an ordinary high tide</span>
+        <span><span class="sw" style="background:var(--flooded)"></span><span id="cFlood">Road under more than 0.5 ft</span></span>
+        <span><span class="sw" style="background:var(--ponded)"></span><span id="cPond">Ponded, 0.25 to 0.5 ft</span></span>
+        <span><span class="sw box" style="background:var(--building)"></span><span id="cBldg">Flood Affected Structure, in more than 0.5 ft</span></span>
+        <span class="plainOnly"><span class="sw box" style="background:var(--map-water)"></span><span id="cWater">Tidal water at an ordinary high tide</span></span>
         <span class="plainOnly"><span class="sw" style="background:var(--map-bridge)"></span>Bridge or tunnel, not evaluated</span>
         <span class="mk" hidden><svg width="13" height="13" viewBox="0 0 13 13" aria-hidden="true"><path d="M6.5 0.8 12.2 6.5 6.5 12.2 0.8 6.5Z" fill="var(--map-mark)" stroke="var(--map-halo)"/></svg>USGS high water mark (hollow: wave-affected)</span>
         <span class="mk" hidden><svg width="13" height="13" viewBox="0 0 13 13" aria-hidden="true"><path d="M6.5 1 12.3 11.6H0.7Z" fill="var(--map-mark)" stroke="var(--map-halo)"/></svg>USGS storm-tide sensor peak</span>
@@ -194,8 +208,9 @@ select{font:inherit;font-size:13.5px;color:var(--ink);background:var(--panel);bo
       <div class="card">
         <h2>How to read this</h2>
         <ul class="plain">
-          <li>Road centerlines from VGIN are cut into 5 m pieces. A piece turns yellow once the water over it is 0.25 ft deep and orange once it is more than 0.5 ft deep. A building footprint (VGIN's, or FEMA's outline where VGIN has none) turns red once the water stands more than 0.5 ft over the ground at the building.</li>
-          <li>The water level at each piece and building is its gauge's level: the forecast at the selected time, the last observation, a past flood's record, or the level you set under Scenario. Depth is that level minus the ground, where the water can reach from tidal water over ground at or below the level. The blues on the map show that depth in 5 m cells.</li>
+          <li id="hr1"></li>
+          <li id="hr2"></li>
+          <li id="hr3" hidden></li>
           <li id="histNote" hidden></li>
           <li id="srcNote"></li>
           <li id="drainNote" hidden></li>
@@ -211,7 +226,7 @@ select{font:inherit;font-size:13.5px;color:var(--ink);background:var(--panel);bo
 
   <div class="card" id="gaugeCard">
     <h2>Gauges</h2>
-    <p class="note">Each road piece and building follows its nearest StormSense gauge. Levels are feet above NAVD88 at the selected time.<span id="followNote"></span></p>
+    <p class="note"><span id="gLead"></span><span id="followNote"></span></p>
     <div class="scroll"><table id="gauges"></table></div>
   </div>
 </div>
@@ -258,9 +273,36 @@ var fDay = new Intl.DateTimeFormat("en-US", {timeZone:TZ, weekday:"short", day:"
 var fShort = new Intl.DateTimeFormat("en-US", {timeZone:TZ, weekday:"short", hour:"numeric", minute:"2-digit"});
 function tAt(i){ return new Date(A.t0ms + i * A.step_min * 60000); }
 function utc(d){ return d.toISOString().slice(11,16) + " UTC"; }
-function scenLevel(i){ return Math.round((S.levels.start + i * S.levels.step) * 100) / 100; }
-function mllw(v, g){ g = g || S.mllw_ref; return g && g.navd88_above_mllw_ft != null ? (v + g.navd88_above_mllw_ft).toFixed(2) + " ft above MLLW" : ""; }
-function stepLabel(i){ return T.view === "scen" ? scenLevel(i).toFixed(2) + " ft NAVD88" : fShort.format(tAt(i)); }
+// Datum and units of everything shown (Derek, 2026-11-28). The data are feet above NAVD88; a level on MLLW is the
+// level plus its own gauge's offset (NAVD88 above MLLW there), so the same water has another number at each gauge.
+var U = {datum:"NAVD", units:"ft"}, M_FT = 0.3048, KM_MI = 1.609344;
+function pref(key, ok, def){ var m = new RegExp("[?&]" + key + "=([^&#]+)").exec(location.search), v = m ? decodeURIComponent(m[1]) : null;
+  if (!v) try { v = localStorage.getItem("stormsense-" + key); } catch (e) {}
+  if (v && key === "datum") v = v.toUpperCase().replace("NAVD88", "NAVD"); if (v && key === "units") v = /^m/i.test(v) ? "m" : "ft";
+  return ok.indexOf(v) >= 0 ? v : def; }
+function uName(){ return U.units; }
+function dName(){ return U.datum === "MLLW" ? "MLLW" : "NAVD88"; }
+function uf(){ return U.units === "m" ? M_FT : 1; }
+function goff(o){ return U.datum === "MLLW" && o != null ? o : 0; }
+function toU(v, o){ return (v + goff(o)) * uf(); }               // a level in ft NAVD88 as shown; o: NAVD88 above MLLW at its gauge
+function fLv(v, o, d){ return toU(v, o).toFixed(d == null ? 2 : d); }
+function fLvU(v, o, d){ return fLv(v, o, d) + " " + uName() + " " + dName(); }
+function alt(v, o){ if (o == null) return ""; var m = U.datum === "MLLW"; return ((m ? v : v + o) * uf()).toFixed(2) + " " + uName() + " " + (m ? "NAVD88" : "MLLW"); }   // the same level on the other datum
+function fLen(v, d){ return (v * uf()).toFixed(d == null ? 2 : d) + " " + uName(); }      // a depth or a difference of two levels
+function tidy(v, d){ return String(parseFloat(v.toFixed(d))); }
+function fLenT(v){ return tidy(v * uf(), 2) + " " + uName(); }
+function mi(v){ return U.units === "m" ? v * KM_MI : v; }        // road miles, as miles or kilometres
+function roadU(long){ return U.units === "m" ? "km" : long ? "miles" : "mi"; }
+function paren(t){ return t ? " (" + t + ")" : ""; }
+function so(si){ var o = R.so ? R.so[si] : null; return o != null ? o : ro(); }                 // NAVD88 above MLLW at gauge si
+function ro(){ return R.ro ? R.ro.navd88_above_mllw_ft : null; }                               // ... at the gauge the scenario's MLLW is given on
+function po(){ var g = S.plot_gauge; return g && g.navd88_above_mllw_ft != null ? g.navd88_above_mllw_ft : ro(); }   // ... at the plot's gauge
+// Scenario levels: 0 to 10 ft in 0.25 ft steps, or 0 to 3 m in 0.1 m steps, on the selected datum
+function scenSet(){ var m = U.units === "m", st = m ? 0.1 : 0.25; R.scen = {st:st, n:Math.round((m ? 3 : 10) / st) + 1}; }
+function scenDisp(i){ return Math.round(i * R.scen.st * 100) / 100; }
+function scenLevel(i){ return Math.round((scenDisp(i) / uf() - goff(ro())) * 100) / 100; }      // ft NAVD88
+function scenIndex(navd){ return Math.max(0, Math.min(R.scen.n - 1, Math.round(toU(navd, ro()) / R.scen.st))); }
+function stepLabel(i){ return T.view === "scen" ? scenDisp(i).toFixed(2) + " " + uName() + " " + dName() : fShort.format(tAt(i)); }
 
 Promise.all([getJSON("static.json"), getJSON("levels.json"), getJSON("events.json").catch(function(){ return {events:[]}; })]).then(function(r){
   S = r[0]; LV = r[1]; EV = r[2] && r[2].events ? r[2] : EV; setup();
@@ -270,6 +312,11 @@ function followNote(){ var out = []; for (var id in LV.stations){ var f = LV.sta
   if ($("followNote")) $("followNote").textContent = out.length ? " " + out.join(" ") : ""; }
 function setup(){
   readColors(); followNote();
+  U.datum = pref("datum", ["NAVD", "MLLW"], "NAVD"); U.units = pref("units", ["ft", "m"], "ft"); scenSet();
+  R.so = S.stations.map(function(st){ var d = LV.stations[st.id]; return d && d.mllw != null ? d.mllw : null; });
+  R.ro = S.plot_gauge && S.plot_gauge.navd88_above_mllw_ft != null ? S.plot_gauge : S.mllw_ref;
+  R.v3 = S.raster.v >= 3; R.bathy = R.v3; R.zones = !!(S.zones && S.zones.lines && S.zones.lines.length);
+  $("lBathyBox").hidden = !R.v3; $("lZonesBox").hidden = !R.zones; $("cWater").textContent = R.v3 ? "Tide flat or marsh above the water now" : "Tidal water at an ordinary high tide";
   R.base = "sat"; try { var kb = localStorage.getItem("stormsense-base"); if (kb && BASE[kb]) R.base = kb; } catch (e) {}
   $("gkeys").innerHTML = "<span>Gauges:</span>" + ["none","action","minor","moderate","major","na"].map(function(k){ return '<span><i class="dot" style="background:' + CAT[k] + '"></i>' + CAT_NAME[k] + "</span>"; }).join("") +
     '<span><i class="ring"></i>Ring: the highest category forecast in 72 hours</span>';
@@ -305,24 +352,41 @@ function setup(){
   for (i = 0; i < B.n; i++){ if (R.bc[i] === NO) continue; R.cumB[R.bst[i]][bin(Math.max(R.bg[i] + fd + 1, R.bc[i]))] += 1; }
   for (s = 0; s < R.ns; s++) [R.cumF[s], R.cumP[s], R.cumB[s]].forEach(function(a){ for (var q = 1; q <= NB; q++) a[q] += a[q-1]; });
 
-  var top = S.levels.start + S.levels.step * (S.levels.n - 1);
-  $("srcNote").textContent = "Ground and depth: " + S.sources.depth + ", at water levels from " + S.levels.start + " to " + top + " ft NAVD88 in " + S.levels.step + " ft steps. Roads: " + S.sources.roads + ". Buildings: " + S.sources.buildings + ". " + S.totals.road_miles.toLocaleString() + " road miles and " + S.totals.buildings.toLocaleString() + " buildings are checked; the map draws the " + S.buildings.n.toLocaleString() + " buildings that 10 ft of water would reach.";
   $("disc").textContent = S.disclaimer;
-  $("scenNote").textContent = "Scenario: drag the slider or the plot to set one water level for every gauge, from " + S.levels.start + " to " + top + " ft NAVD88 in " + S.levels.step + " ft steps. No forecast or past flood is involved: the roads, the buildings and the damage estimate follow the level you set.";
   if (S.sources.ungauged){ var gn = $("gaugeNote"); gn.hidden = false; gn.textContent = "Left out: roads and buildings in " + S.sources.ungauged + ". That water does not rise and fall with the tide at any StormSense gauge (it drains to Currituck or Albemarle Sound, or lies above the head of tide), so no gauge stands for it yet."; }
-  if (S.sources.low_frame){ var ln = $("lowNote"); ln.hidden = false; ln.textContent = "This map holds " + S.sources.low_frame + ": those within 1.5 km of ground at or below " + top + " ft NAVD88. The rest of the locality lies higher than any level mapped here."; }
-  if (S.sources.drainage){ var dn = $("drainNote"); dn.hidden = false; dn.textContent = "Storm drains are in it: where a pipe or ditch network has one opening in the water, the water also comes up at its other inlets and outfalls that lie at or below the level, as in Norfolk's TITAN. Pipes carry the level without loss. Source: " + S.sources.drainage + "." + (S.sources.barriers ? " Floodwalls and levees hold the water back, and no pipe carries it under them, up to the 10 ft level: " + S.sources.barriers + "." : ""); }
   if (R.val){ var V0 = S.values, mn = $("dmgNote"); mn.hidden = false; $("tDmg").hidden = false;
     mn.textContent = "Damage is estimated for homes only" + (V0.home_rule ? " (" + V0.home_rule + ")" : "") + ", from the deepest water the selected forecast line, past flood or scenario puts at the building: " + V0.damage.citation + ". The percent is applied to the building's share of the parcel's " + V0.tax_year + " assessed improvement value (" + S.sources.values + "). Depth is counted from the first floor. " + (V0.certificates ? V0.certificates.toLocaleString("en-US") + " buildings here have a surveyed first floor from an elevation certificate (HRPDC); every other" : "With no surveyed first floor elevations each") + " home's floor is assumed at FEMA Hazus's default for a crawlspace: " + (V0.firm_year ? "3 ft above the ground if built before the first flood map (" + V0.firm_year + "), 4 ft after." : "3 ft above the ground.") + " The Zillow figure is the typical home value in the building's ZIP code (" + S.sources.zillow + "), not a value for that address."; }
   if (EV.events.length){ var hn = $("histNote"); hn.hidden = false;
-    hn.textContent = "Historical floods replay the 36 hours before and after a storm's highest water at Sewells Point, Virginia's longest tide record, on today's ground and buildings. Each gauge that recorded the storm drives its own roads and buildings; where a gauge did not exist yet, or failed in the storm, the nearest gauge that recorded it stands in (in 1933 that is Sewells Point for every place). Rain is not in it. Where the U.S. Geological Survey surveyed high water marks or left storm-tide sensors after a storm (Isabel, Irene and Sandy in Virginia; Flood Event Viewer and the Survey's open-file reports), they are on the map in feet above NAVD88, so the map's water can be checked against what the storm left behind.";
+    hn.textContent = "Historical floods replay the 36 hours before and after a storm's highest water at Sewells Point, Virginia's longest tide record, on today's ground and buildings. Each gauge that recorded the storm drives its own roads and buildings; where a gauge did not exist yet, or failed in the storm, the nearest gauge that recorded it stands in (in 1933 that is Sewells Point for every place). Rain is not in it. Where the U.S. Geological Survey surveyed high water marks or left storm-tide sensors after a storm (Isabel, Irene and Sandy in Virginia; Flood Event Viewer and the Survey's open-file reports), they are on the map, so the map's water can be checked against what the storm left behind.";
     $("evSel").innerHTML = EV.events.map(function(e, q){ return '<option value="' + q + '">' + e.name + "</option>"; }).join(""); }
   $("bHist").disabled = !EV.events.length;
-  var h = "<b>Water depth (ft)</b>"; DEPTH.forEach(function(c, q){ h += '<span><i style="background:' + c + '"></i>' + (q ? "" : "≤") + DEPTH_LABEL[q] + "</span>"; }); $("ramp").innerHTML = h;
+  texts();
   var ov = S.raster.overview; R.over = tile("z0", ov.file, ov.width, ov.height);
   bind(); resize(true); use("fc"); setBase(R.base, "");
-  window.__inundation = function(){ return {view:T.view, event:A && A.ev, s:V.s, ox:V.ox, oy:V.oy}; };   // for browser checks
+  window.__inundation = function(){ var fb = -1; for (var q = 0; q < S.buildings.n && fb < 0; q++) if (R.bstate[q]) fb = q;      // for browser checks
+    return {view:T.view, event:A && A.ev, s:V.s, ox:V.ox, oy:V.oy, datum:U.datum, units:U.units,
+            flooded:fb < 0 ? null : [(R.bbox[4*fb] + R.bbox[4*fb+2]) / 2 * V.s + V.ox, (R.bbox[4*fb+1] + R.bbox[4*fb+3]) / 2 * V.s + V.oy]}; };
 }
+
+// every text that names a level, a depth or a length: written again when the datum or the units change
+function texts(){ var top = S.levels.start + S.levels.step * (S.levels.n - 1), pd = S.ponded_ft, fd = S.flooded_ft, ml = U.datum === "MLLW", topT = tidy(top * uf(), 2) + " " + uName() + " NAVD88", g = R.ro;
+  ["datum", "units"].forEach(function(key){ document.querySelectorAll("#" + key + " button").forEach(function(b){ b.setAttribute("aria-pressed", String(b.dataset.v === U[key])); }); });
+  $("dFlood").textContent = "more than " + fLenT(fd) + " of water"; $("dPond").textContent = tidy(pd * uf(), 2) + " to " + fLenT(fd) + " of water"; $("dBldg").textContent = "more than " + fLenT(fd) + " over the ground at the building";
+  $("cFlood").textContent = "Road under more than " + fLenT(fd); $("cPond").textContent = "Ponded, " + tidy(pd * uf(), 2) + " to " + fLenT(fd); $("cBldg").textContent = "Flood Affected Structure, in more than " + fLenT(fd);
+  $("hr1").textContent = "Road centerlines from VGIN are cut into 5 m pieces. A piece turns yellow once the water over it is " + fLenT(pd) + " deep and orange once it is more than " + fLenT(fd) + " deep. A building footprint (VGIN's, or FEMA's outline where VGIN has none) turns red once the water stands more than " + fLenT(fd) + " over the ground at the building.";
+  $("hr2").textContent = "The water level at each piece and building is its gauge's level: the forecast at the selected time, the last observation, a past flood's record, or the level you set under Scenario. Depth is that level minus the ground, where the water can reach from tidal water over ground at or below the level. The blues on the map show that depth in " + S.raster.cell_m + " m cells" + (R.v3 ? ": over the land when it floods, and always in the rivers, creeks and bay, where they deepen as the tide rises and pale as it falls (the bed is the elevation model's, to about " + tidy(14 * uf(), 1) + " " + uName() + " below NAVD88)" : "") + ".";
+  var h3 = $("hr3"); h3.hidden = !ml && U.units === "ft";
+  h3.textContent = "Levels are shown in " + (U.units === "m" ? "meters" : "feet") + (ml ? " above MLLW, mean lower low water at each gauge. The flood grids are on NAVD88; a level on MLLW is the NAVD88 level plus that gauge's own offset" + (g ? " (" + (g.navd88_above_mllw_ft * uf()).toFixed(2) + " " + uName() + " at " + g.name + ")" : "") + ", so the same water has a different number at each gauge." : " above NAVD88.") + (U.units === "m" ? " Road lengths are in kilometres." : "");
+  $("gLead").textContent = "Each road piece and building follows its nearest StormSense gauge. Levels are " + (U.units === "m" ? "meters" : "feet") + " above " + (ml ? "each gauge's own MLLW" : "NAVD88") + " at the selected time.";
+  $("srcNote").textContent = "Ground and depth: " + S.sources.depth + ", at water levels from " + tidy(S.levels.start * uf(), 2) + " to " + topT + " in " + fLenT(S.levels.step) + " steps. Roads: " + S.sources.roads + ". Buildings: " + S.sources.buildings + ". " + mi(S.totals.road_miles).toLocaleString("en-US", {maximumFractionDigits:1}) + " road " + roadU(true) + " and " + S.totals.buildings.toLocaleString() + " buildings are checked; the map draws the " + S.buildings.n.toLocaleString() + " buildings that water at " + topT + " would reach.";
+  $("scenNote").textContent = "Scenario: drag the slider or the plot to set one water level for every gauge, from 0 to " + tidy(scenDisp(R.scen.n - 1), 2) + " " + uName() + " " + dName() + (ml && g ? " at " + g.name + " (the same NAVD88 level at every gauge)" : "") + " in " + R.scen.st + " " + uName() + " steps. No forecast or past flood is involved: the roads, the buildings and the damage estimate follow the level you set.";
+  if (S.sources.low_frame){ var ln = $("lowNote"); ln.hidden = false; ln.textContent = "This map holds " + S.sources.low_frame + ": those within 1.5 km of ground at or below " + topT + ". The rest of the locality lies higher than any level mapped here."; }
+  if (S.sources.drainage){ var dr = $("drainNote"); dr.hidden = false; dr.textContent = "Storm drains are in it: where a pipe or ditch network has one opening in the water, the water also comes up at its other inlets and outfalls that lie at or below the level, as in Norfolk's TITAN. Pipes carry the level without loss. Source: " + S.sources.drainage + "." + (S.sources.barriers ? " Floodwalls and levees hold the water back, and no pipe carries it under them, up to the " + topT + " level: " + S.sources.barriers + "." : ""); }
+  var h = "<b>Water depth (" + uName() + ")</b>"; DEPTH.forEach(function(c, q){ var v = +DEPTH_LABEL[q]; h += '<span><i style="background:' + c + '"></i>' + (q ? "" : "≤") + (U.units === "m" ? (v * M_FT).toFixed(v < 1 ? 2 : 1) : DEPTH_LABEL[q]) + "</span>"; }); $("ramp").innerHTML = h;
+}
+function setU(key, v){ if (U[key] === v) return; var at = T.view === "scen" ? scenLevel(T.i) : null, i = T.i, obs = T.obs;
+  U[key] = v; try { localStorage.setItem("stormsense-" + key, v); } catch (e) {} scenSet(); texts();
+  if (at != null){ use("scen"); T.i = scenIndex(at); update(); } else { chrome(); charts(); T.i = i; T.obs = obs; update(); } }
 
 /* ---------- what the map shows: the forecast, a past flood, or a scenario ---------- */
 function use(view, ev){
@@ -331,7 +395,7 @@ function use(view, ev){
     A = {kind:"hist", t0ms:Date.parse(E.t0), step_min:E.step_min, n:E.n, ev:E};
     R.series = S.stations.map(function(st){ var d = E.stations[st.id]; return d ? {f:d.f, p10:d.f, p90:d.f, from:d.from, own:d.own, km:d.km, flood_levels_ft:(LV.stations[st.id] || {}).flood_levels_ft} : null; });
     var pd = pid && E.stations[pid]; R.plot = pd ? {f:pd.f, p10:pd.f, p90:pd.f, from:pd.from, own:pd.own, flood_levels_ft:(LV.stations[pid] || {}).flood_levels_ft} : null; }
-  else if (view === "scen"){ T.mode = "f"; var f = []; for (var q = 0; q < S.levels.n; q++) f.push(scenLevel(q));
+  else if (view === "scen"){ T.mode = "f"; var f = []; for (var q = 0; q < R.scen.n; q++) f.push(scenLevel(q));
     A = {kind:"scen", t0ms:0, step_min:0, n:f.length};
     R.series = S.stations.map(function(){ return {f:f, p10:f, p90:f}; }); R.plot = null; }
   else { A = {kind:"fc", t0ms:LV.t0ms, step_min:LV.step_min, n:LV.n};
@@ -341,28 +405,28 @@ function use(view, ev){
   $("mode").querySelectorAll("button").forEach(function(x){ x.setAttribute("aria-pressed", x.dataset.v === T.mode); });
   $("time").max = A.n - 1; R.ticks = ticks(); timeline();
   T.i = view === "hist" ? Math.max(0, Math.min(A.n - 1, A.ev.peak_i)) :
-        view === "scen" ? Math.max(0, Math.min(A.n - 1, Math.round(((S.mllw_ref && S.mllw_ref.navd88_above_mllw_ft != null ? 7 - S.mllw_ref.navd88_above_mllw_ft : 5.5) - S.levels.start) / S.levels.step))) : R.peak;
+        view === "scen" ? scenIndex(ro() != null ? 7 - ro() : 5.5) : R.peak;
   chrome(); charts(); update();
 }
 function playLabel(){ return T.view === "scen" ? "▶ Play the levels" : "▶ Play 72 hours"; }
-function chrome(){ var v = T.view, E = A.ev, pg = S.plot_gauge, top = S.levels.start + S.levels.step * (S.levels.n - 1);
+function chrome(){ var v = T.view, E = A.ev, pg = S.plot_gauge, swo = S.mllw_ref ? S.mllw_ref.navd88_above_mllw_ft : null;
   $("bHist").setAttribute("aria-pressed", v === "hist"); $("bScen").setAttribute("aria-pressed", v === "scen");
   var mkOn = v === "hist" && !!(E && E.marks && E.marks.length); document.querySelectorAll(".chips .mk").forEach(function(x){ x.hidden = !mkOn; });
   $("histBar").hidden = v !== "hist"; $("scenBar").hidden = v !== "scen"; $("modeBox").hidden = v !== "fc"; $("gaugeCard").hidden = v === "scen";
   $("bPlay").textContent = playLabel(); $("evSel").value = T.ev;
   $("time").setAttribute("aria-label", v === "scen" ? "Water level of the scenario" : v === "hist" ? "Time in the flood" : "Time in the forecast");
   $("plotTitle").textContent = v === "hist" ? "StormSense Historical Flood" : v === "scen" ? "StormSense Scenario Builder" : "StormSense Prediction Plot";
-  $("plotSub").textContent = v === "hist" ? E.name + ": 36 Hours Before and After the Peak" : v === "scen" ? "Impacts at Each Water Level, " + S.levels.start + " to " + top + " ft NAVD88" : "Anticipated Impacts in the Next 72 Hours";
+  $("plotSub").textContent = v === "hist" ? E.name + ": 36 Hours Before and After the Peak" : v === "scen" ? "Impacts at Each Water Level, 0 to " + tidy(scenDisp(R.scen.n - 1), 2) + " " + uName() + " " + dName() : "Anticipated Impacts in the Next 72 Hours";
   var key = "", sw = function(c, t, box){ return '<span><span class="sw' + (box ? " box" : "") + '" style="background:' + c + '"></span>' + t + "</span>"; };
-  if (v !== "scen" && R.plot) key += sw(C.navy, (v === "hist" ? "Water level recorded" + (R.plot.own === false && pg && R.plot.from !== pg.name ? " at " + R.plot.from + ", standing in for " : " at ") : "StormSense forecast at ") + (pg ? pg.name : "the gauge") + " (ft NAVD88, left axis)");
+  if (v !== "scen" && R.plot) key += sw(C.navy, (v === "hist" ? "Water level recorded" + (R.plot.own === false && pg && R.plot.from !== pg.name ? " at " + R.plot.from + ", standing in for " : " at ") : "StormSense forecast at ") + (pg ? pg.name : "the gauge") + " (" + uName() + " " + dName() + ", left axis)");
   if (v === "hist" && E.runs && R.plot) key += '<span><span class="sw dash"></span>' + E.runs.length + " StormSense forecasts issued before the peak (later runs darker)</span>";
-  key += sw(C.flooded, "Road miles flooded") + sw(C.ponded, "Road miles ponded") + sw(C.building, "Buildings flooded" + (v === "scen" ? " (right axis)" : " (far right axis)"), true);
+  key += sw(C.flooded, "Road " + roadU(true) + " flooded") + sw(C.ponded, "Road " + roadU(true) + " ponded") + sw(C.building, "Buildings flooded" + (v === "scen" ? " (right axis)" : " (far right axis)"), true);
   $("plotKey").innerHTML = key;
   if (v === "hist"){ var pt = new Date(E.peak_time_z);
-    $("evNote").textContent = "Highest water at Sewells Point: " + fTimeY.format(pt) + ", " + E.peak_ft.toFixed(2) + " ft NAVD88" + (mllw(E.peak_ft) ? " (" + mllw(E.peak_ft) + ")" : "") + ". " + E.gauges + (E.gauges === 1 ? " gauge has" : " gauges have") + " a record through the peak." + (E.note ? " " + E.note : "") + (E.complete === false && E.observed_through_z ? " The record so far ends " + fTime.format(new Date(E.observed_through_z)) + "; the rest of the 36 hours after the peak is added as it is archived." : "") + markNote(E); }
+    $("evNote").textContent = "Highest water at Sewells Point: " + fTimeY.format(pt) + ", " + fLvU(E.peak_ft, swo) + paren(alt(E.peak_ft, swo)) + ". " + E.gauges + (E.gauges === 1 ? " gauge has" : " gauges have") + " a record through the peak." + (E.note ? " " + E.note : "") + (E.complete === false && E.observed_through_z ? " The record so far ends " + fTime.format(new Date(E.observed_through_z)) + "; the rest of the 36 hours after the peak is added as it is archived." : "") + markNote(E); }
   var any = R.series.filter(Boolean)[0];
   var fcNote = ""; if (v === "hist" && E.runs && E.runs.length){ var mx = E.runs.map(function(r){ return r.max_ft; });
-    fcNote = " StormSense's " + E.runs.length + " forecasts issued before the peak put the highest water at " + Math.min.apply(null, mx).toFixed(2) + " to " + Math.max.apply(null, mx).toFixed(2) + " ft; the gauge recorded " + E.peak_ft.toFixed(2) + " ft."; }
+    fcNote = " StormSense's " + E.runs.length + " forecasts issued before the peak put the highest water at " + fLv(Math.min.apply(null, mx), swo) + " to " + fLvU(Math.max.apply(null, mx), swo) + "; the gauge recorded " + fLv(E.peak_ft, swo) + " " + uName() + "."; }
   $("runNote").textContent = v === "hist" ? "Record: " + (E.record || "gauge observations") + "." + fcNote + " Drag the slider or the plot to move through the flood. Times are Eastern." :
     v === "scen" ? "Drag the slider or the plot to change the water level." :
     "Forecast: StormSense fore72" + (any && any.updated ? ", updated " + any.updated : "") + ". Drag the slider or the plot to move through it. Times are Eastern.";
@@ -381,7 +445,7 @@ function markNote(E){ if (!E.marks || !E.marks.length) return E.marks_left_off ?
   var c = E.marks.filter(function(m){ return m.dif != null && m.w !== 1; }).map(function(m){ return m.dif; }).sort(function(a, b){ return a - b; });
   var t = " On the map: " + (h ? h + " USGS high water mark" + (h === 1 ? "" : "s") + " (diamonds)" : "") + (h && sn ? " and " : "") + (sn ? sn + " USGS storm-tide sensor peak" + (sn === 1 ? "" : "s") + " (triangles)" : "") + " surveyed after this storm; tap one to compare it with the map's highest water there.";
   if (c.length >= 3){ var md = c.length % 2 ? c[(c.length - 1) / 2] : (c[c.length / 2 - 1] + c[c.length / 2]) / 2;
-    t += " The " + c.length + " not noted as wave-affected stand a median " + Math.abs(md).toFixed(2) + " ft " + (md >= 0 ? "above" : "below") + " the map's highest water."; }
+    t += " The " + c.length + " not noted as wave-affected stand a median " + fLen(Math.abs(md)) + " " + (md >= 0 ? "above" : "below") + " the map's highest water."; }
   if (E.marks_left_off) t += " " + E.marks_left_off + " more " + (E.marks_left_off === 1 ? "is" : "are") + " left off (a river's flood or a wave's run-up far above the tide).";
   return t; }
 function level(s){ // water level at gauge s for the current selection, in hundredths of a foot (null: none)
@@ -426,33 +490,33 @@ function update(){
   R.L = L; R.kidx = kidx; R.stamp++;
   if (T.view === "scen") peaks();
   var t = T.obs ? totalsAt(0, "obs") : [R.tlF[T.i], R.tlP[T.i], R.tlB[T.i]];
-  $("vFlood").innerHTML = fmtMi(t[0]) + "<small>miles</small>"; $("vPond").innerHTML = fmtMi(t[1]) + "<small>miles</small>"; $("vBldg").textContent = Math.round(t[2]).toLocaleString();
+  $("vFlood").innerHTML = fmtMi(mi(t[0])) + "<small>" + roadU(true) + "</small>"; $("vPond").innerHTML = fmtMi(mi(t[1])) + "<small>" + roadU(true) + "</small>"; $("vBldg").textContent = Math.round(t[2]).toLocaleString();
   var pg = S.plot_gauge, pv = R.plot ? (T.obs ? R.plot.obs_ft : R.plot[T.mode][T.i]) : null;
   if (T.view === "scen"){ var sv = scenLevel(T.i);
-    $("when").innerHTML = "Water at " + sv.toFixed(2) + " ft NAVD88<small>" + (mllw(sv) ? mllw(sv) + " at " + S.mllw_ref.name + " · " : "") + "the same level at every gauge</small>"; }
+    $("when").innerHTML = "Water at " + stepLabel(T.i) + "<small>" + (R.ro ? (U.datum === "MLLW" ? "at " + R.ro.name + " · " + alt(sv, ro()) : alt(sv, ro()) + " at " + R.ro.name) + " · " : "") + "the same level at every gauge</small>"; }
   else if (T.obs){ var o = R.series.filter(function(d){ return d && d.obs_time; })[0];
     $("when").innerHTML = "Last observed" + (o ? "<small>" + fTime.format(new Date(o.obs_time)) + " · the gauges at the forecast run</small>" : ""); }
   else if (T.view === "hist"){ var dh = tAt(T.i), hp = (T.i - A.ev.peak_i) * A.step_min / 60;
     $("when").innerHTML = fTimeY.format(dh) + "<small>" + utc(dh) + " · " + (Math.abs(hp) < 0.05 ? "the peak at Sewells Point" : hp < 0 ? (-hp).toFixed(1) + " h before the peak" : hp.toFixed(1) + " h after the peak") + "</small>"; }
   else { var d0 = tAt(T.i), lead = (d0 - Date.now()) / 3600000;
     $("when").innerHTML = fTime.format(d0) + "<small>" + utc(d0) + (R.nowOk ? " · " + (Math.abs(lead) < 0.2 ? "now" : lead > 0 ? "in " + lead.toFixed(lead < 10 ? 1 : 0) + " h" : (-lead).toFixed(1) + " h ago") : "") + "</small>"; }
-  $("lvlNote").textContent = T.view === "scen" || !pg || pv == null ? "" : pg.name + " at the selected time: " + pv.toFixed(2) + " ft NAVD88" + (mllw(pv, pg) ? " (" + mllw(pv, pg) + ")" : "") + (R.plot.own === false && R.plot.from !== pg.name ? ", taken from " + R.plot.from : "") + ".";
+  $("lvlNote").textContent = T.view === "scen" || !pg || pv == null ? "" : pg.name + " at the selected time: " + fLvU(pv, po()) + paren(alt(pv, po())) + (R.plot.own === false && R.plot.from !== pg.name ? ", taken from " + R.plot.from : "") + ".";
   $("time").value = T.i; $("bObs").setAttribute("aria-pressed", T.obs);
-  $("time").setAttribute("aria-valuetext", T.view === "scen" ? scenLevel(T.i).toFixed(2) + " feet NAVD88" : fTime.format(tAt(T.i)));
+  $("time").setAttribute("aria-valuetext", T.view === "scen" ? stepLabel(T.i) : fTime.format(tAt(T.i)));
   gauges(); cursors(); draw(); $("pop").hidden = true;
 }
 
 function gauges(){
   if (T.view === "scen") return;
-  var h = "<thead><tr><th>Gauge</th><th>Level</th><th>NWS stage</th><th>Peak</th><th>Roads flooded</th><th>Buildings</th></tr></thead><tbody>";
+  var h = "<thead><tr><th>Gauge</th><th>Level (" + uName() + " " + dName() + ")</th><th>NWS stage</th><th>Peak</th><th>Roads flooded</th><th>Buildings</th></tr></thead><tbody>";
   S.stations.forEach(function(st, s){ var d = R.series[s];
     if (!d){ h += "<tr><td><b>" + st.id + "</b><span class='nm'>" + st.name + "</span></td><td colspan='5' style='text-align:left'>" + (T.view === "hist" ? "no gauge recorded this flood" : "no forecast in this run") + "</td></tr>"; return; }
     var v = T.obs ? d.obs_ft : d[T.mode][T.i], cat = "", fl = d.flood_levels_ft || {};
     ["action","minor","moderate","major"].forEach(function(k){ if (v != null && fl[k] != null && v >= fl[k]) cat = k; });
     var pk = 0; for (var i = 1; i < A.n; i++) if (d[T.mode][i] != null && (d[T.mode][pk] == null || d[T.mode][i] > d[T.mode][pk])) pk = i;
     var q = v == null ? 0 : Math.max(0, Math.min(R.NB, Math.round(v * 100) - R.LO));
-    h += "<tr><td><b>" + st.id + "</b><span class='nm'>" + st.name.replace(/\s*\(IN MLLW\)/, "") + (d.own === false ? " · level from " + d.from + ", " + d.km + " km away" : "") + "</span></td><td>" + (v == null ? "–" : v.toFixed(2)) + "</td><td>" +
-      (cat ? "<span class='pill'>" + cat[0].toUpperCase() + cat.slice(1) + "</span>" : "<span class='pill none'>below Action</span>") + "</td><td>" + (d[T.mode][pk] == null ? "–" : d[T.mode][pk].toFixed(2) + "<span class='nm'>" + fShort.format(tAt(pk)) + "</span>") + "</td><td>" + fmtMi(R.cumF[s][q] / 1609.344) + " mi</td><td>" + Math.round(R.cumB[s][q]).toLocaleString() + "</td></tr>"; });
+    h += "<tr><td><b>" + st.id + "</b><span class='nm'>" + st.name.replace(/\s*\(IN MLLW\)/, "") + (d.own === false ? " · level from " + d.from + ", " + d.km + " km away" : "") + "</span></td><td>" + (v == null ? "–" : fLv(v, so(s))) + "</td><td>" +
+      (cat ? "<span class='pill'>" + cat[0].toUpperCase() + cat.slice(1) + "</span>" : "<span class='pill none'>below Action</span>") + "</td><td>" + (d[T.mode][pk] == null ? "–" : fLv(d[T.mode][pk], so(s)) + "<span class='nm'>" + fShort.format(tAt(pk)) + "</span>") + "</td><td>" + fmtMi(mi(R.cumF[s][q] / 1609.344)) + " " + roadU() + "</td><td>" + Math.round(R.cumB[s][q]).toLocaleString() + "</td></tr>"; });
   $("gauges").innerHTML = h + "</tbody>";
 }
 
@@ -460,36 +524,38 @@ function gauges(){
 function nice(max){ if (max <= 0) return 1; var p = Math.pow(10, Math.floor(Math.log10(max))), m = max / p; return (m <= 1 ? 1 : m <= 2 ? 2 : m <= 5 ? 5 : 10) * p; }
 function num(v){ return v >= 10 || v === 0 || v === Math.round(v) ? Math.round(v).toLocaleString() : v.toFixed(1); }
 function ticks(){ var out = [], i;
-  if (A.kind === "scen"){ for (i = 0; i < A.n; i++){ var lv = scenLevel(i); if (lv === Math.round(lv) && Math.round(lv) % 2 === 0) out.push({i:i, label:lv + " ft"}); } return out; }
+  if (A.kind === "scen"){ var ev = U.units === "m" ? 0.5 : 2;       // 0, 2 ... 10 ft or 0, 0.5 ... 3 m: both ends are labelled
+    for (i = 0; i < A.n; i++){ var lv = scenDisp(i); if (Math.abs(lv / ev - Math.round(lv / ev)) < 1e-6) out.push({i:i, label:lv + " " + uName()}); } return out; }
   var f = new Intl.DateTimeFormat("en-US", {timeZone:TZ, hour:"numeric", minute:"numeric", hourCycle:"h23"}); // noon and midnight, Eastern
   for (i = 1; i < A.n - 1; i++){ var p = f.formatToParts(tAt(i)), hr = 0, mn = 0; p.forEach(function(q){ if (q.type === "hour") hr = +q.value; if (q.type === "minute") mn = +q.value; });
     if (mn === 0 && hr % 12 === 0) out.push({i:i, label: hr === 0 ? fDay.format(tAt(i)) : "noon"}); }
   return out; }
 function plotChart(){
-  var el = $("cPlot"), n = A.n, scen = A.kind === "scen", lvl = scen || !R.plot ? null : R.plot[T.mode];
-  var band = lvl && A.kind === "fc" && R.plot.p10 && R.plot.p90 ? [R.plot.p10, R.plot.p90] : null;
+  var el = $("cPlot"), n = A.n, scen = A.kind === "scen", raw = scen || !R.plot ? null : R.plot[T.mode], PO = po(), MI = U.units === "m" ? KM_MI : 1;
+  var cvt = function(a){ return a.map(function(v){ return v == null ? null : toU(v, PO); }); }, lvl = raw ? cvt(raw) : null;      // the level line in the selected datum and units
+  var band = lvl && A.kind === "fc" && R.plot.p10 && R.plot.p90 ? [cvt(R.plot.p10), cvt(R.plot.p90)] : null;
   var W = Math.max(280, el.clientWidth), H = 250, m = {l:36, r:lvl ? 88 : 46, t:20, b:22}, pw = W - m.l - m.r, ph = H - m.t - m.b, i;
   var maxMi = 0, maxB = 0; for (i = 0; i < n; i++){ if (R.tlF[i] > maxMi) maxMi = R.tlF[i]; if (R.tlP[i] > maxMi) maxMi = R.tlP[i]; if (R.tlB[i] > maxB) maxB = R.tlB[i]; }
-  maxMi = nice(maxMi); maxB = nice(maxB);
-  var lo = Infinity, hi = -Infinity; var runs = lvl && A.kind === "hist" && A.ev.runs ? A.ev.runs : null;
+  maxMi = nice(maxMi * MI) / MI; maxB = nice(maxB);
+  var lo = Infinity, hi = -Infinity; var runs = lvl && A.kind === "hist" && A.ev.runs ? A.ev.runs.map(function(r){ return {f:cvt(r.f)}; }) : null;
   (lvl ? [lvl].concat(band || [], runs ? runs.map(function(r){ return r.f; }) : []) : []).forEach(function(a){ for (var q = 0; q < n; q++){ var v = a[q]; if (v != null){ if (v < lo) lo = v; if (v > hi) hi = v; } } });
-  if (!isFinite(lo)){ lo = 0; hi = 1; } var st = hi - lo > 6 ? 2 : 1; lo = Math.floor(lo / st) * st; hi = Math.ceil(hi / st) * st; if (hi === lo) hi += st;
+  if (!isFinite(lo)){ lo = 0; hi = 1; } var sp = hi - lo, st = sp > 6 ? 2 : U.units === "ft" || sp > 2.5 ? 1 : sp > 1.2 ? 0.5 : 0.25; lo = Math.floor(lo / st) * st; hi = Math.ceil(hi / st) * st; if (hi === lo) hi += st;
   var x = function(q){ return m.l + pw * q / (n - 1); }, yL = function(v){ return m.t + ph * (1 - (v - lo) / (hi - lo)); },
       yM = function(v){ return m.t + ph * (1 - v / maxMi); }, yB = function(v){ return m.t + ph * (1 - v / maxB); };
   var svg = '<svg viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="' + $("plotTitle").textContent + ": " + $("plotSub").textContent + '">', xr = W - m.r, g, v;
-  if (lvl){ for (v = lo; v <= hi + 1e-9; v += st){ g = yL(v); svg += '<line x1="' + m.l + '" x2="' + xr + '" y1="' + g + '" y2="' + g + '" stroke="' + C.line + '"/><text x="' + (m.l - 6) + '" y="' + (g + 3.5) + '" text-anchor="end">' + v + '</text>'; }
-    svg += '<text x="' + (m.l - 30) + '" y="10">ft NAVD88</text><text x="' + (xr + 6) + '" y="10">miles</text><text x="' + (W - 1) + '" y="10" text-anchor="end">buildings</text>';
-    [0, 0.5, 1].forEach(function(f){ g = m.t + ph * (1 - f); svg += '<line x1="' + xr + '" x2="' + (xr + 4) + '" y1="' + g + '" y2="' + g + '" stroke="' + C.line + '"/><text x="' + (xr + 6) + '" y="' + (g + 3.5) + '">' + num(maxMi * f) + '</text><text x="' + (W - 1) + '" y="' + (g + 3.5) + '" text-anchor="end">' + num(maxB * f) + '</text>'; });
-    var fl = R.plot.flood_levels_ft || {}; ["action","minor","moderate","major"].forEach(function(k){ if (fl[k] == null || fl[k] < lo || fl[k] > hi) return; g = yL(fl[k]);
-      svg += '<line x1="' + m.l + '" x2="' + xr + '" y1="' + g + '" y2="' + g + '" stroke="' + C.muted + '" stroke-dasharray="3 4" stroke-width="1"/><text x="' + (xr - 4) + '" y="' + (g - 3) + '" text-anchor="end">' + k[0].toUpperCase() + k.slice(1) + " " + fl[k].toFixed(1) + '</text>'; }); }
-  else { [0, 0.5, 1].forEach(function(f){ g = m.t + ph * (1 - f); svg += '<line x1="' + m.l + '" x2="' + xr + '" y1="' + g + '" y2="' + g + '" stroke="' + C.line + '"/><text x="' + (m.l - 6) + '" y="' + (g + 3.5) + '" text-anchor="end">' + num(maxMi * f) + '</text><text x="' + (W - 1) + '" y="' + (g + 3.5) + '" text-anchor="end">' + num(maxB * f) + '</text>'; });
-    svg += '<text x="' + (m.l - 30) + '" y="10">miles</text><text x="' + (W - 1) + '" y="10" text-anchor="end">buildings</text>'; }
-  var placed = [];                                             // day names first, "noon" only where there is room
-  [false, true].forEach(function(noon){ R.ticks.forEach(function(t){ var xx = x(t.i); if ((t.label === "noon") !== noon) return;
+  if (lvl){ for (v = lo; v <= hi + 1e-9; v += st){ g = yL(v); svg += '<line x1="' + m.l + '" x2="' + xr + '" y1="' + g + '" y2="' + g + '" stroke="' + C.line + '"/><text x="' + (m.l - 6) + '" y="' + (g + 3.5) + '" text-anchor="end">' + tidy(v, 2) + '</text>'; }
+    svg += '<text x="' + (m.l - 30) + '" y="10">' + uName() + " " + dName() + '</text><text x="' + (xr + 6) + '" y="10">' + roadU(true) + '</text><text x="' + (W - 1) + '" y="10" text-anchor="end">buildings</text>';
+    [0, 0.5, 1].forEach(function(f){ g = m.t + ph * (1 - f); svg += '<line x1="' + xr + '" x2="' + (xr + 4) + '" y1="' + g + '" y2="' + g + '" stroke="' + C.line + '"/><text x="' + (xr + 6) + '" y="' + (g + 3.5) + '">' + num(maxMi * MI * f) + '</text><text x="' + (W - 1) + '" y="' + (g + 3.5) + '" text-anchor="end">' + num(maxB * f) + '</text>'; });
+    var fl = R.plot.flood_levels_ft || {}; ["action","minor","moderate","major"].forEach(function(k){ var fv = fl[k] == null ? null : toU(fl[k], PO); if (fv == null || fv < lo || fv > hi) return; g = yL(fv);
+      svg += '<line x1="' + m.l + '" x2="' + xr + '" y1="' + g + '" y2="' + g + '" stroke="' + C.muted + '" stroke-dasharray="3 4" stroke-width="1"/><text x="' + (xr - 4) + '" y="' + (g - 3) + '" text-anchor="end">' + k[0].toUpperCase() + k.slice(1) + " " + fv.toFixed(U.units === "m" ? 2 : 1) + '</text>'; }); }
+  else { [0, 0.5, 1].forEach(function(f){ g = m.t + ph * (1 - f); svg += '<line x1="' + m.l + '" x2="' + xr + '" y1="' + g + '" y2="' + g + '" stroke="' + C.line + '"/><text x="' + (m.l - 6) + '" y="' + (g + 3.5) + '" text-anchor="end">' + num(maxMi * MI * f) + '</text><text x="' + (W - 1) + '" y="' + (g + 3.5) + '" text-anchor="end">' + num(maxB * f) + '</text>'; });
+    svg += '<text x="' + (m.l - 30) + '" y="10">' + roadU(true) + '</text><text x="' + (W - 1) + '" y="10" text-anchor="end">buildings</text>'; }
+  var placed = [], end = function(t){ return scen && (t.i === 0 || t.i === n - 1) ? 1 : 0; };     // day names first, "noon" only where there is room; a scenario's two ends always
+  [false, true].forEach(function(noon){ R.ticks.slice().sort(function(a, b){ return end(b) - end(a); }).forEach(function(t){ var xx = x(t.i); if ((t.label === "noon") !== noon) return;
     if (!noon) svg += '<line x1="' + xx + '" x2="' + xx + '" y1="' + (m.t + ph) + '" y2="' + (m.t + ph + 4) + '" stroke="' + C.line + '"/>';
-    if (xx < m.l + 12 || xx > xr - 12 || placed.some(function(q){ return Math.abs(q - xx) < 46; })) return;
+    if ((!end(t) && (xx < m.l + 12 || xx > xr - 12)) || placed.some(function(q){ return Math.abs(q - xx) < (scen ? 34 : 46); })) return;
     if (noon) svg += '<line x1="' + xx + '" x2="' + xx + '" y1="' + (m.t + ph) + '" y2="' + (m.t + ph + 4) + '" stroke="' + C.line + '"/>';
-    svg += '<text x="' + xx + '" y="' + (H - 4) + '" text-anchor="middle">' + t.label + '</text>'; placed.push(xx); }); });
+    svg += '<text x="' + xx + '" y="' + (H - 4) + '" text-anchor="' + (!end(t) ? "middle" : t.i === 0 ? "start" : "end") + '">' + t.label + '</text>'; placed.push(xx); }); });
   function path(a, y, close){ var p = "", pen = false; for (var q = 0; q < n; q++){ if (a[q] == null){ pen = false; continue; } p += (pen ? "L" : "M") + x(q).toFixed(1) + "," + y(a[q]).toFixed(1); pen = true; }
     return close ? p + "L" + x(n - 1) + "," + (m.t + ph) + "L" + x(0) + "," + (m.t + ph) + "Z" : p; }
   if (band){ var up = "", dn = ""; for (i = 0; i < n; i++) if (band[0][i] != null && band[1][i] != null){ up += (up ? "L" : "M") + x(i).toFixed(1) + "," + yL(band[1][i]).toFixed(1); dn = "L" + x(i).toFixed(1) + "," + yL(band[0][i]).toFixed(1) + dn; }
@@ -498,13 +564,13 @@ function plotChart(){
   var ser = [{name:"Roads flooded", v:R.tlF, c:C.flooded, y:yM, unit:"mi", fill:true}, {name:"Roads ponded", v:R.tlP, c:C.ponded, y:yM, unit:"mi"}, {name:"Buildings flooded", v:R.tlB, c:C.building, y:yB, unit:"n"}];
   ser.forEach(function(s){ if (s.fill) svg += '<path d="' + path(s.v, s.y, true) + '" fill="' + s.c + '" fill-opacity="0.12"/>';
     svg += '<path d="' + path(s.v, s.y) + '" fill="none" stroke="' + s.c + '" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>'; });
-  if (lvl){ svg += '<path d="' + path(lvl, yL) + '" fill="none" stroke="' + C.navy + '" stroke-width="2.6" stroke-linejoin="round" stroke-linecap="round"/>'; ser.unshift({name:(S.plot_gauge ? S.plot_gauge.name : "Water level"), v:lvl, c:C.navy, y:yL, unit:"ft"}); }
+  if (lvl){ svg += '<path d="' + path(lvl, yL) + '" fill="none" stroke="' + C.navy + '" stroke-width="2.6" stroke-linejoin="round" stroke-linecap="round"/>'; ser.unshift({name:(S.plot_gauge ? S.plot_gauge.name : "Water level"), v:lvl, raw:raw, c:C.navy, y:yL, unit:"ft"}); }
   svg += '<g class="cur"><line y1="' + m.t + '" y2="' + (m.t + ph) + '" stroke="' + C.ink + '" stroke-width="1"/>' + ser.map(function(s){ return '<circle r="4.5" fill="' + s.c + '" stroke="' + C.panel + '" stroke-width="2"/>'; }).join("") + '</g></svg><div class="tip" hidden></div>';
   el.innerHTML = svg; el._g = {W:W, m:m, pw:pw, n:n, x:x, series:ser};
   if (!el._bound){ el._bound = true; var down = false;
     var idx = function(e){ var q = el._g, r = el.firstChild.getBoundingClientRect(), f = ((e.clientX - r.left) / r.width * q.W - q.m.l) / q.pw; return Math.max(0, Math.min(q.n - 1, Math.round(f * (q.n - 1)))); };
     var show = function(e){ var q = el._g, k = idx(e), r = el.getBoundingClientRect(), tip = el.lastChild;
-      tip.innerHTML = "<b>" + stepLabel(k) + "</b><br>" + q.series.map(function(s){ var val = s.v[k]; return '<span class="sw" style="background:' + s.c + ';vertical-align:middle;margin-right:5px"></span>' + s.name + ": " + (val == null ? "–" : s.unit === "mi" ? fmtMi(val) + " mi" : s.unit === "ft" ? val.toFixed(2) + " ft NAVD88" + (mllw(val, S.plot_gauge) ? " (" + mllw(val, S.plot_gauge) + ")" : "") : Math.round(val).toLocaleString()); }).join("<br>");
+      tip.innerHTML = "<b>" + stepLabel(k) + "</b><br>" + q.series.map(function(s){ var val = s.v[k]; return '<span class="sw" style="background:' + s.c + ';vertical-align:middle;margin-right:5px"></span>' + s.name + ": " + (val == null ? "–" : s.unit === "mi" ? fmtMi(mi(val)) + " " + roadU() : s.unit === "ft" ? fLvU(s.raw[k], po()) + paren(alt(s.raw[k], po())) : Math.round(val).toLocaleString()); }).join("<br>");
       tip.hidden = false; var tx = e.clientX - r.left + 12; if (tx + tip.offsetWidth > r.width) tx = e.clientX - r.left - tip.offsetWidth - 12; tip.style.left = Math.max(0, tx) + "px"; };
     var set = function(e){ T.obs = false; T.i = idx(e); stop(); update(); };
     el.addEventListener("pointermove", function(e){ show(e); if (down) set(e); });
@@ -526,11 +592,15 @@ function tile(key, url, w, h){ var t = R.tiles[key]; if (t) return t; t = R.tile
     for (var i = 0, j = 0; i < n; i++, j += 4){ t.lev[i] = px[j]; t.zone[i] = px[j+1]; t.gnd[i] = px[j+2]; }
     t.cv = c; t.ctx = x; t.im = x.createImageData(w, h); t.a = new Uint32Array(t.im.data.buffer); t.state = 1; draw(); }).catch(function(){ t.state = -1; });
   return t; }
-function paint(t){ if (t.stamp === R.stamp) return; var a = t.a, lev = t.lev, zn = t.zone, g = t.gnd, n = a.length, K = R.kidx, L = R.L, W = R.colWater, D = R.colDepth, NZ = S.raster.no_zone,
-    g0 = S.raster.ground0_ft * 100, gs = S.raster.ground_step_ft * 100;
+function paint(t){ if (t.stamp === R.stamp) return; var a = t.a, lev = t.lev, zn = t.zone, g = t.gnd, n = a.length, K = R.kidx, L = R.L, W = R.colWater, D = R.colDepth, ra = S.raster, NZ = ra.no_zone,
+    g0 = ra.ground0_ft * 100, gs = ra.ground_step_ft * 100, v3 = R.v3, WI = v3 ? ra.water_index : -1, b0 = v3 ? ra.bed0_ft * 100 : 0, bs = v3 ? ra.bed_step_ft * 100 : 0, deep = R.bathy, d, z;
   if (R.base !== "plain") W = 0;                 // over a basemap the imagery shows the water
-  for (var i = 0; i < n; i++){ var gi = g[i]; if (gi === 0){ a[i] = W; continue; } var z = zn[i]; if (z === NZ || z >= K.length || lev[i] > K[z]){ a[i] = 0; continue; }
-    var d = L[z] - (g0 + (gi - 1) * gs); a[i] = D[d <= 50 ? 0 : d <= 100 ? 1 : d >= 1000 ? 10 : Math.ceil(d / 100)]; }
+  for (var i = 0; i < n; i++){ var gi = g[i];
+    if (v3 ? lev[i] <= WI : gi === 0){            // tidal water, tide flats and marsh: the depth over the bed, where the gauge's level covers it
+      z = zn[i]; if (!deep || z === NZ || z >= K.length || L[z] <= -32000 || (lev[i] > K[z] && lev[i] > 0)){ a[i] = W; continue; }
+      d = gi === 255 ? 1e6 : L[z] - (b0 - (gi - 1) * bs); a[i] = D[d <= 50 ? 0 : d <= 100 ? 1 : d >= 1000 ? 10 : Math.ceil(d / 100)]; continue; }
+    z = zn[i]; if (z === NZ || z >= K.length || lev[i] > K[z]){ a[i] = 0; continue; }
+    d = L[z] - (g0 + (gi - 1) * gs); a[i] = D[d <= 50 ? 0 : d <= 100 ? 1 : d >= 1000 ? 10 : Math.ceil(d / 100)]; }
   t.ctx.putImageData(t.im, 0, 0); t.stamp = R.stamp; }
 function resize(fit){ cv.style.aspectRatio = S.width_m + " / " + S.height_m; var r = cv.getBoundingClientRect(); cv.width = Math.round(r.width * DPR); cv.height = Math.round(r.height * DPR); R.w = r.width; R.h = r.height; if (fit) fitAll(); }
 function fitAll(){ var wu = S.width_m / S.unit_m, hu = S.height_m / S.unit_m; V.s = Math.min(R.w / wu, R.h / hu); V.ox = (R.w - wu * V.s) / 2; V.oy = (R.h - hu * V.s) / 2; }
@@ -631,13 +701,22 @@ function draw(){
     if (big){ k = R.bstart[i]; e = R.bstart[i+1]; ctx.moveTo(R.bxy[2*k] * s + ox, R.bxy[2*k+1] * s + oy); for (k++; k < e; k++) ctx.lineTo(R.bxy[2*k] * s + ox, R.bxy[2*k+1] * s + oy); ctx.closePath(); }
     else ctx.rect((R.bbox[b] + R.bbox[b+2]) / 2 * s + ox - 1.1, (R.bbox[b+1] + R.bbox[b+3]) / 2 * s + oy - 1.1, 2.2, 2.2); }
   ctx.fillStyle = C.building; ctx.fill();
+  // the lines between the gauges' areas (Derek, 2026-11-28): gray dashes over a light casing, each area named by its gauge
+  if (R.zones && $("lZones").checked){ var Z = S.zones;
+    (R.base === "sat" ? [["rgba(16,24,31,.7)", 4.6], ["#e4e8ec", 2.2]] : [["rgba(255,255,255,.85)", 4.6], ["#5d6770", 2.2]]).forEach(function(p){ ctx.beginPath();
+      Z.lines.forEach(function(l){ ctx.moveTo(l[0] * s + ox, l[1] * s + oy); for (k = 2; k < l.length; k += 2) ctx.lineTo(l[k] * s + ox, l[k+1] * s + oy); });
+      ctx.strokeStyle = p[0]; ctx.lineWidth = p[1]; ctx.lineCap = "butt"; ctx.setLineDash([9, 7]); ctx.stroke(); }); ctx.setLineDash([]); ctx.lineCap = "round";
+    ctx.font = "italic 600 11.5px " + tok("--body"); ctx.textBaseline = "middle"; ctx.textAlign = "center";
+    Z.labels.forEach(function(q){ var g = S.stations[q.s]; if (!g) return; var lx = q.x * s + ox, ly = q.y * s + oy; if (lx < -60 || lx > w + 60 || ly < -20 || ly > h + 20) return;
+      var t = "follows " + g.id; ctx.lineWidth = 3.5; ctx.strokeStyle = "rgba(255,255,255,.85)"; ctx.strokeText(t, lx, ly); ctx.fillStyle = "#4d5863"; ctx.fillText(t, lx, ly); });
+    ctx.textAlign = "start"; }
   // gauges
   ctx.font = "600 12px " + tok("--body"); ctx.textBaseline = "middle";
   S.stations.forEach(function(g, si){ if (!g.inside) return; var gx = g.x * s + ox, gy = g.y * s + oy; if (gx < -40 || gx > w + 40 || gy < -20 || gy > h + 20) return;
     var lv = R.L[si], now = cat(g, lv > -32000 ? lv / 100 : null), hi = T.view === "fc" && !T.obs ? topCat(g) : null;
     if (hi && CAT_RANK[hi] > 0){ ctx.beginPath(); ctx.arc(gx, gy, 10, 0, 6.2832); ctx.lineWidth = 3.5; ctx.strokeStyle = CAT[hi]; ctx.stroke(); }
     ctx.beginPath(); ctx.arc(gx, gy, 6, 0, 6.2832); ctx.fillStyle = CAT[now]; ctx.fill(); ctx.lineWidth = 1.8; ctx.strokeStyle = "#ffffff"; ctx.stroke();
-    var t = g.id + (lv > -32000 ? " " + (lv / 100).toFixed(1) + " ft" : "");
+    var t = g.id + (lv > -32000 ? " " + fLen(toU(lv / 100, so(si)) / uf(), U.units === "m" ? 2 : 1) : "");
     ctx.lineWidth = 3.5; ctx.strokeStyle = C.halo; ctx.strokeText(t, gx + 9, gy); ctx.fillStyle = C.label; ctx.fillText(t, gx + 9, gy); });
   // a past flood's surveyed marks: diamonds (high water marks) and triangles (storm-tide sensor peaks)
   if (T.view === "hist" && A.ev.marks){ markSetup(A.ev); var put = [], lab = mpx > 0.05; ctx.font = "600 11px " + tok("--body"); ctx.textBaseline = "middle"; ctx.lineJoin = "miter";
@@ -648,7 +727,7 @@ function draw(){
       ctx.closePath(); ctx.lineWidth = 4; ctx.strokeStyle = C.halo; ctx.stroke(); ctx.fillStyle = m.w === 1 ? C.halo : C.mark; ctx.fill();
       if (m.w === 1){ ctx.lineWidth = 2; ctx.strokeStyle = C.mark; ctx.stroke(); }
       if (!lab) return; for (k = 0; k < put.length; k++) if (Math.abs(put[k][0] - mx) < 44 && Math.abs(put[k][1] - my) < 13) return;
-      put.push([mx, my]); var t = m.ft.toFixed(1) + " ft";
+      put.push([mx, my]); var t = fLen(toU(m.ft, so(m.si)) / uf(), U.units === "m" ? 2 : 1);
       ctx.lineWidth = 3.5; ctx.strokeStyle = C.halo; ctx.strokeText(t, mx + 10, my); ctx.fillStyle = C.label; ctx.fillText(t, mx + 10, my); });
     ctx.lineJoin = "round"; }
   // scale
@@ -667,19 +746,20 @@ function pick(px, py){ // a building under the pointer, else the nearest road pi
   for (i = 0; i < P.n; i++){ var q = 4 * i, mx = (xy[q] + xy[q+2]) / 2 - ux, my = (xy[q+1] + xy[q+3]) / 2 - uy, d = mx * mx + my * my; if (d < bd){ bd = d; best = i; } }
   return best < 0 ? null : {kind:"p", i:best};
 }
-function markDif(m){ return m.dif == null ? "" : Math.abs(m.dif) < 0.005 ? "matches the map" : Math.abs(m.dif).toFixed(2) + " ft " + (m.dif > 0 ? "higher" : "lower") + " than the map"; }
+function markDif(m){ return m.dif == null ? "" : Math.abs(m.dif) < 0.005 ? "matches the map" : fLen(Math.abs(m.dif)) + " " + (m.dif > 0 ? "higher" : "lower") + " than the map"; }
 function markHTML(m, E){ var sen = m.k === "s", h = "<b>" + (sen ? "USGS storm-tide sensor peak" : "USGS high water mark") + "</b>" + (m.t && m.t !== "Other" ? " <span class='u'>" + m.t + "</span>" : "");
-  h += "<br>" + m.ft.toFixed(2) + " ft NAVD88" + (m.o ? " (surveyed as " + m.o + ")" : "") + (m.q ? " · " + (m.u ? m.q + ", within " + m.u.toFixed(2) + " ft" : "quality not rated") : "");
+  var mo = so(m.si);
+  h += "<br>" + fLvU(m.ft, mo) + (m.o ? " (surveyed as " + m.o + ")" : "") + (m.q ? " · " + (m.u ? m.q + ", within " + fLen(m.u) : "quality not rated") : "");
   if (m.z) h += "<br>Peak recorded " + fTimeY.format(new Date(m.z));
   if (m.w === 1) h += "<br>Noted as wave-affected: waves or run-up lifted it above the still water";
   if (m.dif != null){ var g = S.stations[m.si], from = E.stations[g.id];
-    h += "<br>The map's highest water here: " + m.map.toFixed(2) + " ft (" + g.id + (from && from.own === false ? ", taken from " + from.from : "") + ")<br>" +
-      (Math.abs(m.dif) < 0.005 ? "The mark matches it" : "The mark is " + Math.abs(m.dif).toFixed(2) + " ft " + (m.dif > 0 ? "higher" : "lower")); }
+    h += "<br>The map's highest water here: " + fLv(m.map, mo) + " " + uName() + " (" + g.id + (from && from.own === false ? ", taken from " + from.from : "") + ")<br>" +
+      (Math.abs(m.dif) < 0.005 ? "The mark matches it" : "The mark is " + fLen(Math.abs(m.dif)) + " " + (m.dif > 0 ? "higher" : "lower")); }
   else h += "<br>No road here follows a gauge, so the map has no level to compare";
   if (m.d) h += "<span class='f'><i>Where:</i> " + String(m.d).replace(/</g, "&lt;") + "</span>";
   return h + "<span class='f'><i>Source:</i> " + E.mark_sources[m.s] + " · " + m.n + "</span>"; }
 function popup(px, py){ var hit = pick(px, py), p = $("pop"); if (!hit){ p.hidden = true; return; }
-  if (hit.kind === "m"){ var more = hit.marks.slice(1, 6).map(function(m){ return "<span class='f'>" + m.ft.toFixed(2) + " ft" + (markDif(m) ? " · " + markDif(m) : "") + (m.w === 1 ? " · wave-affected" : "") + "</span>"; }).join("");
+  if (hit.kind === "m"){ var more = hit.marks.slice(1, 6).map(function(m){ return "<span class='f'>" + fLv(m.ft, so(m.si)) + " " + uName() + (markDif(m) ? " · " + markDif(m) : "") + (m.w === 1 ? " · wave-affected" : "") + "</span>"; }).join("");
     p.innerHTML = markHTML(hit.marks[0], A.ev) + (more ? "<hr><span class='f'><i>" + (hit.marks.length - 1) + " more within reach of this tap (zoom in to tell them apart):</i></span>" + more : ""); p.hidden = false; var ml = Math.min(px + 12, R.w - p.offsetWidth - 8), mt = py + 14; if (mt + p.offsetHeight > R.h - 8) mt = py - p.offsetHeight - 10;
     p.style.left = Math.max(8, ml) + "px"; p.style.top = Math.max(8, mt) + "px"; return; }
   var NO = S.no_level, g, c, si, name, first, pd = S.ponded_ft, fd = S.flooded_ft, scen = T.view === "scen", hist = T.view === "hist";
@@ -688,14 +768,15 @@ function popup(px, py){ var hit = pick(px, py), p = $("pop"); if (!hit){ p.hidde
   var lv = R.L[si] / 100, d = lv >= c ? Math.max(0, lv - g) : 0, st = S.stations[si], never = (hit.kind === "p" ? R.pc : R.bc)[hit.i] === NO;
   var via = (hit.kind === "p" ? R.pvia : R.bvia), v = hit.kind === "b" ? R.val : null, h = "<b>" + name + "</b>";
   if (v && v.use[hit.i] !== 255) h += " <span class='u'>" + S.values.uses[v.use[hit.i]] + "</span>";
-  h += "<br>Ground " + g.toFixed(2) + " ft NAVD88<br>" + (never ? "Water does not reach it at 10 ft or below" : (hit.kind === "p" ? "Ponds" : "Floods") + " once the water reaches " + first.toFixed(2) + " ft" + (via && via[hit.i] ? ", through the storm drains" : "")) + "<br>" +
-    (R.L[si] > -32000 ? (scen ? "At this level: " : "At the selected time: ") + (d > 0 ? d.toFixed(2) + " ft of water" : "dry") + " (" + (scen ? "water" : st.id) + " at " + lv.toFixed(2) + " ft)" : st.id + ": no level");
+  var o = so(si), top = S.levels.start + S.levels.step * (S.levels.n - 1);
+  h += "<br>Ground " + fLvU(g, o) + (U.datum === "MLLW" ? " at " + st.id : "") + "<br>" + (never ? "Water does not reach it at " + fLv(top, o, 1) + " " + uName() + " or below" : (hit.kind === "p" ? "Ponds" : "Floods") + " once the water reaches " + fLv(first, o) + " " + uName() + (via && via[hit.i] ? ", through the storm drains" : "")) + "<br>" +
+    (R.L[si] > -32000 ? (scen ? "At this level: " : "At the selected time: ") + (d > 0 ? fLen(d) + " of water" : "dry") + " (" + (scen ? "water" : st.id) + " at " + fLv(lv, o) + " " + uName() + ")" : st.id + ": no level");
   if (v){ var V0 = S.values, i = hit.i, zi = v.zip[i], zh = zi === 255 ? null : V0.zhvi[zi], e = bDamage(i), pkI = R.pkI[si];
     h += "<span class='f'><i>Year Built:</i> " + (v.year[i] ? v.year[i] : "not on record") + "</span>" +
       "<span class='f'><i>" + V0.tax_year + " Tax Assessed Value:</i> " + (v.vt[i] ? fmtUSD(v.vt[i]) + (v.vb[i] ? " (parcel; this building " + fmtUSD(v.vb[i]) + ")" : "") : "no assessment record matched") + "</span>" +
       "<span class='f'><i>" + String(V0.zillow_month || "").slice(0, 4) + " Zillow Est. Avg. Value:</i> " + (!v.res[i] ? "not applicable (not a home)" : zh ? fmtUSD(zh) + " (typical home in ZIP " + V0.zips[zi] + ")" : "none for this ZIP code") + "</span>" +
       "<span class='f'><i>" + (scen ? "Est. Damage at This Water Level:" : hist ? "Est. Damage at This Flood's Max Depth:" : "Est. Damage at Max Forecast Depth:") + "</i> " + (!v.res[i] ? "not estimated (the curve is for homes)" : !e ? "not estimated (no assessed building value)" :
-        e.depth <= 0 ? "$0 (stays dry)" : fmtUSD(e.usd) + " (" + (e.frac > 0 ? (e.frac * 100).toFixed(1) + "% of the building; " : "") + e.depth.toFixed(2) + " ft of water" + (pkI >= 0 ? " " + fShort.format(tAt(pkI)) : "") + ", " + (e.above >= 0 ? e.above.toFixed(1) + " ft over" : (-e.above).toFixed(1) + " ft under") + (v.ec && v.ec[i] ? " the first floor of its elevation certificate, " + (v.ffh[i] / 10).toFixed(1) + " ft above the ground)" : " a first floor assumed " + (v.ffh[i] / 10).toFixed(0) + " ft above the ground)")) + "</span>"; }
+        e.depth <= 0 ? "$0 (stays dry)" : fmtUSD(e.usd) + " (" + (e.frac > 0 ? (e.frac * 100).toFixed(1) + "% of the building; " : "") + fLen(e.depth) + " of water" + (pkI >= 0 ? " " + fShort.format(tAt(pkI)) : "") + ", " + (e.above >= 0 ? fLen(e.above, 1) + " over" : fLen(-e.above, 1) + " under") + (v.ec && v.ec[i] ? " the first floor of its elevation certificate, " + fLen(v.ffh[i] / 10, 1) + " above the ground)" : " a first floor assumed " + fLenT(v.ffh[i] / 10) + " above the ground)")) + "</span>"; }
   p.innerHTML = h;
   p.hidden = false; var left = Math.min(px + 12, R.w - p.offsetWidth - 8), topp = py + 14; if (topp + p.offsetHeight > R.h - 8) topp = py - p.offsetHeight - 10;
   p.style.left = Math.max(8, left) + "px"; p.style.top = Math.max(8, topp) + "px"; }
@@ -714,6 +795,8 @@ function bind(){
     else if (k === "ArrowLeft") V.ox += st; else if (k === "ArrowRight") V.ox -= st; else if (k === "ArrowUp") V.oy += st; else if (k === "ArrowDown") V.oy -= st; else return; e.preventDefault(); draw(); });
   $("zIn").onclick = function(){ zoomAt(R.w / 2, R.h / 2, 1.6); }; $("zOut").onclick = function(){ zoomAt(R.w / 2, R.h / 2, 1 / 1.6); }; $("zFit").onclick = function(){ fitAll(); draw(); };
   $("time").addEventListener("input", function(){ T.obs = false; T.i = +this.value; stop(); update(); });
+  ["datum", "units"].forEach(function(key){ document.querySelectorAll("#" + key + " button").forEach(function(b){ b.onclick = function(){ setU(key, b.dataset.v); }; }); });
+  $("lBathy").onchange = function(){ R.bathy = this.checked; R.stamp++; draw(); }; $("lZones").onchange = function(){ draw(); };
   function fc(){ if (T.view !== "fc") use("fc"); stop(); }
   $("bNow").onclick = function(){ fc(); T.obs = false; T.i = Math.max(0, Math.min(LV.n - 1, Math.round((Date.now() - LV.t0ms) / (LV.step_min * 60000)))); update(); };
   $("bPeak").onclick = function(){ fc(); T.obs = false; T.i = R.peak; update(); };

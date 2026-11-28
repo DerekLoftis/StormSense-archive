@@ -212,6 +212,17 @@ project's shared folder (skill code, baselines, notes, station sheet, disclosure
   Impacts in the Next 72 Hours" with the nearest NOAA gauge's forecast on the left axis and roads and buildings on the
   right (his layout: keep the two right axes). `python -m inundation.page --prepared <page dir> --work <work dir>`
   redraws a prepared area's picture.
+- Derek's asks of 2026-11-28 (both pages): Datum (MLLW / NAVD88, opens on NAVD88) and Units (feet / metres) buttons
+  before the forecast buttons, followed by every count caption, plot, table, popup and note (data stay ft NAVD88;
+  MLLW is each gauge's own offset, `mllw` in levels.json; `?datum=`, `?units=`, remembered in the browser as
+  `stormsense-datum`, `stormsense-units`); the water depth layer (tiles `raster.v` 3: a cell wet at an ordinary high
+  tide carries its bed on the scale `bed0_ft` 1.3, `bed_step_ft` 0.06, so the rivers and the bay are drawn in the
+  same blues at every tide; a page prepared before keeps the old picture until it is prepared again, since the DEM
+  is not in the prepared pack); gauge boundaries (gray dashes, `static.json` `zones` from `page.zone_lines`; on by
+  default on a locality's page, off on the map of all localities); Scenario runs 0 to 10 ft (0 to 3 m) on the
+  selected datum with both ends labelled; on the map of all localities a click on a gauge also narrows the counts and
+  the plot to the roads and buildings that follow it (`SC`, `setScope`; "Whole coastal zone" undoes it). Check these
+  in a browser on a local build (`python -m inundation.site`, then `python3 -m http.server`), in each datum and unit.
 - Historical floods (`history.py`, `events/<id>/`): the 72 hours around the highest water at Sewells Point for the 2026
   Thanksgiving Day Nor'easter (from the archived runs, with every forecast), Matthew 2016, Sandy 2012, Irene 2011,
   Nor'Ida 2009, Isabel 2003 and the 1933 Hurricane (NOAA CO-OPS, USGS since 2007; ft NAVD88; the menu lists them
