@@ -196,6 +196,9 @@ On the saved tables of localities prepared before the rule, it would take out 96
 (Hickory Fork Road, 130 m at 3 to 4 ft between banks of 40%), 12 in Northampton (Ellens Lane, between two dunes:
 likely not a deck), 8 in Hampton, 6 in Newport News and none in Poquoson: they get it when they are next
 prepared. It finds the Woodrow Wilson Bridge's approaches over Jones Point in Alexandria (382 pieces).
+`python -m inundation.check_decks --prepared <dir> --work <prep's work dir> --name <name>` lists what the rule
+does on a prepared locality's saved roads, and with `--street` the ground along one street: read the profiles
+of the newly marked streets before changing the rule.
 
 ## Files
 
@@ -394,8 +397,19 @@ At each gauge's forecast peak (most between 4.9 and 6.1 ft NAVD88, about 14:30Z 
 | Richmond (City) (no pipes or values found) | 0.0 | – | 0.0 | 0 | – | – | 0.0 / 0 |
 | New Kent County (no pipes or values found) | 1.0 | – | 0.1 | 80 | – | – | 1.1 / 95 |
 | Hanover County, near tidal water (no pipes or values found) | 0.0 | – | 0.0 | 0 | – | – | 0.0 / 0 |
+| Caroline County, near tidal water (no pipes or values looked for) | 0.0 | – | 0.0 | 2 | – | – | 0.0 / 3 |
+| Spotsylvania County, near tidal water (no pipes or values looked for) | 0.0 | – | 0.0 | 0 | – | – | 0.0 / 0 |
+| Fredericksburg (no pipes or values looked for) | 0.0 | – | 0.0 | 0 | – | – | 0.0 / 0 |
+| King George County (no pipes or values looked for) | 0.3 | – | 0.1 | 12 | – | – | 0.4 / 18 |
+| Stafford County, near tidal water (no pipes or values looked for) | 0.1 | – | 0.0 | 2 | – | – | 0.1 / 8 |
 
-- The rows from Surry County down (the upper James, 28 Nov) are small because little there lies low: the James and
+- The rows from Caroline County down (the Fredericksburg area, 28 Nov): the forecast peak was 3.7 ft NAVD88 at
+  Fredericksburg, 3.4 at Tappahannock, 4.4 at Dahlgren, 3.8 at Leesylvania and 2.9 at Crow's Nest. King George's
+  flooded roads and nine of its buildings follow Dahlgren. Through Fredericksburg the elevation data has the
+  Rappahannock's surface at 5.0 ft (from the railroad bridge to above the city dock) and 6.5 ft at the Chatham
+  bridge, flown at a higher stage than the -1.1 ft below the city, so the map draws the river there only from
+  5.25 ft up. The ground beside it is not affected: nothing in the data lies lower than that water.
+- The rows from Surry County to Hanover County (the upper James, 28 Nov) are small because little there lies low: the James and
   the Appomattox run between bluffs above Hopewell, and the forecast peak was 4.9 ft NAVD88 at Jordan Point, 5.8 at
   Richmond Locks and 6.3 at Pocahontas. Charles City County has no VGIN footprints at all (6,381 FEMA outlines).
 - The rows from Gloucester down were prepared on 27 and 28 Nov with the gauges by water body, the high tide limit
@@ -471,7 +485,8 @@ A county's boundary runs far out into the bay and the ocean, and the frame is 1 
 
 ## Counties that are mostly upland
 
-Henrico, Chesterfield, Hanover and Prince George reach from a tidal river to the Piedmont, and nearly all of their
+Henrico, Chesterfield, Hanover, Prince George, Caroline, Spotsylvania and Stafford reach from a tidal river to the
+Piedmont, and nearly all of their
 roads and buildings stand higher than any level mapped here. A row of `areas.csv` with `low` = 1 (`prep --low`)
 keeps only what the water could reach:
 
@@ -490,6 +505,9 @@ keeps only what the water could reach:
 | Chesterfield | 1,935 of 25,594 | 16,167 of 210,830 | 0.74 (2.22 whole) |
 | Prince George | 457 of 2,627 | 5,070 of 30,325 | 0.67 |
 | Hanover | 61 of 7,740 | 975 of 89,063 | 0.26 |
+| Caroline | 240 of 3,339 | 1,817 of 27,853 | 0.57 |
+| Spotsylvania | 372 of 9,712 | 3,644 of 96,492 | 0.14 |
+| Stafford | 1,783 of 8,106 | 14,726 of 68,438 | 0.76 |
 
 `<name>_prep.json` has the counts under `low_frame`, and the page says what it holds. The tables of such a
 locality are not the whole locality.

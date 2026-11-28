@@ -171,7 +171,8 @@ project's shared folder (skill code, baselines, notes, station sheet, disclosure
   within 15 m after 20 m of level road is an abutment; Interstate 95 at Petersburg was a flooded road at 4 ft without
   it; 150 m at most on a road that is not a highway or a ramp). A road that stops within 150 m of an abutment at the
   locality's boundary is half of a bridge to the next locality (Four Mile Run; there 10 ft within 20 m is enough).
-  Steep dead ends and ravine roads must stay roads: check a change with a saved table (README "Bridges").
+  Steep dead ends and ravine roads must stay roads: check a change to the rule on saved tables with
+  `python -m inundation.check_decks --prepared <dir> --work <prep work dir> --name <name> [--street "..."]`.
   The Mobjack Norfolk SLR services are RGB extent pictures (no depth). Needs `inundation/requirements.txt`.
 - Hampton Roads (since 2026-11-26): one `prep` per locality FIPS. `drainage_sources.json` has Norfolk, Newport
   News (`snap_m` 1: pipes stop 0.85 m short of the structures), Virginia Beach, Chesapeake and Hampton (lines only:
@@ -209,7 +210,7 @@ project's shared folder (skill code, baselines, notes, station sheet, disclosure
   Nor'Ida or Matthew. The pages draw them in the Historical Floods view with the difference from the map's highest
   water (Norfolk in Isabel: 21 marks, median 0.03 ft below the map).
 - Site (2026-11-27): `inundation/areas.csv` lists the localities (Hampton Roads, the Middle Peninsula, the Northern
-  Neck and the Eastern Shore so far; add a row to add one). `python -m inundation.site --prepared <dir of <name>/> --latest <Latest site> --out site/inundation`
+  Neck, the Eastern Shore, the upper James and the Fredericksburg area so far; add a row to add one). `python -m inundation.site --prepared <dir of <name>/> --latest <Latest site> --out site/inundation`
   writes each locality's page under `<name>/` and `index.html`, the map of all of them (`templates/statewide.html`:
   Leaflet, Esri satellite hybrid or street basemap, opens on the whole coastal zone with every gauge (Derek,
   2026-11-27; a click on a gauge puts its forecast in the plot, Sewells Point's until then), gauges colored by NWS
@@ -247,7 +248,7 @@ project's shared folder (skill code, baselines, notes, station sheet, disclosure
   is several rows of areas.csv with a `box` (west south east north; `prep --box`): Accomack (4.30 billion cells, over
   the 32-bit node limit) is `accomack_north`, `accomack_south` and `tangier`.
 - Counties that are mostly upland (2026-11-28, Derek: "complete the remaining localities in coastal Va"): a row of
-  areas.csv with `low` = 1 (`prep --low`: Henrico, Chesterfield, Hanover, Prince George) keeps only the roads and
+  areas.csv with `low` = 1 (`prep --low`: Henrico, Chesterfield, Hanover, Prince George, Caroline, Spotsylvania, Stafford) keeps only the roads and
   buildings within 1.5 km of ground at or below 10 ft that the tide can be part of (`depth.low_grid` reads one tile
   row every 64 m, `depth.tidal_low` leaves out shut-in pits such as quarry floors below sea level, `prep.near_low`
   cuts the frame). Its tables are not the whole locality. The Town of West Point is inside King William's map.
