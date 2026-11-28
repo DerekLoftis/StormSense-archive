@@ -118,11 +118,19 @@ def raster(dem, cidx, origin, sts_xy, cell=CELL_M, hucs=None, fwd=None, forced=N
         where = {st: i for i, st in enumerate(ids or [])}
         for f in hucs:
             st = tether.rule(f["properties"]["huc12"], forced)
-            if st is None or (st and st not in where):
+            own = [where[t] for t in tether.group(st) if t in where]        # the rule's gauges that this page has
+            if st is None or (st and not own):
                 continue
             geom = shapely.transform(shapely.force_2d(shape(f["geometry"])), lambda c: np.column_stack(fwd(c[:, 0], c[:, 1])))
             m = features.rasterize([(geom, 1)], out_shape=(nh, nw), transform=tr, fill=0, dtype="uint8").astype(bool)
-            zone[m] = where[st] if st else NO_ZONE
+            if not st:
+                zone[m] = NO_ZONE
+            elif len(own) == 1:
+                zone[m] = own[0]
+            elif m.any():                                                   # the nearest of the rule's gauges
+                rr, cc = np.nonzero(m)
+                pts = np.column_stack([origin[0] + (cc + 0.5) * cell, origin[1] - (rr + 0.5) * cell])
+                zone[rr, cc] = np.asarray(own)[cKDTree(np.asarray(sts_xy)[own]).query(pts)[1]]
     return idx, zone, gnd
 
 

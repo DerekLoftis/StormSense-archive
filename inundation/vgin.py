@@ -77,28 +77,63 @@ def roads(fips, log=None):
     return feats
 
 
+def _as_usa(feats, fips):
+    for f in feats:
+        p = f["properties"]
+        f["properties"] = {"OBJECTID": p.get("OBJECTID", f.get("id")), "SOURCEFEATUREID": str(p.get("BUILD_ID") or ""),
+                           "BUILDINGCLASS": None, "NUMSTORIES": None, "FIPS": fips, "FOOTPRINTS": USA_STRUCTURES_NAME}
+    return feats
+
+
+NEAR_DEG = 0.00003      # about 3 m: an outline this close to a footprint is the same building drawn from other imagery
+
+
+def untouched(extra, feats, near=NEAR_DEG):
+    """The features of `extra` whose outline comes within `near` degrees of none of `feats`."""
+    import numpy as np
+    import shapely
+    from shapely.geometry import shape
+
+    def geoms(fs):
+        return shapely.make_valid(np.array([shape(f["geometry"]) if f.get("geometry") else None for f in fs], object))
+    if not extra or not feats:
+        return [f for f in extra if f.get("geometry")]
+    mine = geoms(feats)
+    tree = shapely.STRtree(mine[~shapely.is_missing(mine)])
+    hit = set(tree.query(geoms(extra), predicate="dwithin", distance=near)[0].tolist())
+    return [f for i, f in enumerate(extra) if i not in hit and f.get("geometry")]
+
+
 def buildings(fips, log=None):
-    """The locality's building footprints from VGIN. VGIN publishes none for King and Queen County (2026-11): where
-    it has none, the outlines of FEMA's USA Structures (ORNL, from imagery) stand in, with VGIN's property names
-    and `FOOTPRINTS` saying where they came from."""
+    """The locality's building footprints from VGIN, plus the outlines of FEMA's USA Structures (ORNL, from imagery;
+    450 square feet and larger) that come within 3 m of no VGIN footprint, with VGIN's property names and
+    `FOOTPRINTS` saying where those came from. VGIN's layer has gaps: none for King and Queen County (2026-11),
+    4,056 footprints in Northumberland where FEMA maps 14,101 structures (11,825 of them away from any footprint),
+    and FEMA structures without a footprint are 6,246 in King William, 6,142 in Gloucester, 5,001 in Mathews and
+    5 to 17% of FEMA's count in the counties around them. They are other buildings, not the same ones drawn to one
+    side: in Mathews the median distance to the nearest footprint is 28 m. VGIN keeps the sheds FEMA leaves out.
+    If FEMA's service cannot be read the log warns and VGIN's footprints stand alone."""
     where = f"FIPS='{fips}'"
     n = count(BUILDINGS, where)
-    if n == 0 and count(USA_STRUCTURES, where):
-        feats = query(USA_STRUCTURES, where, "OBJECTID,BUILD_ID,FIPS", log)
-        n = count(USA_STRUCTURES, where)
-        if len(feats) != n:
-            raise RuntimeError(f"buildings (USA Structures): got {len(feats)} of {n}")
-        for f in feats:
-            p = f["properties"]
-            f["properties"] = {"OBJECTID": p.get("OBJECTID", f.get("id")), "SOURCEFEATUREID": str(p.get("BUILD_ID") or ""),
-                               "BUILDINGCLASS": None, "NUMSTORIES": None, "FIPS": fips, "FOOTPRINTS": USA_STRUCTURES_NAME}
-        if log:
-            log(f"  VGIN has no footprints for {fips}: {len(feats)} outlines from {USA_STRUCTURES_NAME}")
-        return feats
-    feats = query(BUILDINGS, where, BUILDING_FIELDS, log)
+    feats = query(BUILDINGS, where, BUILDING_FIELDS, log) if n else []
     if len(feats) != n:
         raise RuntimeError(f"buildings: got {len(feats)} of {n}")
-    return feats
+    try:
+        m = count(USA_STRUCTURES, where)
+        more = query(USA_STRUCTURES, where, "OBJECTID,BUILD_ID,FIPS", log) if m else []
+        if len(more) != m:
+            raise RuntimeError(f"buildings (USA Structures): got {len(more)} of {m}")
+    except RuntimeError as e:
+        if n == 0:
+            raise
+        if log:
+            log(f"  WARNING: FEMA USA Structures could not be read ({str(e)[:160]}): VGIN's footprints only")
+        return feats
+    more = _as_usa(untouched(more, feats), fips)
+    if log and more:
+        log(f"  VGIN has {n} footprints for {fips} and FEMA maps {m} structures: {len(more)} outlines away from any "
+            f"VGIN footprint added from {USA_STRUCTURES_NAME}")
+    return feats + more
 
 
 def locality(fips):

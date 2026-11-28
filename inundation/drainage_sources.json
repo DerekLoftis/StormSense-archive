@@ -72,7 +72,9 @@
         "url": "https://maps.nnva.gov/gis/rest/services/Operational/StormwaterManhole/MapServer/0",
         "fields": "FACILITYID,MANHOLETYPE",
         "name": "manhole",
-        "closed": true
+        "closed": true,
+        "saved": "saved_layers/51700_stormwater_manhole.geojson.gz",
+        "saved_note": "the city's service has had no layers since 27 Nov 2026; the copy is the layer as read on 26 Nov 2026"
       }
     ],
     "valve_field": "TIDEGATE",

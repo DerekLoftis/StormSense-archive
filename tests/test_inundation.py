@@ -109,6 +109,13 @@ def test_nearest_gauge_and_huc12_override():
     assert list(st) == ["", "EAST", "WEST"] and np.isnan(km[0]) and np.isclose(km[1], 1)
     assert tether.rule("0301A", {"0301*": "-"}) == "" and tether.rule("0208C", {"0301*": "-"}) is None
     assert tether.overrides()["03010205*"] == "-"            # Back Bay and the North Landing River
+    # several gauges in a rule: the nearest of those, whatever else is nearer
+    far = sts + [{"station": "NORTH", "name": "", "lon": 1000.0, "lat": 100.0}]       # nearest to the first point
+    st, km = tether.nearest(x, y, far, flat, huc, {"0301A": "WEST|EAST", "0208C": "EAST|NORTH"})
+    assert list(st) == ["WEST", "EAST", "NORTH"] and np.isclose(km[0], 1)
+    assert tether.group("WACH|CHIV") == ["WACH", "CHIV"] and tether.group("") == [] and tether.group(None) == []
+    ok = {s["station"] for s in tether.stations()}
+    assert all(set(tether.group(v)) <= ok for v in tether.overrides().values() if v != "-")
     assert all(s["lat"] and not s["station"].startswith(("NN", "VB")) for s in tether.stations())
 
 
@@ -418,7 +425,16 @@ def test_statewide_curves_count_each_gauges_roads_and_buildings_at_every_level()
 def test_the_list_of_areas_names_each_locality_once_and_the_workflow_reads_it():
     from inundation import site
     rows = site.areas()
-    assert len({r["name"] for r in rows}) == len({r["fips"] for r in rows}) == len(rows) >= 18
+    assert len({r["name"] for r in rows}) == len(rows) >= 18
+    from inundation import prep
+    parts = {}
+    for r in rows:
+        parts.setdefault(r["fips"], []).append(prep.parse_box(r["box"]))
+    for fips, boxes in parts.items():                 # a locality once, or in parts that each have a box and share nothing
+        assert len(boxes) == 1 or all(boxes), fips
+        for i, a in enumerate(boxes):
+            for b in boxes[i + 1:]:
+                assert a[2] <= b[0] or b[2] <= a[0] or a[3] <= b[1] or b[3] <= a[1], (fips, a, b)
     assert all(r["fips"].startswith("51") and len(r["fips"]) == 5 and r["title"] and r["region"] for r in rows)
     assert all(r["name"] == r["name"].lower() and " " not in r["name"] for r in rows)       # a folder and a URL
     assert {"norfolk", "poquoson", "gloucester", "york"} <= {r["name"] for r in rows}
@@ -557,3 +573,168 @@ def test_marks_on_a_page_are_the_tides_marks_inside_its_frame(tmp_path, monkeypa
     assert marks[1]["k"] == "s" and "o" not in marks[1] and marks[1]["s"] == 1
     assert 0 < marks[0]["x"] < 60000 and 0 < marks[0]["y"] < 60000      # page units of half a metre from the frame's corner
     assert history.marks_for_page("no-such-storm", frame, 6.3) == ([], [], 0)
+
+
+def test_a_layer_its_city_took_down_comes_from_the_saved_copy(monkeypatch):
+    from inundation import drainage, vgin
+    src = drainage.sources()["51700"]
+
+    def query(url, where, fields, log=None, geometry=True):
+        if "Manhole" in url:
+            raise RuntimeError(f"{url}/query: HTTP Error 404: Not Found")
+        return []
+    monkeypatch.setattr(vgin, "query", query)
+    monkeypatch.setattr(vgin, "count", lambda url, where: 0)
+    out = drainage.fetch(src)
+    assert len(out["structures"]) == out["saved"][0]["features"] > 4000
+    assert all(f["properties"]["_closed"] == 1 for f in out["structures"])      # manholes are never openings
+    assert out["saved"][0]["read_utc"].startswith("2026-11-26")
+    # a layer without a copy still stops the preparation
+    src = {"pipes": [{"url": "https://example.invalid/Manhole/0"}]}
+    try:
+        drainage.fetch(src)
+    except RuntimeError as e:
+        assert "404" in str(e)
+    else:
+        raise AssertionError("a layer that cannot be read and has no copy must fail")
+
+
+def test_open_water_as_one_node_gives_the_same_answer():
+    pytest.importorskip("scipy")
+    pytest.importorskip("numba")
+    from inundation import spread
+    rng = np.random.default_rng(11)
+    for trial in range(4):
+        dem = rng.uniform(-3, 12, (200, 260)).astype(np.float32)
+        dem = (dem + np.roll(dem, 1, 0) + np.roll(dem, 1, 1) + np.roll(dem, (1, 1), (0, 1))) / 4
+        dem[:, :100] = -8.0                                  # the bay
+        dem[:, 100:103] = rng.uniform(-3, 6, (200, 3))       # a ragged shore
+        dem[60:150, 150:240] = -5.0                          # a deep lake behind higher ground ...
+        dem[55:60, 150:240] = dem[150:155, 150:240] = dem[55:155, 145:150] = dem[55:155, 240:245] = 4.0 + trial
+        dem[100, 103:150] = [1.0, 3.0, 5.0, 11.0][trial]     # ... and a ditch to it that fills at some level, or never
+        dem[(rng.random(dem.shape) < 0.01) & (dem > -4)] = np.nan            # holes in the data, on land
+        n = 80
+        links = (rng.integers(0, 200, n), rng.integers(0, 260, n), rng.integers(0, 12, n))
+        wall = (np.arange(20, 180), np.full(160, 125)) if trial % 2 else None
+        g = spread.own_level(dem, depth.LEVELS_FT, wall)
+        lab, bodies, cells = spread.open_sea(g, keep=(links[0], links[1]))
+        assert bodies >= 2 and cells > 20000 and (g == spread.SEA).sum() == cells
+        assert not (g[links[0], links[1]] == spread.SEA).any()               # an opening keeps its own node
+        a = depth.connect_index(dem, links=links, blocked=wall, method="label")
+        b = depth.connect_index(dem, links=links, blocked=wall, method="spread")
+        assert (a[0] == b[0]).all() and (a[1] == b[1]).all()
+        assert (depth.connect_index(dem, blocked=wall, method="label") == depth.connect_index(dem, blocked=wall, method="spread")).all()
+    # the lake is water from the start, but the sea reaches it only over its 7 ft bank in the last trial (ditch at 11 ft)
+    assert depth.LEVELS_FT[b[0][100, 200]] == 7.0 and b[0][100, 50] == 0
+
+
+def test_the_frame_is_cut_back_to_the_roads_and_buildings():
+    from inundation import prep
+    county = (0, 0, 90000, 60000)                              # far out into the bay and the ocean
+    x, y = np.array([30000.0, 70000.0, np.nan]), np.array([5000.0, 58000.0, 100.0])
+    assert prep.land_bounds(county, x, y) == (28500, 3500, 71500, 59500)
+    assert prep.land_bounds(county, x, y, margin=40000) == county            # never larger than the county's own
+    assert prep.land_bounds(county, [], []) == county
+    feats = [{"geometry": {"type": "Polygon", "coordinates": [[[1.0, 2.0], [1.1, 2.0], [1.1, 2.1], [1.0, 2.0]]]}},
+             {"geometry": {"type": "MultiPolygon", "coordinates": [[[[3.0, 4.0], [3.1, 4.0], [3.1, 4.1], [3.0, 4.0]]]]}},
+             {"geometry": None}]
+    bx, by = prep.first_points(feats, lambda lon, lat: (lon * 10, lat * 10))
+    assert list(bx) == [10.0, 30.0] and list(by) == [20.0, 40.0]
+
+
+
+def test_a_locality_too_large_for_one_frame_is_prepared_in_boxes(tmp_path):
+    pytest.importorskip("shapely")
+    from inundation import prep
+    assert prep.parse_box("") is None and prep.parse_box(None) is None
+    assert prep.parse_box("-75.95 37.3 -75.0 37.75") == prep.parse_box("-75.95,37.3,-75.0,37.75") == (-75.95, 37.3, -75.0, 37.75)
+    with pytest.raises(ValueError):
+        prep.parse_box("-75 37.3 -75.95 37.75")
+    line = lambda lon, lat: {"geometry": {"type": "LineString", "coordinates": [[lon, lat], [lon + 0.5, lat + 0.5]]}}
+    feats = [line(1.0, 1.0), line(1.9, 1.9), line(2.0, 1.0), line(1.0, 2.0), {"geometry": None}]
+    south, north, east = (1.0, 1.0, 2.0, 2.0), (1.0, 2.0, 2.0, 3.0), (2.0, 1.0, 3.0, 3.0)
+    got = [prep.in_box(feats, b) for b in (south, north, east)]
+    assert got[0] == feats[:2] and got[1] == [feats[3]] and got[2] == [feats[2]]       # each one once, by where it starts
+    loc = {"properties": {"NAMELSAD": "Split County"},
+           "geometry": {"type": "Polygon", "coordinates": [[[0, 0], [4, 0], [4, 4], [0, 4], [0, 0]]]}}
+    prep.write_outline(str(tmp_path / "o_outline.geojson"), loc, box=south)
+    with open(tmp_path / "o_outline.geojson") as fh:
+        g = json.load(fh)["geometry"]
+    assert g["type"] == "MultiPolygon"
+    xs, ys = zip(*g["coordinates"][0][0])
+    assert (min(xs), min(ys), max(xs), max(ys)) == south
+    from inundation import site
+    assert len(site.outline(str(tmp_path), "o", {})) == 1
+
+
+def test_water_under_a_deck_is_judged_by_the_gauges_own_high_tide(tmp_path):
+    pytest.importorskip("scipy")
+    from inundation import prep, tether
+    with open(tmp_path / "LOWT.json", "w") as fh:
+        json.dump({"MHHW": 1.82, "NAVD88": 1.30}, fh)              # 0.52 ft NAVD88, Tangier's
+    with open(tmp_path / "HIGH.json", "w") as fh:
+        json.dump({"MHHW": 3.9, "NAVD88": 1.8}, fh)                # 2.1 ft: never above the 1 ft limit
+    with open(tmp_path / "NONE.json", "w") as fh:
+        json.dump({"NAVD88": 1.0}, fh)
+    tide = lambda st: tether.high_tide_ft(st, str(tmp_path))
+    assert tide("LOWT") == pytest.approx(0.52) and tide("NONE") is None and tide("GONE") is None and tide("") is None
+    limit = prep.over_water_ft(np.array(["LOWT", "HIGH", "NONE", "", "LOWT"], object), tide)
+    assert list(np.round(limit, 2)) == [0.52, 1.0, 1.0, 1.0, 0.52]
+    assert tether.high_tide_ft("SWPT") == pytest.approx(1.15, abs=0.02)      # the datum sheets the run uses
+    assert tether.high_tide_ft("PRTV") < 0.6
+    # an island lane at 0.8 ft is a road where the high tide is 0.52 ft and water under a deck where the limit is 1 ft
+    n = 6
+    pieces = {"SEG_TYPE": [None] * n, "xm": np.arange(n) * 100.0, "ym": np.zeros(n), "ST_FULL": ["MAIN ST"] * n,
+              "road": np.arange(n)}
+    ground = np.array([0.8, 0.8, 0.3, 0.8, 1.4, np.nan])
+    assert list(prep.bridges(pieces, ground)) == [1, 1, 1, 1, 0, 1]
+    assert list(prep.bridges(pieces, ground, np.full(n, 0.52))) == [0, 0, 1, 0, 0, 1]
+
+
+def test_fema_outlines_fill_in_where_vgin_has_no_footprint(monkeypatch):
+    pytest.importorskip("shapely")
+    from inundation import prep, vgin
+    sq = lambda x, y, d=0.0001: {"type": "Polygon", "coordinates": [[[x, y], [x + d, y], [x + d, y + d], [x, y + d], [x, y]]]}
+    footprints = [{"properties": {"OBJECTID": 1, "SOURCEFEATUREID": "a"}, "geometry": sq(-76.3, 37.9)},
+                  {"properties": {"OBJECTID": 2, "SOURCEFEATUREID": "b"}, "geometry": None}]
+    fema = [{"properties": {"OBJECTID": 7, "BUILD_ID": 70}, "geometry": sq(-76.30005, 37.90005)},      # the same house
+            {"properties": {"OBJECTID": 8, "BUILD_ID": 80}, "geometry": sq(-76.29988, 37.9)},        # 2 m beside it
+            {"properties": {"OBJECTID": 9, "BUILD_ID": 90}, "geometry": sq(-76.2995, 37.9)},         # the neighbour's
+            {"properties": {"OBJECTID": 10, "BUILD_ID": 100}, "geometry": None}]
+    assert [f["properties"]["OBJECTID"] for f in vgin.untouched(fema, footprints)] == [9]
+    assert [f["properties"]["OBJECTID"] for f in vgin.untouched(fema, [])] == [7, 8, 9]
+    copy = lambda fs: json.loads(json.dumps(fs))
+    monkeypatch.setattr(vgin, "count", lambda layer, where: len(footprints if layer == vgin.BUILDINGS else fema))
+    monkeypatch.setattr(vgin, "query", lambda layer, where, fields, log=None: copy(footprints if layer == vgin.BUILDINGS else fema))
+    said = []
+    got = vgin.buildings("51133", said.append)
+    assert [f["properties"]["OBJECTID"] for f in got] == [1, 2, 9] and got[2]["properties"]["FOOTPRINTS"] == vgin.USA_STRUCTURES_NAME
+    assert got[2]["properties"]["SOURCEFEATUREID"] == "90" and "1 outlines away from any VGIN footprint" in said[-1]
+    assert prep.building_source(got) == f"VGIN building footprints, and 1 {vgin.USA_STRUCTURES_NAME} outlines where VGIN has no footprint"
+    assert prep.building_source(got[:2]) == "VGIN building footprints"
+    assert prep.building_source(got[2:]).endswith("(VGIN has none here)")
+
+    def down(layer, where):                                   # FEMA's service out: VGIN's footprints alone, and the log says so
+        if layer == vgin.USA_STRUCTURES:
+            raise RuntimeError("HTTP 503")
+        return len(footprints)
+    monkeypatch.setattr(vgin, "count", down)
+    said = []
+    assert len(vgin.buildings("51133", said.append)) == 2 and "WARNING" in said[-1]
+
+
+def test_the_pages_carry_what_derek_asked_of_the_maps():
+    here = os.path.join(os.path.dirname(__file__), "..", "inundation", "templates")
+    with open(os.path.join(here, "map.html")) as fh:
+        page = fh.read()
+    with open(os.path.join(here, "statewide.html")) as fh:
+        state = fh.read()
+    for html in (page, state):
+        assert "Flooded Building" not in html and "Flood Affected Structure" in html       # the name in the popup, no labels
+        assert all(k in html for k in ('action:"#ffe600"', 'minor:"#ff9900"', 'moderate:"#e60000"', 'major:"#c800e6"'))
+        assert "World_Imagery" in html and "World_Street_Map" in html
+    assert 'data-b="plain"' in page and "function drawBase" in page and "function lonlat" in page
+    assert "function selectGauge" in state and "fitBounds" in state and "function declutter" in state
+    from inundation import tether
+    sts = tether.stations()
+    assert {"navd88_above_mllw_ft", "noaa"} <= set(sts[0]) and any(s["noaa"] for s in sts) and not all(s["noaa"] for s in sts)

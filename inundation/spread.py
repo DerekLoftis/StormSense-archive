@@ -4,7 +4,7 @@ depth.connect_index labels the wet cells once per water level, which needs the w
 fine for Norfolk (280 million cells), not for Virginia Beach or Suffolk (well over a billion). Here every cell first
 gets its own level number (the lowest level at or above its ground). The cells are then added level by level, in
 row order, and joined to the neighbours (and storm drain networks) already there; a body of water is marked with the
-level at which it first touches the sea. Each cell is added once and memory is read almost in sequence. Six bytes
+level at which it first touches the sea. A body of open water is one node (open_sea). Each cell is added once and memory is read almost in sequence. Six bytes
 per cell are kept in memory and the DEM stays on disk.
 
 Needs numba (in inundation/requirements.txt); depth.connect_index uses this when numba is there and labels otherwise.
@@ -14,6 +14,8 @@ import os
 import numpy as np
 
 DRY = 127            # own level number of a cell the water never covers: above the top level, no data, or a wall
+SEA = 126            # open tidal water that needs no node of its own (open_sea)
+SEA_BLOCK = 8        # cells along the side of the squares open_sea works with
 OPENING = 128        # flag on a cell that is an opening of a drainage network
 NEVER = 255
 
@@ -27,7 +29,7 @@ def own_level(dem_ft, levels, blocked=None, rows=2048, path=None):
     """uint8 per cell: the number of the lowest level at or above the ground (DRY where none). Reads the DEM in
     strips, so a memory-mapped DEM never has to fit in memory. `path` keeps the result in a file as well."""
     lev = np.asarray(levels, np.float64)
-    if len(lev) >= DRY:
+    if len(lev) >= SEA:
         raise ValueError("too many levels")
     h, w = dem_ft.shape
     g = np.empty((h, w), np.uint8) if path is None else np.lib.format.open_memmap(path, "w+", np.uint8, (h, w))
@@ -47,6 +49,53 @@ def seed_cells(dem_ft, level, step=8):
     if dem_ft.size <= 50_000_000:
         return depth.tidal_seeds(np.asarray(dem_ft), level)
     return [(r * step, c * step) for r, c in depth.tidal_seeds(np.asarray(dem_ft[::step, ::step]), level, cell_m2=step * step)]
+
+
+def open_sea(g, keep=None, block=SEA_BLOCK, rows=2048, smallest=64):
+    """Marks open water as SEA in the grid of own levels. Returns (the number of its body for each square of
+    block x block cells, 0 where none; how many bodies; how many cells).
+
+    A frame on the Eastern Shore is mostly bay and ocean, and a node of the union-find for each of those cells is
+    what does not fit in memory (Accomack: several billion cells). The squares that lie wholly at the lowest level
+    are under water at every level, and squares that touch are one body of water whatever else happens. Each such
+    body of at least `smallest` squares gets one node for all its cells, and a cell next to one is joined to that
+    node. The answer is the same cell for cell. `keep` = (rows, cols) of cells that must keep their own node (the
+    openings of the storm drains): their squares are left alone."""
+    from scipy import ndimage
+    h, w = g.shape
+    hb, wb = h // block, w // block
+    none = np.zeros((1, 1), np.int32), 0, 0
+    if hb < 3 or wb < 3:
+        return none
+    wet = np.zeros((hb, wb), bool)
+    step = max(block, rows // block * block)
+    for r in range(0, hb * block, step):
+        a = np.asarray(g[r:min(r + step, hb * block), :wb * block]) == 0
+        wet[r // block:r // block + a.shape[0] // block] = a.reshape(-1, block, wb, block).all(axis=(1, 3))
+    if keep is not None and len(keep[0]):
+        kr, kc = np.asarray(keep[0]) // block, np.asarray(keep[1]) // block
+        ok = (kr < hb) & (kc < wb)
+        wet[kr[ok], kc[ok]] = False
+    lab, n = ndimage.label(wet, structure=np.ones((3, 3)))
+    del wet
+    if n == 0:
+        return none
+    sizes = np.bincount(lab.ravel(), minlength=n + 1)
+    new = np.zeros(n + 1, np.int32)
+    big = np.flatnonzero(sizes >= smallest)
+    big = big[big > 0]
+    if not len(big):
+        return none
+    new[big] = np.arange(1, len(big) + 1)
+    lab = new[lab]
+    for r in range(0, hb, step // block):
+        m = lab[r:r + step // block] > 0
+        if m.any():
+            m = np.repeat(np.repeat(m, block, axis=0), block, axis=1)
+            part = np.array(g[r * block:r * block + m.shape[0], :wb * block])
+            part[m] = SEA
+            g[r * block:r * block + m.shape[0], :wb * block] = part
+    return lab, len(big), int(sizes[big].sum()) * block * block
 
 
 def sparse(n, dtype):
@@ -96,7 +145,7 @@ if njit is not None:
                 vflag[rb - n] = k
 
     @njit(cache=True)
-    def _spread(g, out, parent, seed_r, seed_c, nlev, cells, nets, n_nets, use_links):
+    def _spread(g, out, parent, seed_r, seed_c, nlev, cells, nets, n_nets, use_links, sea, n_sea, block):
         """Fills `out` with the level number at which the sea first reaches each cell (255: never).
 
         Cells are added level by level in row order, each joined to the neighbours already there, so memory is
@@ -105,10 +154,12 @@ if njit is not None:
         n = h * w
         flag = out.reshape(n)
         gf = g.reshape(n)
-        vflag = np.full(max(n_nets, 1), 255, np.uint8)
-        for i in range(n_nets):
+        vflag = np.full(max(n_nets + n_sea, 1), 255, np.uint8)
+        for i in range(n_nets + n_sea):
             parent[n + i] = n + i
-        if (gf[seed_r[0] * w + seed_c[0]] & 127) != 0:
+        first_sea = n + n_nets - 1                       # body b of open water (open_sea) is node first_sea + b
+        g0 = gf[seed_r[0] * w + seed_c[0]] & 127
+        if g0 != 0 and g0 != 126:
             return 0
         for k in range(nlev):
             for r in range(h):
@@ -128,7 +179,9 @@ if njit is not None:
                                 continue
                             nb = rr * w + cc
                             gi = g[rr, cc] & 127
-                            if gi < k or (gi == k and nb < cell):       # already there
+                            if gi == 126:                               # open water: there from the start
+                                _join(parent, flag, vflag, n, cell, first_sea + sea[rr // block, cc // block], k)
+                            elif gi < k or (gi == k and nb < cell):     # already there
                                 _join(parent, flag, vflag, n, cell, nb, k)
                     if use_links and (g[r, c] & 128) != 0:              # an opening: joined to its network
                         lo = 0
@@ -145,14 +198,24 @@ if njit is not None:
             if k == 0:                                                  # every body of tidal water is the sea
                 for i in range(len(seed_r)):
                     seed = seed_r[i] * w + seed_c[i]
-                    if (gf[seed] & 127) == 0:
-                        flag[_find(parent, seed)] = 0
+                    gs = gf[seed] & 127
+                    if gs == 126:
+                        seed = first_sea + sea[seed_r[i] // block, seed_c[i] // block]
+                    if gs == 0 or gs == 126:
+                        root = _find(parent, seed)
+                        if root < n:
+                            flag[root] = 0
+                        else:
+                            vflag[root - n] = 0
         wet = 0
         for cell in range(n):
             if (gf[cell] & 127) == 127:
                 flag[cell] = 255
             else:
-                root = _find(parent, cell)
+                node = cell
+                if (gf[cell] & 127) == 126:
+                    node = first_sea + sea[(cell // w) // block, (cell % w) // block]
+                root = _find(parent, node)
                 flag[cell] = flag[root] if root < n else vflag[root - n]
                 if flag[cell] != 255:
                     wet += 1
@@ -184,12 +247,15 @@ def connect_index(dem_ft, levels, seed=None, log=None, links=None, blocked=None,
         _, net = np.unique(ln, return_inverse=True)
         net = np.asarray(net).ravel().astype(np.int64)
         n_nets = int(net.max()) + 1 if len(net) else 0
-    if h * w + n_nets >= 2 ** 32:
+    sea, n_sea, sea_cells = open_sea(g, keep=None if links is None else (lr, lc))
+    if log and n_sea:
+        log(f"  open water: {sea_cells:,} of {h * w:,} cells in {n_sea:,} bodies that take one node each")
+    if h * w + n_nets + n_sea >= 2 ** 32:
         raise ValueError("the grid has more than 4.29 billion cells: split the area")
-    parent = sparse(h * w + n_nets, np.uint32)
+    parent = sparse(h * w + n_nets + n_sea, np.uint32)
     empty = np.zeros(0, np.int64)
     out = np.full((h, w), NEVER, np.uint8)
-    n = _spread(g, out, parent, seed_r, seed_c, len(levels), empty, empty, 0, False)
+    n = _spread(g, out, parent, seed_r, seed_c, len(levels), empty, empty, 0, False, sea, n_sea, SEA_BLOCK)
     if log:
         log(f"  over the surface: {n:,} cells reached through {levels[-1]:+.2f} ft")
     def keep(a, i):                       # to its file and back as a memory map, or as it is
@@ -211,7 +277,7 @@ def connect_index(dem_ft, levels, seed=None, log=None, links=None, blocked=None,
     order = np.argsort(cell, kind="stable")
     g[lr, lc] |= OPENING
     piped = np.full((h, w), NEVER, np.uint8)
-    m = _spread(g, piped, parent, seed_r, seed_c, len(levels), cell[order], net[order], n_nets, True)
+    m = _spread(g, piped, parent, seed_r, seed_c, len(levels), cell[order], net[order], n_nets, True, sea, n_sea, SEA_BLOCK)
     if log:
         log(f"  with the pipes: {m - n:,} more cells")
     del parent

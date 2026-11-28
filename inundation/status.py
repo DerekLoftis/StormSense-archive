@@ -274,7 +274,7 @@ def main(argv=None):
     def whole(v, f="%.0f"):
         return ["" if not np.isfinite(x) else f % x for x in np.asarray(v, float)]
 
-    rmore, bmore, dmg = {}, {"label": np.where(bres["state_peak"] == 2, "Flooded Building", "")}, None
+    rmore, bmore, dmg = {}, {"label": np.where(bres["state_peak"] == 2, "Flood Affected Structure", "")}, None
     if "via_pipes" in roads:
         rmore["via_pipes"] = whole(roads["via_pipes"])
         bmore["via_pipes"] = whole(bldgs["via_pipes"])

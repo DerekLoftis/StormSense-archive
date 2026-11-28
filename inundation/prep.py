@@ -25,7 +25,8 @@ import numpy as np
 
 from . import FLOODED_FT, PIECE_M, PONDED_FT, barriers, damage, depth, drainage, ffe, page, segments, tether, value, vgin
 
-OVER_WATER_FT = 1.0   # ground below this (ft NAVD88; MHHW at Sewells Point is 1.15) cannot be a road surface
+OVER_WATER_FT = 1.0   # ground below this (ft NAVD88; MHHW at Sewells Point is 1.15) cannot be a road surface;
+                      # lower where the gauge's own mean higher high water is lower (over_water_ft)
 APPROACH_M = 60       # pieces of the same street this close to an over-water piece are on the bridge too
 RCL_BRIDGE = 2        # VGIN RCL SEG_TYPE of bridges and overpasses
 BUFFER_M = 500
@@ -63,21 +64,96 @@ def bounds_of(feature, transform, buffer=BUFFER_M):
             int(np.ceil(xs.max() + buffer)), int(np.ceil(ys.max() + buffer)))
 
 
+LAND_MARGIN_M = 1500
+
+
+def land_bounds(bounds, xs, ys, margin=LAND_MARGIN_M):
+    """The frame cut back to the roads and buildings plus a margin, never larger than `bounds`. A county's boundary
+    runs far out into the bay and the ocean (Accomack's to the Maryland line in the Chesapeake and three miles off
+    the beach), and open water that far from anything mapped only costs memory and disk."""
+    xs, ys = np.asarray(xs, float), np.asarray(ys, float)
+    ok = np.isfinite(xs) & np.isfinite(ys)
+    if not ok.any():
+        return bounds
+    xs, ys = xs[ok], ys[ok]
+    return (max(bounds[0], int(np.floor(xs.min() - margin))), max(bounds[1], int(np.floor(ys.min() - margin))),
+            min(bounds[2], int(np.ceil(xs.max() + margin))), min(bounds[3], int(np.ceil(ys.max() + margin))))
+
+
+def first_lonlat(feature):
+    """The first point of a feature's geometry (lon, lat), or None without one."""
+    c = (feature.get("geometry") or {}).get("coordinates") or []
+    while c and isinstance(c[0], (list, tuple)):
+        if not isinstance(c[0][0], (list, tuple)):
+            return c[0][0], c[0][1]
+        c = c[0]
+    return None
+
+
+def first_points(features, transform):
+    """One corner of each building's outline, in map coordinates: enough to know how far the buildings reach."""
+    pts = [p for p in map(first_lonlat, features) if p is not None]
+    if not pts:
+        return np.zeros(0), np.zeros(0)
+    lon, lat = np.asarray(pts, float).T
+    x, y = transform(lon, lat)
+    return np.asarray(x), np.asarray(y)
+
+
+def parse_box(text):
+    """'west,south,east,north' in degrees as four floats, or None for an empty text."""
+    if not (text or "").strip():
+        return None
+    box = tuple(float(v) for v in text.replace(",", " ").split())
+    if len(box) != 4 or not (box[0] < box[2] and box[1] < box[3]):
+        raise ValueError(f"a box is west,south,east,north in degrees, not {text!r}")
+    return box
+
+
+def in_box(features, box):
+    """The features whose first point lies in the box (west and south edges in, east and north edges out, so that
+    boxes side by side share nothing and lose nothing). A locality too large for one frame is prepared as several
+    areas of inundation/areas.csv, each with its `box` (Accomack: north, south and Tangier Island)."""
+    w, s, e, n = box
+    keep = []
+    for f in features:
+        p = first_lonlat(f)
+        if p is not None and w <= p[0] < e and s <= p[1] < n:
+            keep.append(f)
+    return keep
+
+
 def middle(a):
     """Row-wise median treating NaN as 'never' (+inf): NaN when most of the row never floods."""
     m = np.median(np.where(np.isfinite(a), a, np.inf), axis=1)
     return np.where(np.isfinite(m), m, np.nan)
 
 
-def bridges(pieces, ground):
+def over_water_ft(stations, high_tide=tether.high_tide_ft):
+    """For each place, by its gauge: ground below this is water or marsh under a deck or a pier, not a road or a
+    yard. OVER_WATER_FT, or the gauge's mean higher high water where that is lower: the bay's tide is small
+    (0.52 ft NAVD88 at Tangier, 0.21 at Windmill Point), and Tangier Island's lanes and yards lie at 0.7 to 1.5 ft.
+    With one limit of 1 ft, 1,219 of the island's 1,381 road pieces were bridges and 459 of 581 buildings piers."""
+    known = {}
+    out = np.full(len(stations), OVER_WATER_FT)
+    for i, st in enumerate(stations):
+        if st not in known:
+            h = high_tide(st) if st else None
+            known[st] = OVER_WATER_FT if h is None else min(OVER_WATER_FT, h)
+        out[i] = known[st]
+    return out
+
+
+def bridges(pieces, ground, limit=OVER_WATER_FT):
     """0 road on the ground; 1 the elevation model shows water or a cut under it (bridge deck, tunnel);
     2 a bridge or overpass in VGIN's own coding; 3 the same street within APPROACH_M of a 1 (the spans
-    over the banks, where the bare-earth model shows the shore under the deck)."""
+    over the banks, where the bare-earth model shows the shore under the deck). limit: ground below it is
+    water, one value or one per piece (over_water_ft)."""
     from scipy.spatial import cKDTree
     code = np.zeros(len(ground), np.int8)
     seg = np.array([int(t) if t is not None else -1 for t in pieces["SEG_TYPE"]])
     code[seg == RCL_BRIDGE] = 2
-    over = (ground < OVER_WATER_FT) | ~np.isfinite(ground)
+    over = (ground < limit) | ~np.isfinite(ground)
     code[over] = 1
     if over.any():
         xy = np.column_stack([pieces["xm"], pieces["ym"]])
@@ -230,6 +306,8 @@ def main(argv=None):
     ap.add_argument("--no-barriers", action="store_true", help="leave the floodwalls and levees of the National Levee Database out")
     ap.add_argument("--no-values", action="store_true", help="leave out parcels, assessed values and damage inputs")
     ap.add_argument("--no-certificates", action="store_true", help="leave out HRPDC's elevation certificates (first floors are all assumed)")
+    ap.add_argument("--box", default="", help="west,south,east,north in degrees: only the locality's roads and buildings "
+                    "that start inside (a part of a locality too large for one frame)")
     a = ap.parse_args(argv)
     from pyproj import Transformer
     os.makedirs(a.out, exist_ok=True); os.makedirs(a.work, exist_ok=True)
@@ -238,17 +316,29 @@ def main(argv=None):
     ring = np.asarray((loc["geometry"]["coordinates"][0] if loc["geometry"]["type"] == "Polygon"
                        else loc["geometry"]["coordinates"][0][0]), float)
     epsg = utm_epsg(ring[:, 0].mean())
-    write_outline(f"{a.out}/{a.name}_outline.geojson", loc)
+    box = parse_box(a.box)
+    write_outline(f"{a.out}/{a.name}_outline.geojson", loc, box=box)
     fwd = Transformer.from_crs(4326, epsg, always_xy=True).transform
     inv = Transformer.from_crs(epsg, 4326, always_xy=True).transform
     bounds = bounds_of(loc, fwd)
     log(loc["properties"].get("NAMELSAD"), "EPSG", epsg, "bounds", bounds)
 
     roads = cached(f"{a.work}/roads_raw.geojson", lambda: {"type": "FeatureCollection", "features": vgin.roads(a.fips)})["features"]
-    bldgs = cached(f"{a.work}/buildings_raw.geojson", lambda: {"type": "FeatureCollection", "features": vgin.buildings(a.fips)})["features"]
-    log(len(roads), "road segments,", len(bldgs), "buildings (VGIN)")
+    bldgs = cached(f"{a.work}/buildings_raw.geojson", lambda: {"type": "FeatureCollection", "features": vgin.buildings(a.fips, log)})["features"]
+    log(len(roads), "road segments,", len(bldgs), "buildings:", building_source(bldgs))
+    if box:
+        roads, bldgs = in_box(roads, box), in_box(bldgs, box)
+        log(f"inside {box}: {len(roads)} road segments, {len(bldgs)} buildings")
+        if not roads and not bldgs:
+            raise SystemExit(f"nothing of {a.fips} lies inside {box}")
     pieces = segments.split(roads, fwd)
     log(len(pieces["road"]), f"pieces of at most {PIECE_M:g} m,", round(pieces["length_m"].sum() / 1000, 1), "km")
+    bx, by = first_points(bldgs, fwd)
+    whole = bounds
+    bounds = land_bounds(bounds, np.concatenate([pieces["xm"], bx]), np.concatenate([pieces["ym"], by]))
+    if bounds != whole:
+        cut = 1 - (bounds[2] - bounds[0]) * (bounds[3] - bounds[1]) / ((whole[2] - whole[0]) * (whole[3] - whole[1]))
+        log(f"frame cut back to the roads and buildings plus {LAND_MARGIN_M} m: {bounds} ({cut:.0%} smaller)")
 
     dem_path, cidx_path = f"{a.work}/dem_ft.npy", f"{a.work}/cidx.npy"
     origin = (bounds[0], bounds[3])
@@ -334,6 +424,9 @@ def main(argv=None):
     okb = np.isfinite(bt["x"])
     bt["station"] = np.full(len(bldgs), "", dtype=object); bt["station_km"] = np.full(len(bldgs), np.nan)
     bt["station"][okb], bt["station_km"][okb] = tether.nearest(bt["x"][okb], bt["y"][okb], sts, fwd, bt["huc12"][okb], forced)
+    # with the gauges known: what is water under a deck or a pier, by each gauge's own high tide
+    rt["bridge"] = bridges(pieces, rt["ground_ft"], over_water_ft(rt["station"]))
+    bt["over_water"] = (bt["ground_ft"] < over_water_ft(bt["station"])).astype(int)
 
     lon, lat = inv(pieces["xm"], pieces["ym"])
     road_cols = {
@@ -344,6 +437,7 @@ def main(argv=None):
     bldg_cols = {
         "building": np.arange(len(bldgs)), "vgin_oid": [f["properties"].get("OBJECTID") for f in bldgs],
         "source_id": [f["properties"].get("SOURCEFEATUREID") for f in bldgs],
+        "outline": ["FEMA" if f["properties"].get("FOOTPRINTS") else "VGIN" for f in bldgs],
         "lon": np.where(okb, blon, np.nan), "lat": np.where(okb, blat, np.nan),
         **{k: v for k, v in bt.items() if k not in ("x", "y")}, **vcols}
     f2, f6 = "%.2f", "%.6f"
@@ -366,7 +460,7 @@ def main(argv=None):
         fh.write("huc12,huc12_name,station,station_name,road_pieces,buildings,farthest_km,forced\n")
         for (hh, ss), r in sorted(rows.items()):
             fh.write(f"{hh},{names.get(hh, '')},{ss},\"{stn.get(ss, '') if ss else 'no gauge: left out'}\",{r['road_pieces']},{r['buildings']},"
-                     f"{r['max_km']:.1f},{'yes' if tether.rule(hh, forced) == ss else ''}\n")
+                     f"{r['max_km']:.1f},{'yes' if ss in tether.group(tether.rule(hh, forced)) else ''}\n")
     ungauged = sorted({names.get(hh, hh) for (hh, ss) in rows if ss == ""})
     n_ungauged = {k: sum(r[k] for (hh, ss), r in rows.items() if ss == "") for k in ("road_pieces", "buildings")}
     if ungauged:
@@ -377,8 +471,7 @@ def main(argv=None):
     if a.gdb:
         write_layers(f"{a.out}/{a.name}.gdb", pieces, road_cols, bgeoms, bldg_cols, epsg)
     sources = {"depth": "NOAA/USGS CoNED Chesapeake Bay topobathy, 1 m (2016)", "roads": "VGIN road centerlines (VBMP RCL)",
-               "buildings": next((f["properties"]["FOOTPRINTS"] + " building outlines (VGIN has none here)" for f in bldgs[:1] if f["properties"].get("FOOTPRINTS")),
-                                 "VGIN building footprints")}
+               "buildings": building_source(bldgs)}
     if net is not None:
         sources["drainage"] = dsrc.get("source", "city stormwater layers")
     if bdoc["routes"]:
@@ -400,12 +493,15 @@ def main(argv=None):
                           hucs=hucs, forced=forced)
     with open(f"{a.out}/{a.name}_prep.json", "w") as fh:
         json.dump({"fips": a.fips, "name": a.name, "locality": loc["properties"].get("NAMELSAD"), "epsg": epsg,
+                   **({"box": list(box)} if box else {}),
                    "bounds": bounds, "levels_ft": [float(depth.LEVELS_FT[0]), float(depth.LEVELS_FT[-1]), 0.25],
                    "depth_source": "NOAA/USGS CoNED Chesapeake Bay topobathy 1 m (2016), water joined to tidal water",
                    "roads": "VGIN VBMP_RCL", "buildings": "VGIN VA_Building_Footprints",
                    "road_segments": len(roads), "road_pieces": int(len(lon)), "buildings_n": len(bldgs),
+                   "buildings_fema": sum(1 for f in bldgs if f["properties"].get("FOOTPRINTS")),
                    "piece_m": PIECE_M, "ponded_ft": PONDED_FT, "flooded_ft": FLOODED_FT,
-                   "drainage": None if net is None else {"source": dsrc.get("source"), **net["counts"]},
+                   "drainage": None if net is None else {"source": dsrc.get("source"), **net["counts"],
+                                                         **({"saved_layers": layers["saved"]} if layers.get("saved") else {})},
                    "barriers": sorted({str(f["properties"].get("SYSTEM_NAME")) for f in bdoc["routes"]}),
                    "values": None if not vsrc else {"tax_year": vsrc["tax_year"], "note": vsrc["tax_year_note"], "firm_year": vsrc.get("firm_year"),
                                                     "assessment": vsrc["assessment"]["name"], "damage_curves": damage.CITATION,
@@ -437,11 +533,25 @@ def sea_cells(dem, origin, hucs, forced, fwd, log=lambda *_: None):
     return keep
 
 
-def write_outline(path, loc, tol_deg=0.0003):
-    """The locality's boundary, thinned to about 30 m, for the map of all areas (inundation.site)."""
+def building_source(bldgs):
+    """Where the building outlines came from, in words (the page and <name>_prep.json say it)."""
+    other = [f["properties"]["FOOTPRINTS"] for f in bldgs if f["properties"].get("FOOTPRINTS")]
+    if not other:
+        return "VGIN building footprints"
+    if len(other) == len(bldgs):
+        return other[0] + " building outlines (VGIN has none here)"
+    return f"VGIN building footprints, and {len(other):,} {other[0]} outlines where VGIN has no footprint"
+
+
+def write_outline(path, loc, tol_deg=0.0003, box=None):
+    """The locality's boundary, thinned to about 30 m, for the map of all areas (inundation.site); with a box, the
+    part of it inside."""
     import shapely
     from shapely.geometry import mapping, shape
     g = shapely.simplify(shapely.force_2d(shape(loc["geometry"])), tol_deg)
+    if box:
+        g = shapely.intersection(shapely.make_valid(g), shapely.box(*box))
+        g = shapely.multipolygons([p for p in shapely.get_parts(g) if p.geom_type == "Polygon"])
     with open(path, "w") as fh:
         json.dump({"type": "Feature", "properties": {"name": loc["properties"].get("NAMELSAD")}, "geometry": mapping(g)}, fh)
 

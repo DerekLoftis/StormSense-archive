@@ -32,16 +32,26 @@ def sources(path=None):
 
 def fetch(src, log=None):
     """Download a city's drainage layers. Returns {"pipes": [...], "ditches": [...], "structures": [...]}
-    as GeoJSON features (absent layers give empty lists)."""
+    as GeoJSON features (absent layers give empty lists). A layer that cannot be read and has a "saved" copy in
+    drainage_sources.json is taken from the copy and listed under "saved"."""
     from . import vgin
     out = {}
     for kind in ("pipes", "ditches", "structures"):
         out[kind] = []
         for lyr in src.get(kind, []):
-            feats = vgin.query(lyr["url"], lyr.get("where", "1=1"), lyr.get("fields", "*"), log)
-            n = vgin.count(lyr["url"], lyr.get("where", "1=1"))
-            if len(feats) != n:
-                raise RuntimeError(f"{kind}: got {len(feats)} of {n} from {lyr['url']}")
+            try:
+                feats = vgin.query(lyr["url"], lyr.get("where", "1=1"), lyr.get("fields", "*"), log)
+                n = vgin.count(lyr["url"], lyr.get("where", "1=1"))
+                if len(feats) != n:
+                    raise RuntimeError(f"{kind}: got {len(feats)} of {n} from {lyr['url']}")
+            except Exception as e:
+                if not lyr.get("saved"):
+                    raise
+                feats, when = saved_layer(lyr["saved"])      # a layer its city has taken down: the copy kept here
+                out.setdefault("saved", []).append({"layer": lyr["url"], "file": lyr["saved"], "read_utc": when,
+                                                    "features": len(feats), "error": str(e)[:200]})
+                if log:
+                    log(f"  WARNING {lyr['url']} did not answer ({str(e)[:120]}): using the copy read {when}")
             for f in feats:
                 f["properties"]["_layer"] = lyr.get("name", kind)
                 if lyr.get("closed"):                    # a whole layer that is never an opening: manholes
@@ -50,6 +60,14 @@ def fetch(src, log=None):
             if log:
                 log(f"  drainage {kind}: {len(feats):,} from {lyr['url'].split('/rest/services/')[-1]}")
     return out
+
+
+def saved_layer(name):
+    """A layer kept in the repository (GeoJSON, gzipped) for when its service is down: (features, when it was read)."""
+    import gzip
+    with gzip.open(os.path.join(HERE, name), "rt") as f:
+        d = json.load(f)
+    return d["features"], d.get("read_utc", "")
 
 
 def _lines(features):

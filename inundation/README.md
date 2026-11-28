@@ -2,7 +2,7 @@
 
 Which roads and buildings the gauges and the 72-hour forecast put under water, and what that costs. Pilot: Norfolk
 (FIPS 51710), 2026-11-25. Derek's rules: roads under more than 0.5 ft of water are orange, ponded water (0.25 ft) is
-yellow, buildings in more than 0.5 ft are red and labelled "Flooded Building". Since 2026-11-26 the water also
+yellow, buildings in more than 0.5 ft are red (a click names one "Flood Affected Structure"; Derek, 2026-11-27: no labels on the map, they covered the buildings). Since 2026-11-26 the water also
 travels through the stormwater pipes, floodwalls hold it back, and buildings carry year built, assessed value and an
 estimated damage.
 
@@ -67,6 +67,13 @@ a wall stands). The system's line is burned into the terrain as cells water cann
 they enter the leveed area. The system is taken as closed and not overtopped up to 10 ft NAVD88; water can still
 come round the end of a wall over low ground (downtown Norfolk: from about 7.5 ft in this DEM).
 
+A layer its city has taken down: Newport News's stormwater manholes (`Operational/StormwaterManhole`) have answered
+"Layer not found" since 27 Nov 2026. The pipes there stop short of the manholes, so without them the networks fall
+apart and every loose end would count as an opening. `drainage_sources.json` names a copy for that layer (`"saved"`,
+`saved_layers/51700_stormwater_manhole.geojson.gz`: the 4,810 manholes as read on 26 Nov 2026); `drainage.fetch`
+uses it when the layer cannot be read, the log warns, and `<name>_prep.json` lists it under `drainage.saved_layers`.
+The live layer is used again as soon as it answers. A layer without a copy stops the preparation.
+
 `check_titan.py` compares the result with TITAN's own depth maps. Downtown Norfolk and the Hague, wet in both over
 wet in either: 0.35 over the surface only and 0.72 with the pipes and the floodwall at 5.5 ft NAVD88 (0.22 and 0.61
 at 4.0 ft, 0.68 and 0.77 at 6.5 ft). Two things the comparison found and fixed: without the floodwall downtown
@@ -112,16 +119,42 @@ floor is 3 ft).
 
 ## Building footprints
 
-VGIN's statewide footprints, by locality FIPS. VGIN publishes none for King and Queen County (November 2026): there
-the outlines of FEMA's USA Structures (Oak Ridge National Laboratory, traced from imagery) stand in
-(`vgin.buildings`), and the page's sources say so.
+VGIN's statewide footprints, by locality FIPS, plus the outlines of FEMA's USA Structures (Oak Ridge National
+Laboratory, traced from imagery, 450 square feet and larger) that come within 3 m of no VGIN footprint
+(`vgin.buildings`; the building table's `outline` says VGIN or FEMA, `<name>_prep.json` counts them as
+`buildings_fema`, and the page's sources say so). VGIN's layer has gaps:
+
+| County | VGIN footprints | FEMA structures | FEMA structures away from any footprint |
+|---|---|---|---|
+| King and Queen | 0 | all of them stand in | |
+| Northumberland | 4,056 | 14,101 | 11,825 |
+| King William | 11,227 | 12,904 | 6,246 |
+| Gloucester | 19,101 | 20,962 | 6,142 |
+| Mathews | 6,362 | 9,044 | 5,001 |
+| Lancaster | 12,943 | 10,038 | 1,670 |
+| Essex | 12,726 | 9,246 | 1,130 |
+| Accomack | 44,084 | 28,815 | 1,129 |
+| Northampton | 15,804 | 10,874 | 1,096 |
+| Richmond | 10,042 | 6,480 | 972 |
+| Poquoson | 6,459 | 6,050 | 698 |
+| Middlesex | 12,610 | 10,785 | 665 |
+
+They are other buildings, not the same ones drawn to one side: in Mathews the median distance from such a structure
+to the nearest VGIN footprint is 28 m, and only 137 have a VGIN footprint of like size within 15 m that FEMA lacks.
+VGIN keeps the sheds FEMA leaves out, which is why it has more where it is complete. If FEMA's service cannot be
+read, VGIN's footprints stand alone and the log warns. A locality prepared before 27 Nov 2026 has VGIN's only until
+it is prepared again.
 
 ## Bridges, piers
 
 The bare-earth DEM has no bridge decks. Road pieces are kept in the table but never flagged when `bridge` > 0:
-1 the DEM shows water or a cut under the piece (ground below 1 ft NAVD88), 2 VGIN codes the segment as a
-bridge (`SEG_TYPE` 2), 3 the same street within 60 m of a 1. Buildings standing in the water (`over_water`) are
-never flagged either. VGIN's own bridge coding is incomplete (most bridges are `SEG_TYPE` 99), so a proper
+1 the DEM shows water or a cut under the piece, 2 VGIN codes the segment as a bridge (`SEG_TYPE` 2), 3 the same
+street within 60 m of a 1. Buildings standing in the water (`over_water`) are never flagged either. Water is
+ground below 1 ft NAVD88, or below the gauge's mean higher high water where that is lower (`prep.over_water_ft`,
+from the datum sheets in `stormsense/data/datums`): 1.15 ft at Sewells Point, but 0.52 ft at Tangier, 0.21 at
+Windmill Point, 0.68 at Lewisetta. Tangier Island's lanes and yards lie at 0.7 to 1.5 ft, and with 1 ft everywhere
+1,219 of its 1,381 road pieces were bridges and 459 of its 581 buildings piers. Elsewhere the change is a handful
+of pieces (11 in Mathews, 8 in Lancaster, none in Norfolk). VGIN's own bridge coding is incomplete (most bridges are `SEG_TYPE` 99), so a proper
 bridge layer (VDOT structures) would be better.
 
 ## Files
@@ -165,6 +198,13 @@ python -m inundation.status --prepared prepared --name norfolk --site <StormSens
   written as `page/tiles/z0.png` (the whole area, at most 2048 pixels) plus 1024-pixel tiles the page loads as the
   reader zooms in. One big picture (`extent.png`, before 2026-11-27) did not draw on phones. Cells in a watershed no
   gauge measures are left empty.
+- Basemap (Derek, 2026-11-27: the plain background made the flooding hard to place): Satellite (Esri World Imagery
+  with its road and place-name layers; the page opens on it), Streets (World Street Map) or Plain (the page's own
+  drawing of land, water, roads and buildings). The page's view is the area's UTM grid, so each Web Mercator map tile
+  is drawn through the affine map of three of its corners (`drawBase`; `utm` and `lonlat` are Krueger's series).
+  Over a basemap the flood picture leaves ordinary tidal water clear and the page's own road network and building
+  outlines are not drawn, only the flagged ones. Where the map tiles cannot be loaded (a Claude artifact blocks other
+  hosts) the page falls back to Plain and says so. A viewer's own choice is remembered in the browser.
 - Views: Now, Forecast peak (the page opens here), Last observed, Historical Floods, Scenario. Scenario sets one
   water level for every gauge, -2 to 10 ft NAVD88 in 0.25 ft steps, and the roads, buildings and damage follow it; it
   opens at the step nearest 7 ft above MLLW at Sewells Point.
@@ -176,13 +216,14 @@ python -m inundation.status --prepared prepared --name norfolk --site <StormSens
 
 ## The site and the map of all localities
 
-`areas.csv` lists the localities (FIPS, the short name used in file names and URLs, the title, the region):
-Hampton Roads and the Middle Peninsula so far. Add a row to add a locality.
+`areas.csv` lists the localities (FIPS, the short name used in file names and URLs, the title, the region, and a
+`box` for a part of a locality, see "Counties that are mostly water"): Hampton Roads, the Middle Peninsula, the
+Northern Neck and the Eastern Shore so far. Add a row to add a locality.
 
     python -m inundation.site --prepared <folder of <name>/ folders> --latest <Latest site> --out site/inundation
 
 writes one site: `<name>/` is each prepared locality's own map page (its tables under `<name>/data/`) and
-`index.html` is the map of all of them (`templates/statewide.html`). That map opens on Sewells Point over a
+`index.html` is the map of all of them (`templates/statewide.html`). That map opens on the whole coastal zone, with every StormSense gauge, over a
 satellite basemap with roads and place names, or a street map (Esri's World Imagery, its two reference layers and
 World Street Map, drawn with Leaflet from `crest/jslib`). The water is drawn from the localities' own depth tiles:
 they are in each locality's UTM zone, so the page reprojects them as it draws (a far view from `tiles/z1.png`,
@@ -192,7 +233,16 @@ written by `prep`) so neighbours do not paint over each other. Roads, buildings 
 water level, so the far view never loads the road and building tables. From zoom 15 in, the page reads the
 `static.json` of each locality in view (its own page's data) and draws every flooded or ponded road piece and
 flooded building on the water; a click on one gives its depth, ground and gauge, a click elsewhere in a locality its
-counts and the link to its own map. The plot is Sewells Point's forecast.
+counts and the link to its own map. The plot is Sewells Point's forecast until a gauge is clicked: then it is that
+gauge's, with its flood levels (Derek, 2026-11-27).
+
+Gauges, on the map of all localities and on each locality's own: the dot has the color of the National Weather
+Service flood category of the gauge's level at the selected time (green below Action, yellow Action, orange Minor,
+red Moderate, purple Major, navy where no levels are set, grey without a reading), and a ring around it the color of
+the highest category its forecast reaches in the 72 hours. Zoomed out, the map of all localities labels the gauges
+with their abbreviations (a label that would sit on another gives way: the plot's gauge, the highest category and
+NOAA's gauges keep theirs); from zoom 10.5 in, the label also carries the level. When no gauge that a prepared
+locality follows is at Action, a note under the map says that this is why there is no blue to see.
 
 `.github/workflows/inundation.yml` runs it after every StormSense run and publishes to GitHub Pages at
 https://derekloftis.github.io/StormSense-archive/inundation/ (and to release `inundation-pages`). GitHub Pages
@@ -305,11 +355,48 @@ At each gauge's forecast peak (most between 4.9 and 6.1 ft NAVD88, about 14:30Z 
 - Not yet checked against observed flooding (Norfolk publishes flooded-street reports:
   `Storm/Storm_Data/MapServer/26` on orfmaps.norfolk.gov).
 
+## Gauges by water body
+
+The nearest gauge in a straight line is often on other water: Wachapreague (seaside) is the nearest gauge to much of
+the Eastern Shore's bay shore, Dahlgren (Potomac) to northern Essex on the Rappahannock, West Point (York) to
+Middlesex's Rappahannock shore. A row of `tether_overrides.csv` can name several gauges joined by `|`, and the
+watersheds it covers (a code ending in `*` covers every HUC-12 that starts with it) take the nearest of those:
+
+| Watersheds | Water | Gauges |
+|---|---|---|
+| `0204030*` | Eastern Shore, sea side (Chincoteague Bay and the lagoons) | CHIV, WACH, CCHV |
+| `0208011*` | Eastern Shore, bay side, Tangier and Pocomoke Sounds | KIPT, ONAV, SAXV, PRTV, CRSM |
+| `02070011*` | lower Potomac | LEWI, SGSM, LENM, DAHL, CNRC, LSPV, IHDM |
+| `02080104*` | tidal Rappahannock | WMPT, RAPV, FEDV |
+| `0208010201*` | the Northern Neck's bay shore | LEWI, WMPT |
+| `02080105*` | Mattaponi | WSPV |
+| `02080106*` | Pamunkey | GS02, WSPV |
+| `0208010202*` | Dragon Swamp | WCKV |
+| `0208010203*` | Piankatank and Milford Haven | WCKV, WMPT |
+
+The seaside gauges ran far above the bay on 26 Nov 2026: Wachapreague reached 8.44 ft NAVD88 (NOAA preliminary) and
+Oyster 6.55 ft before its record stopped, against 4.93 ft at Kiptopeke and 5.21 ft at Chincoteague, so which side
+of the peninsula a road is tied to decides whether it floods.
+
+## Counties that are mostly water
+
+A county's boundary runs far out into the bay and the ocean, and the frame is 1 m cells:
+
+- `prep.land_bounds` cuts the frame back to the roads and buildings plus 1.5 km (Northampton 25% smaller).
+- `spread.open_sea` gives every body of open water one node of the union-find: 8 m squares that are wholly below
+  the lowest level and joined in bodies of 64 squares or more (Northampton: 1.29 of 2.19 billion cells in 44
+  bodies). The answer is the same as cell by cell; only the time and the memory change.
+- A locality whose frame is still too large is prepared in parts: `areas.csv` has a `box` column (west south east
+  north, degrees) and `prep --box` keeps the roads and buildings that start inside and clips the outline. Accomack's
+  cut frame is 4.30 billion cells, more than the union-find's 32-bit nodes and about 26 GB of grids, so it is three
+  areas: `accomack_north` and `accomack_south` (split at 37.75 N, between Onancock and Parksley) and `tangier`.
+
 ## Watersheds without a gauge
 
 A HUC-12 whose water level no StormSense gauge measures is left out rather than tied to the nearest gauge:
 `tether_overrides.csv` takes `-` as the station, and a code ending in `*` covers every HUC-12 that starts with it.
-The one rule so far is `03010205*`: Back Bay, the North Landing River and the Northwest River (the south of Virginia
+The first rule was `03010205*` (the Blackwater and Nottoway, `03010202*` and `03010201*`, which run to Albemarle
+Sound, followed): Back Bay, the North Landing River and the Northwest River (the south of Virginia
 Beach and Chesapeake) drain to Currituck Sound, are driven by wind rather than tide, and are shut off from the
 Elizabeth River by the Great Bridge lock. Tied to Lake Rudee they showed 66 road miles flooded on a day when nothing
 there was. That leaves out 239,164 road pieces and 78,804 buildings in Virginia Beach and 173,410 pieces and 41,189 buildings in

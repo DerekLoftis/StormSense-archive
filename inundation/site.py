@@ -133,6 +133,14 @@ def build(prepared, latest, out, log=print):
     plot = "SWPT"       # Derek, 2026-11-27: the statewide map's forecast location is Sewells Point
     if plot not in levels:
         levels[plot] = status.station_levels(latest, plot)
+    # every StormSense gauge is on the map, also those no prepared locality follows yet (Derek, 2026-11-27: the
+    # whole coastal zone with all of the sensors is the opening view); one without a forecast in this run is left out
+    for st in known:
+        if st not in levels:
+            try:
+                levels[st] = status.station_levels(latest, st)
+            except (OSError, ValueError, KeyError):
+                pass
     made = max(s["made_utc"] for s in summaries.values())
     page.write_levels(out, levels, {"made_utc": made, "stations_without_forecast": sorted({m for s in summaries.values() for m in s["stations_without_forecast"]})})
     gauge, ref = page.plot_gauge(known[plot]["lat"], known[plot]["lon"])
@@ -140,7 +148,9 @@ def build(prepared, latest, out, log=print):
         json.dump({"made_utc": made, "plot_gauge": gauge, "mllw_ref": ref,
                    "levels": {"start": float(depth.LEVELS_FT[0]), "step": 0.25, "n": int(len(depth.LEVELS_FT))},
                    "ponded_ft": status.PONDED_FT, "flooded_ft": status.FLOODED_FT, "disclaimer": page.DISCLAIMER,
-                   "stations": {k: {"name": known[k]["name"], "lat": known[k]["lat"], "lon": known[k]["lon"]} for k in levels if k in known},
+                   "stations": {k: {"name": known[k]["name"].replace(" (IN MLLW)", ""), "lat": known[k]["lat"], "lon": known[k]["lon"],
+                                    "mllw": known[k]["navd88_above_mllw_ft"], "noaa": known[k]["noaa"],
+                                    "used": any(k in a["stations"] for a in doc)} for k in levels if k in known},
                    "areas": doc}, fh, separators=(",", ":"))
     for logo in ("stormsense_logo.png", "ccrm_logo.png"):
         shutil.copy(os.path.join(HERE, "..", "crest", "branding", logo), out)

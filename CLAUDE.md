@@ -160,7 +160,7 @@ project's shared folder (skill code, baselines, notes, station sheet, disclosure
   the area's self-contained map page (`inundation/page.py`, `templates/map.html`).
 - Since 2026-11-26 (Derek's asks): water also travels through the city's stormwater pipes (`drainage.py`,
   `drainage_sources.json` per FIPS; static like Norfolk's TITAN), floodwalls from the USACE National Levee Database
-  hold it back and cut the pipes (`barriers.py`), red buildings are labelled "Flooded Building", and buildings get
+  hold it back and cut the pipes (`barriers.py`), a click on a red building names it "Flood Affected Structure" (Derek, 2026-11-27; the "Flooded Building" labels on the map are gone), and buildings get
   year built, assessed value (`value.py`, `value_sources.json`: Norfolk parcels + FY27 assessment roll), the ZIP's
   Zillow typical home value, and "Est. Damage at Max Forecast Depth" from the USACE generic depth-damage curves
   (EGM 01-03 / 04-01; `damage.py`), homes only. No statewide first floor elevations in Virginia: floors are assumed at the
@@ -178,6 +178,10 @@ project's shared folder (skill code, baselines, notes, station sheet, disclosure
   `store`). maps.nnva.gov goes down for minutes at a time around 3 AM ET: just run again. A HUC-12 no gauge measures is
   left out (`tether_overrides.csv` station `-`, prefix with `*`): `03010205*`, the Back Bay, North Landing and Northwest
   River watersheds south of the Great Bridge lock, which drain to Currituck Sound. Results per city: README "Numbers".
+- Map page basemap (Derek, 2026-11-27): Satellite (opens here), Streets or Plain; Esri's Web Mercator tiles are drawn
+  into the page's UTM canvas (`drawBase` in `templates/map.html`), and the page falls back to Plain where other hosts
+  are blocked (artifacts), so check basemaps on a local build (`python3 -m http.server` over the built site), not in
+  an artifact.
 - Map page (Derek's asks 2026-11-27): the flood picture is an overview plus 1024-pixel tiles (`page/tiles/`; level,
   gauge and ground per 5 m cell) because one big picture did not draw on phones; depth is colored in Derek's eleven
   blues (to 0.5 ft, then each foot to 10); views Now / Forecast peak (opens here) / Last observed / Historical Floods /
@@ -199,10 +203,12 @@ project's shared folder (skill code, baselines, notes, station sheet, disclosure
   (geodesy.noaa.gov/api/ncat; -0.82 ft at Sewells Point, not the -1 ft of thumb). The viewer has no Virginia marks for
   Nor'Ida or Matthew. The pages draw them in the Historical Floods view with the difference from the map's highest
   water (Norfolk in Isabel: 21 marks, median 0.03 ft below the map).
-- Site (2026-11-27): `inundation/areas.csv` lists the localities (Hampton Roads and the Middle Peninsula so far; add
-  a row to add one). `python -m inundation.site --prepared <dir of <name>/> --latest <Latest site> --out site/inundation`
+- Site (2026-11-27): `inundation/areas.csv` lists the localities (Hampton Roads, the Middle Peninsula, the Northern
+  Neck and the Eastern Shore so far; add a row to add one). `python -m inundation.site --prepared <dir of <name>/> --latest <Latest site> --out site/inundation`
   writes each locality's page under `<name>/` and `index.html`, the map of all of them (`templates/statewide.html`:
-  Leaflet, Esri satellite hybrid or street basemap, opens on Sewells Point, water reprojected from the localities' UTM
+  Leaflet, Esri satellite hybrid or street basemap, opens on the whole coastal zone with every gauge (Derek,
+  2026-11-27; a click on a gauge puts its forecast in the plot, Sewells Point's until then), gauges colored by NWS
+  flood category with a ring for the highest category forecast, water reprojected from the localities' UTM
   depth tiles, totals from `areas.json` `curves`, each flagged road piece and building from zoom 15 in, read from the
   locality's own `static.json`). `inundation.yml` runs it after every StormSense run and deploys to
   Pages at /StormSense-archive/inundation/ (release `inundation-pages`); Pages is one site per repo, so it and
@@ -210,13 +216,31 @@ project's shared folder (skill code, baselines, notes, station sheet, disclosure
   `prepare` = names, `missing` or `all`; release `inundation-prepared`), because a session cannot upload release assets.
   A locality that cannot be prepared does not keep the others off Pages (deploy's `!cancelled()`; the first publishing
   run, 27 Nov, built 17 localities and skipped the deploy). Newport News failed that day: the city's
-  `Operational/StormwaterManhole` service had no layers. Prep stops there on purpose (pipes without their manholes
-  fall apart into pieces whose ends count as openings); run `prepare` = newport_news again once the layer is back.
+  `Operational/StormwaterManhole` service had no layers, and pipes without their manholes fall apart into pieces
+  whose ends count as openings. Derek (27 Nov): build it anyway. A layer with `"saved"` in `drainage_sources.json`
+  that cannot be read comes from its copy under `inundation/saved_layers/` (the manholes as read 26 Nov; the log
+  warns and `<name>_prep.json` lists it under `drainage.saved_layers`); a layer without a copy still stops prep.
+  A manual run of `inundation.yml` from a branch prepares and builds but does not deploy (Pages takes main only).
 - Tidal water (2026-11-27): the largest body at -2 ft in the frame plus every body of 5 ha or more that runs off the
   frame's edge (`depth.tidal_seeds`; before that the Piankatank side of Gloucester and the York side of James City
   were land), except one leaving inside a watershed without a gauge (`prep.sea_cells`). `spread.sparse` keeps the
   union-find's untouched pages out of memory (King and Queen's frame is 2.96 billion cells). VGIN has no footprints
-  for King and Queen: FEMA USA Structures outlines stand in (`vgin.buildings`).
+  for King and Queen: FEMA USA Structures outlines stand in (`vgin.buildings`). Since 2026-11-27 the FEMA outlines
+  that come within 3 m of no VGIN footprint are added everywhere (VGIN has 4,056 footprints in Northumberland where
+  FEMA maps 14,101 structures, and lacks about 6,000 in King William and Gloucester and 5,000 in Mathews; table in
+  the README; `outline` column, `buildings_fema` in prep.json).
+- Water under a deck or a pier (`bridge` 1, `over_water`) is ground below 1 ft NAVD88 or below the gauge's mean
+  higher high water where that is lower (`prep.over_water_ft`; 0.52 ft at Tangier, whose lanes lie at 0.7 to 1.5 ft
+  and were all bridges under the 1 ft rule).
+- Gauges by water (2026-11-27): a `tether_overrides.csv` row can name several gauges joined by `|`, and its
+  watersheds take the nearest of those (Eastern Shore sea side CHIV|WACH|CCHV and bay side KIPT|ONAV|SAXV|PRTV|CRSM,
+  the lower Potomac, the Rappahannock, the Mattaponi, Pamunkey, Dragon and Piankatank; table in the README). Before
+  that Wachapreague was the nearest gauge to much of the bay shore, and it read 8.44 ft NAVD88 on 26 Nov against
+  4.93 at Kiptopeke.
+- Counties that are mostly water: `prep.land_bounds` cuts the frame to the roads and buildings plus 1.5 km,
+  `spread.open_sea` gives each body of open water one union-find node (same answer), and a locality still too large
+  is several rows of areas.csv with a `box` (west south east north; `prep --box`): Accomack (4.30 billion cells, over
+  the 32-bit node limit) is `accomack_north`, `accomack_south` and `tangier`.
 - A gauge without a forecast in a run (BRDH on 27 Nov 2026) follows the nearest gauge that has one
   (`status.read_levels`; `stations_following` in the summary, `follows` in levels.json, named on the pages).
 - Not wired yet: the push to the AGOL folder "StormSense CREST". Each area's prepared tables and file geodatabase are
