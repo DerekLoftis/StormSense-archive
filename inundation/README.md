@@ -329,13 +329,31 @@ At each gauge's forecast peak (most between 4.9 and 6.1 ft NAVD88, about 14:30Z 
 | York County (no pipes found) | 10.5 | – | 2.4 | 1,013 | 457 | $0.99M | 12.9 / 1,274 |
 | James City County | 2.8 | 0.0 | 0.5 | 205 | 103 | $0.33M | 3.4 / 253 |
 | Williamsburg | 0.0 | – | 0.0 | 0 | 0 | $0 | 0.0 / 0 |
-| Gloucester County (no pipes found) | 44.5 | – | 4.4 | 719 | 325 | $1.68M | 49.0 / 858 |
-| Mathews County (no pipes or values found) | 37.7 | – | 6.0 | 957 | – | – | 44.2 / 1,152 |
-| Middlesex County (no pipes or values found) | 1.9 | – | 0.4 | 78 | – | – | 2.4 / 110 |
-| King and Queen County (no pipes or values found; FEMA USA Structures outlines) | 2.6 | – | 0.5 | 24 | – | – | 3.2 / 34 |
-| King William County (no pipes or values found) | 2.2 | – | 0.3 | 112 | – | – | 2.6 / 126 |
-| Essex County (no pipes or values found) | 3.1 | – | 0.6 | 55 | – | – | 3.8 / 89 |
+| Gloucester County (no pipes found) | 44.5 | – | 4.4 | 1,175 | 614 | $2.18M | 49.0 / 1,392 |
+| Mathews County (no pipes or values found) | 37.8 | – | 6.0 | 1,542 | – | – | 44.2 / 1,878 |
+| Middlesex County (no pipes or values found) | 1.3 | – | 0.4 | 56 | – | – | 1.7 / 84 |
+| King and Queen County (no pipes or values found; FEMA USA Structures outlines) | 2.6 | – | 0.5 | 25 | – | – | 3.2 / 35 |
+| King William County (no pipes or values found) | 2.2 | – | 0.3 | 145 | – | – | 2.6 / 161 |
+| Essex County (no pipes or values found) | 3.1 | – | 0.6 | 59 | – | – | 3.8 / 95 |
+| Lancaster County (no pipes or values found) | 8.8 | – | 2.1 | 281 | – | – | 11.2 / 378 |
+| Northumberland County (no pipes or values found) | 3.0 | – | 0.6 | 235 | – | – | 3.6 / 290 |
+| Richmond County (no pipes or values found) | 1.0 | – | 0.2 | 51 | – | – | 1.2 / 66 |
+| Westmoreland County (no pipes or values found) | 2.1 | – | 0.6 | 286 | – | – | 2.7 / 331 |
+| Northampton County (no pipes or values found) | 8.3 | – | 0.8 | 455 | – | – | 9.2 / 486 |
+| Accomack County, south of 37.75 N (no pipes or values found) | 33.7 | – | 4.5 | 891 | – | – | 40.0 / 1,099 |
+| Accomack County, north of 37.75 N (no pipes or values found) | 96.9 | – | 5.9 | 7,422 | – | – | 103.7 / 7,854 |
+| Tangier Island (no pipes or values found) | 3.7 | – | 0.0 | 510 | – | – | 3.7 / 510 |
 
+- The rows from Gloucester down were prepared on 27 and 28 Nov with the gauges by water body, the high tide limit
+  for water under a deck and FEMA's outlines where VGIN has no footprint; the Hampton Roads rows above them are as
+  prepared before those three changes. FEMA's outlines took Mathews from 957 to 1,542 buildings, Gloucester from 719
+  to 1,175 and Northumberland from 69 to 235; the gauge rules took Middlesex from 78 buildings to 56 (its shores now follow
+  Windmill Point, the Piankatank and Tappahannock, not West Point on the York).
+- The Eastern Shore's totals follow two gauges that read far above the rest. NOAA's own preliminary record at
+  Wachapreague peaks at 8.44 ft NAVD88 on 26 Nov (Kiptopeke 4.93, Sewells Point 5.98), and the forecast of 00Z had it
+  at 7.57 ft; Chincoteague's forecast peak was 5.29 ft, and 6,817 of northern Accomack's 7,422 buildings are on that
+  gauge (Chincoteague Island's ground is mostly 3 to 5 ft). Onancock's forecast peak was 2.74 ft, with Saxis at 4.22
+  and Kiptopeke at 5.01 either side of it: a question for the forecast.
 - Norfolk: 360,651 pieces (1,765 km), 93,969 buildings, 9 gauges; 32,598 pipes, 4,956 ditches and 38,352 structures
   in 2,441 networks; one floodwall system. Before the pipes and the floodwall: 34.8 miles and 1,958 buildings.
 - The damage figure is ruled by the first floor: with every home on a slab at grade the same water gives $37.0M in
@@ -373,6 +391,9 @@ watersheds it covers (a code ending in `*` covers every HUC-12 that starts with 
 | `02080106*` | Pamunkey | GS02, WSPV |
 | `0208010202*` | Dragon Swamp | WCKV |
 | `0208010203*` | Piankatank and Milford Haven | WCKV, WMPT |
+| `0208020604*` to `06*` | Chickahominy | USJT (its own gauge at Mamanahunt, GS01, has no trusted readings yet) |
+| `02080207*` | Appomattox | ARPV, JPHV |
+| `02070010*` | tidal Potomac from Occoquan Bay to Little Falls, the Anacostia, Four Mile Run | WADC, GTND, AXTV, ALEV, BPAD, LSPV, IHDM |
 
 The seaside gauges ran far above the bay on 26 Nov 2026: Wachapreague reached 8.44 ft NAVD88 (NOAA preliminary) and
 Oyster 6.55 ft before its record stopped, against 4.93 ft at Kiptopeke and 5.21 ft at Chincoteague, so which side
@@ -390,6 +411,28 @@ A county's boundary runs far out into the bay and the ocean, and the frame is 1 
   north, degrees) and `prep --box` keeps the roads and buildings that start inside and clips the outline. Accomack's
   cut frame is 4.30 billion cells, more than the union-find's 32-bit nodes and about 26 GB of grids, so it is three
   areas: `accomack_north` and `accomack_south` (split at 37.75 N, between Onancock and Parksley) and `tangier`.
+
+## Counties that are mostly upland
+
+Henrico, Chesterfield, Hanover and Prince George reach from a tidal river to the Piedmont, and nearly all of their
+roads and buildings stand higher than any level mapped here. A row of `areas.csv` with `low` = 1 (`prep --low`)
+keeps only what the water could reach:
+
+- `depth.low_grid` reads one row of the 1 m tiles every 64 m, whole, and marks the 64 m cells with ground or water
+  at or below 10 ft NAVD88.
+- `depth.tidal_low` keeps the low patches the tide can be part of: the largest, every one that runs off the frame's
+  edge and every one of 2 km2 or more, with patches within two cells of each other counted as one. A quarry floor
+  below sea level in the middle of the county is left out (two of them sit in Henrico's frame).
+- `prep.near_low` keeps the roads with a vertex, and the buildings with their first point, within 1.5 km of that
+  ground, and cuts the frame to them and to the whole of each low patch they lie near, so that the river they flood
+  from is in the frame.
+
+Henrico: 316 of 23,014 road segments and 2,897 of 179,682 buildings, in a frame of 0.49 billion cells in place of
+1.78. `<name>_prep.json` has the counts under `low_frame`, and the page says what it holds. The tables of such a
+locality are not the whole locality.
+
+The localities' boundary layer holds Prince George County in two rows, a 2 ha sliver first: `vgin.locality` puts
+every row's polygons together.
 
 ## Watersheds without a gauge
 

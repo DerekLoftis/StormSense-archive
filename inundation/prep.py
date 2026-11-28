@@ -123,6 +123,53 @@ def in_box(features, box):
     return keep
 
 
+LOW_STEP_M = 64
+
+
+def near_low(roads, bldgs, grid, bounds, transform, margin=LAND_MARGIN_M, step=LOW_STEP_M):
+    """An upland county cut down to what a mapped level can reach. `grid` is depth.tidal_low's numbered map of low
+    ground over `bounds`. Returns the roads with a vertex, and the buildings with their first point, within `margin`
+    of low ground; the frame around them and around the whole of each low part they lie near (the river they flood
+    from has to be in the frame); and how many low parts that is."""
+    from scipy import ndimage
+    if not grid.any():
+        return [], [], bounds, 0
+    dist, (ir, ic) = ndimage.distance_transform_edt(grid == 0, sampling=step, return_indices=True)
+    part = grid[ir, ic]                                             # each cell's nearest low part
+    x0, y0, x1, y1 = bounds
+
+    def cells(x, y):
+        c = np.clip(((np.asarray(x, float) - x0) // step).astype(int), 0, grid.shape[1] - 1)
+        r = np.clip(((y1 - np.asarray(y, float)) // step).astype(int), 0, grid.shape[0] - 1)
+        return r, c
+
+    used, kept_roads, xs, ys = set(), [], [], []
+    for f in roads:
+        c = (f.get("geometry") or {}).get("coordinates") or []
+        while c and isinstance(c[0], (list, tuple)) and isinstance(c[0][0], (list, tuple)):
+            c = [q for sub in c for q in sub]
+        if not c:
+            continue
+        a = np.asarray(c, float)
+        x, y = transform(a[:, 0], a[:, 1])
+        r, cc = cells(x, y)
+        near = dist[r, cc] <= margin
+        if near.any():
+            kept_roads.append(f); used.update(part[r, cc][near].tolist()); xs.append(x); ys.append(y)
+    bx, by = first_points(bldgs, transform)
+    ok = np.isfinite(bx) & np.isfinite(by)
+    r, cc = cells(np.where(ok, bx, x0), np.where(ok, by, y0))
+    near = ok & (dist[r, cc] <= margin)
+    kept_bldgs = [f for f, k in zip(bldgs, near) if k]
+    used.update(part[r, cc][near].tolist()); xs.append(bx[near]); ys.append(by[near])
+    used.discard(0)
+    if not kept_roads and not kept_bldgs:
+        return [], [], bounds, 0
+    rr, cc = np.nonzero(np.isin(grid, sorted(used)))
+    xs.append(x0 + np.array([cc.min(), cc.max() + 1]) * step); ys.append(y1 - np.array([rr.max() + 1, rr.min()]) * step)
+    return kept_roads, kept_bldgs, land_bounds(bounds, np.concatenate(xs), np.concatenate(ys), margin), len(used)
+
+
 def middle(a):
     """Row-wise median treating NaN as 'never' (+inf): NaN when most of the row never floods."""
     m = np.median(np.where(np.isfinite(a), a, np.inf), axis=1)
@@ -306,6 +353,8 @@ def main(argv=None):
     ap.add_argument("--no-barriers", action="store_true", help="leave the floodwalls and levees of the National Levee Database out")
     ap.add_argument("--no-values", action="store_true", help="leave out parcels, assessed values and damage inputs")
     ap.add_argument("--no-certificates", action="store_true", help="leave out HRPDC's elevation certificates (first floors are all assumed)")
+    ap.add_argument("--low", action="store_true", help="only the roads and buildings within reach of the ground at or "
+                    "below the highest level (a county that is mostly upland: Henrico, Fairfax)")
     ap.add_argument("--box", default="", help="west,south,east,north in degrees: only the locality's roads and buildings "
                     "that start inside (a part of a locality too large for one frame)")
     a = ap.parse_args(argv)
@@ -339,6 +388,20 @@ def main(argv=None):
     if bounds != whole:
         cut = 1 - (bounds[2] - bounds[0]) * (bounds[3] - bounds[1]) / ((whole[2] - whole[0]) * (whole[3] - whole[1]))
         log(f"frame cut back to the roads and buildings plus {LAND_MARGIN_M} m: {bounds} ({cut:.0%} smaller)")
+
+    low_doc = None
+    if a.low:
+        n_roads, n_bldgs, km = len(roads), len(bldgs), pieces["length_m"].sum() / 1000
+        grid = depth.tidal_low(depth.low_grid(a.dem or ["/vsicurl/" + u for u in depth.coned_tiles(bounds)], bounds, step=LOW_STEP_M))
+        roads, bldgs, bounds, parts = near_low(roads, bldgs, grid, bounds, fwd)
+        if not roads:
+            raise SystemExit(f"{a.name}: no road within {LAND_MARGIN_M} m of tidal ground at or below {depth.LEVELS_FT[-1]:g} ft NAVD88")
+        pieces = segments.split(roads, fwd)
+        bx, by = first_points(bldgs, fwd)
+        low_doc = {"limit_ft": float(depth.LEVELS_FT[-1]), "margin_m": LAND_MARGIN_M, "grid_m": LOW_STEP_M, "low_parts": parts,
+                   "road_segments_all": n_roads, "road_km_all": round(float(km), 1), "buildings_all": n_bldgs}
+        log(f"within {LAND_MARGIN_M} m of ground at or below {depth.LEVELS_FT[-1]:g} ft that the tide can reach: {len(roads):,} of "
+            f"{n_roads:,} road segments and {len(bldgs):,} of {n_bldgs:,} buildings; frame {bounds}")
 
     dem_path, cidx_path = f"{a.work}/dem_ft.npy", f"{a.work}/cidx.npy"
     origin = (bounds[0], bounds[3])
@@ -486,6 +549,9 @@ def main(argv=None):
         used = sorted((set(rt["station"]) | set(bt["station"][okb])) - {""})
         if ungauged:
             sources["ungauged"] = ", ".join(ungauged)
+        if low_doc:
+            sources["low_frame"] = (f"{len(roads):,} of the locality's {low_doc['road_segments_all']:,} road segments and "
+                                    f"{len(bldgs):,} of its {low_doc['buildings_all']:,} buildings")
         page.write_static(f"{a.out}/page", a.name, a.title or loc["properties"].get("NAME") or a.name, bounds, epsg, pieces,
                           road_cols, roads, fwd, bgeoms, bldg_cols, dem, cidx, [s for s in sts if s["station"] in used], sources,
                           values=None if not vsrc else {"tax_year": vsrc["tax_year"], "firm_year": vsrc.get("firm_year"), "certificates": n_cert, "home_rule": vsrc.get("residential_note"),
@@ -509,6 +575,7 @@ def main(argv=None):
                                                     "home_rule": vsrc.get("residential_note")},
                    "ungauged": None if not ungauged else {"huc12": ungauged, **n_ungauged,
                                                           "why": "no StormSense gauge stands for this water (tether_overrides.csv)"},
+                   "low_frame": low_doc,
                    "prepared_utc": time.strftime("%Y-%m-%dT%H:%MZ", time.gmtime())}, fh, indent=1)
     log("wrote", a.out)
 

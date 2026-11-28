@@ -766,3 +766,56 @@ def test_an_elevation_strip_cut_short_is_read_again(tmp_path):
         depth._read_strip(Short(), str(tmp_path / "missing.tif"), Window(0, 0, 1, 1), tries=2, wait=0)
     out, corner = depth.read_dem([p], (400000, 4100000, 400008, 4100006))
     assert out.shape == (6, 8) and corner == (400000, 4100006) and np.allclose(out, a * depth.M_TO_FT)
+
+
+def test_an_upland_county_keeps_what_lies_near_low_ground(tmp_path):
+    """--low: a coarse map of the low ground, its tidal parts, and the roads and buildings near them."""
+    rasterio = pytest.importorskip("rasterio")
+    pytest.importorskip("scipy")
+    from rasterio.transform import from_origin
+    from inundation import depth, prep, vgin
+    a = np.full((4000, 3000), 30.0, np.float32)               # metres: upland
+    a[3600:, :] = -1.0                                        # a river along the south edge, 400 m wide
+    a[3300:3600, 1000:1010] = 1.0                             # a creek 10 m wide running north from it
+    a[1000:1100, 500:600] = -5.0                              # a quarry floor below sea level, shut in
+    a[10, 2500] = -32767.0                                    # no data is not low ground
+    p = str(tmp_path / "t.tif")
+    with rasterio.open(p, "w", driver="GTiff", height=4000, width=3000, count=1, dtype="float32", crs="EPSG:26918",
+                       nodata=-32767.0, transform=from_origin(500000, 4104000, 1, 1)) as w:
+        w.write(a, 1)
+    whole = (500000, 4100000, 503000, 4104000)
+    low = depth.low_grid([p], whole, step=50)
+    assert low.shape == (80, 60) and low[72:].all() and low[66:72, 20].all() and not low[66:72, 21].any()
+    assert low[20:22, 10:12].all() and not low[0].any() and low.sum() == 8 * 60 + 6 + 4
+    assert not depth.low_grid([p], whole, limit_ft=-20.0, step=50).any()        # -5 m is -16.4 ft
+    tidal = depth.tidal_low(low)
+    assert tidal[72:].all() and tidal[66:72, 20].all() and not tidal[20:22, 10:12].any()    # the quarry is left out
+    assert len(np.unique(tidal)) == 2 and not depth.tidal_low(np.zeros((4, 4), bool)).any()
+    flat = lambda x, y: (np.asarray(x, float), np.asarray(y, float))
+    road = lambda *pts: {"geometry": {"type": "LineString", "coordinates": [list(q) for q in pts]}}
+    house = lambda x, y: {"geometry": {"type": "Polygon", "coordinates": [[[x, y], [x + 10, y], [x + 10, y + 10], [x, y]]]}}
+    roads = [road((500100, 4100600), (500300, 4100700)),            # by the river
+             road((501000, 4103900), (501000, 4101200)),            # comes down to within reach of the creek's head
+             road((500500, 4103000), (500600, 4103000)),            # by the quarry only
+             road((502500, 4103900), (502900, 4103900))]            # upland
+    bldgs = [house(502000, 4100900), house(500550, 4102950), house(502000, 4103500)]
+    kr, kb, frame, parts = prep.near_low(roads, bldgs, tidal, whole, flat, margin=600, step=50)
+    assert kr == roads[:2] and kb == bldgs[:1] and parts == 1
+    assert frame == (500000, 4100000, 503000, 4104000)              # the whole river, and the road that runs north
+    kr, kb, frame, parts = prep.near_low(roads[:1], bldgs[:1], tidal, whole, flat, margin=600, step=50)
+    assert frame == (500000, 4100000, 503000, 4101500)              # the low part whole and the house, plus the margin
+    assert prep.near_low(roads[3:], bldgs[2:], tidal, whole, flat, margin=600, step=50)[:2] == ([], [])
+    # a locality the layer holds in two rows is one outline, its main body first
+    sliver = {"type": "Feature", "properties": {"NAME": "X"}, "geometry": {"type": "Polygon", "coordinates": [[[0, 0], [1, 0], [0, 1], [0, 0]]]}}
+    body = {"type": "Feature", "properties": {"NAME": "X"}, "geometry": {"type": "Polygon", "coordinates": [[[0, 0], [9, 0], [9, 9], [5, 12], [0, 9], [0, 0]]]}}
+    one = vgin.one_feature([sliver, body])
+    assert one["geometry"]["type"] == "MultiPolygon" and len(one["geometry"]["coordinates"]) == 2
+    assert one["geometry"]["coordinates"][0] == body["geometry"]["coordinates"] and vgin.one_feature([body]) is body
+    assert prep.bounds_of(one, flat, buffer=0) == (0, 0, 9, 12)
+    rows = prep_areas()
+    assert {r["name"] for r in rows if r.get("low")} >= {"henrico", "chesterfield"} and not any(r.get("low") and r.get("box") for r in rows)
+
+
+def prep_areas():
+    from inundation import site
+    return site.areas()

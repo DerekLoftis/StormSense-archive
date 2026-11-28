@@ -137,7 +137,22 @@ def buildings(fips, log=None):
 
 
 def locality(fips):
+    """The locality's boundary as one feature. The layer holds some localities in several rows (Prince George County
+    is a sliver of 2 ha and the county itself): their polygons are put together."""
     feats = query(LOCALITIES, f"STCOFIPS='{fips}'", "STCOFIPS,NAME,NAMELSAD")
     if not feats:
         raise RuntimeError(f"no locality {fips}")
-    return feats[0]
+    return one_feature(feats)
+
+
+def one_feature(feats):
+    """Several polygon features as one MultiPolygon feature with the first one's properties; one feature as it is."""
+    if len(feats) == 1:
+        return feats[0]
+    polys = []
+    for f in feats:
+        g = f["geometry"]
+        polys += g["coordinates"] if g["type"] == "MultiPolygon" else [g["coordinates"]]
+    polys.sort(key=lambda poly: -len(poly[0]))               # the main body first: prep reads the zone off it
+    return {"type": "Feature", "properties": dict(feats[0]["properties"]),
+            "geometry": {"type": "MultiPolygon", "coordinates": polys}}

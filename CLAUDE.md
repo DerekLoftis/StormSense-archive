@@ -241,6 +241,14 @@ project's shared folder (skill code, baselines, notes, station sheet, disclosure
   `spread.open_sea` gives each body of open water one union-find node (same answer), and a locality still too large
   is several rows of areas.csv with a `box` (west south east north; `prep --box`): Accomack (4.30 billion cells, over
   the 32-bit node limit) is `accomack_north`, `accomack_south` and `tangier`.
+- Counties that are mostly upland (2026-11-28, Derek: "complete the remaining localities in coastal Va"): a row of
+  areas.csv with `low` = 1 (`prep --low`: Henrico, Chesterfield, Hanover, Prince George) keeps only the roads and
+  buildings within 1.5 km of ground at or below 10 ft that the tide can be part of (`depth.low_grid` reads one tile
+  row every 64 m, `depth.tidal_low` leaves out shut-in pits such as quarry floors below sea level, `prep.near_low`
+  cuts the frame). Its tables are not the whole locality. The Town of West Point is inside King William's map.
+  `vgin.locality` joins a locality's rows (Prince George's first row is a 2 ha sliver). `depth.read_dem` tries a
+  strip again when a read from NOAA's bucket is cut short (King William, 28 Nov). Above the head of tide (Richmond,
+  Fredericksburg, Little Falls) river flooding from rain is not in these maps.
 - A gauge without a forecast in a run (BRDH on 27 Nov 2026) follows the nearest gauge that has one
   (`status.read_levels`; `stations_following` in the summary, `follows` in levels.json, named on the pages).
 - Not wired yet: the push to the AGOL folder "StormSense CREST". Each area's prepared tables and file geodatabase are

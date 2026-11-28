@@ -73,6 +73,58 @@ def _read_strip(r, path, window, tries=4, wait=10):
             time.sleep(wait * (k + 1))
 
 
+def low_grid(paths, bounds, limit_ft=LEVELS_FT[-1], step=64):
+    """Where the ground or the water lies at or below `limit_ft` inside `bounds`, on a grid of `step` m cells: a
+    boolean array whose first row is the north edge and first column the west edge. One row of the 1 m tiles is
+    read for each row of cells, whole, so nothing a cell wide is missed along it. A county that reaches from a
+    tidal river to the Piedmont is mostly ground no mapped level can reach; this is the map of the part that can."""
+    import rasterio
+    from rasterio.windows import Window
+    x0, y0, x1, y1 = [int(round(v)) for v in bounds]
+    rows, cols = -(-(y1 - y0) // step), -(-(x1 - x0) // step)
+    low = np.zeros((rows, cols), bool)
+    limit = float(limit_ft) / M_TO_FT
+    for p in paths:
+        with rasterio.open(p) as r:
+            left, top = int(round(r.transform.c)), int(round(r.transform.f))
+            c0, c1 = max(x0, left), min(x1, left + r.width)
+            if c0 >= c1:
+                continue
+            for k in range(rows):
+                q = top - (y1 - k * step)                           # the tile's row at this cell row's north edge
+                if q < 0 or q >= r.height:
+                    continue
+                a = _read_strip(r, p, Window(c0 - left, q, c1 - c0, 1))[0]
+                ok = (a <= limit) & (a > -1000)
+                if r.nodata is not None:
+                    ok &= a != r.nodata
+                at = np.flatnonzero(ok)
+                if len(at):
+                    low[k, np.unique((at + c0 - x0) // step)] = True
+    return low
+
+
+def tidal_low(low, big=500, join=2):
+    """The parts of a low_grid that the tide can be part of, numbered from 1 (0 elsewhere): the largest patch, every
+    patch that runs off the grid's edge and every patch of `big` cells or more. Patches within `join` cells of each
+    other count as one, since the grid can miss a channel between two of its rows. What is left out is low ground
+    shut in by high ground: a quarry floor below sea level, a pit."""
+    from scipy import ndimage
+    if not low.any():
+        return np.zeros(low.shape, np.int32)
+    lab, n = ndimage.label(ndimage.binary_dilation(low, np.ones((3, 3), bool), iterations=join), np.ones((3, 3), bool))
+    lab = np.where(low, lab, 0)
+    size = np.bincount(lab.ravel(), minlength=n + 1)
+    size[0] = 0
+    keep = np.zeros(n + 1, bool)
+    keep[np.argmax(size)] = True
+    keep[size >= big] = True
+    edge = np.unique(np.concatenate([lab[0], lab[-1], lab[:, 0], lab[:, -1]]))
+    keep[edge] = True
+    keep[0] = False
+    return np.where(keep[lab], lab, 0).astype(np.int32)
+
+
 def read_dem(paths, bounds, into=None):
     """Mosaic the tiles over bounds (whole metres). Returns ground in ft NAVD88 (NaN where no data) and
     (x of the west edge, y of the north edge); cells are 1 m. `into` is the path of a .npy file to build the grid

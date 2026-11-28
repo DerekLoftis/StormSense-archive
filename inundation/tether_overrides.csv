@@ -11,3 +11,8 @@ huc12,station,note
 0208010202*,WCKV,"Dragon Swamp drains to the Piankatank, not to the York or the Rappahannock."
 0208010203*,WCKV|WMPT,"The Piankatank and Milford Haven: the Piankatank gauge or Windmill Point, not West Point or the Ware River."
 0208010201*,LEWI|WMPT,"The Northern Neck's bay shore (Little Wicomico to Fleets Bay): Lewisetta or Windmill Point on its own shore, not Tangier Island across the bay."
+0208020604*,USJT,"The Chickahominy (Henrico and Hanover down to the James at Barretts Point): Jamestown, at its mouth, never the Pamunkey at Lay Landing or Richmond Locks across the divide (its own gauge at Mamanahunt has no trusted readings yet)."
+0208020605*,USJT,"The Chickahominy (Henrico and Hanover down to the James at Barretts Point): Jamestown, at its mouth, never the Pamunkey at Lay Landing or Richmond Locks across the divide (its own gauge at Mamanahunt has no trusted readings yet)."
+0208020606*,USJT,"The Chickahominy (Henrico and Hanover down to the James at Barretts Point): Jamestown, at its mouth, never the Pamunkey at Lay Landing or Richmond Locks across the divide (its own gauge at Mamanahunt has no trusted readings yet)."
+02080207*,ARPV|JPHV,"The Appomattox: Pocahontas (Petersburg) or Jordan Point where it meets the James at Hopewell, not Richmond Locks."
+02070010*,WADC|GTND|AXTV|ALEV|BPAD|LSPV|IHDM,The tidal Potomac from Occoquan Bay to Little Falls with the Anacostia and Four Mile Run: the nearest of its own gauges.
