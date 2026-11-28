@@ -4,7 +4,9 @@ VGIN's statewide footprints and parcels carry no values (the parcels have only t
 numbers come from each locality's own open data. value_sources.json says, per locality FIPS, where the parcel
 polygons and the assessment table are and what their columns are called. A building takes the parcel its middle
 falls in; where a parcel holds several buildings its improvement (building) value is shared between them by
-footprint area.
+footprint area. The values are in an assessment roll of their own (Norfolk), on the parcel polygons themselves
+(assessment type "parcels": most localities), or in tables joined to the polygons by the parcel number ("more":
+Fairfax, Arlington, Richmond's year built). A roll with land and improvement values but no total gets their sum.
 
 The second opinion on value is Zillow's Home Value Index (ZHVI, the typical home value of the middle third of homes)
 for the building's ZIP code: Zillow publishes that openly, per ZIP and month. It does not publish its estimate for
@@ -41,14 +43,12 @@ def sources(path=None):
     return out
 
 
-def fetch_parcels(src, log=None):
+def fetch_parcels(src, log=None, bbox=None):
+    """The locality's parcel polygons with the fields value_sources.json names; `bbox` (west, south, east, north in
+    degrees) for the parcels that touch that box only."""
     from . import vgin
     p = src["parcels"]
-    feats = vgin.query(p["url"], p.get("where", "1=1"), p.get("fields", p["key"]), log)
-    n = vgin.count(p["url"], p.get("where", "1=1"))
-    if len(feats) != n:
-        raise RuntimeError(f"parcels: got {len(feats)} of {n}")
-    return feats
+    return vgin.layer_features(p, log, bbox, fields=p.get("fields", p["key"]))
 
 
 def records_from_parcels(parcels, src):
@@ -71,6 +71,65 @@ def add_use(records, uses):
     for r in records:
         if not str(r.get("use") or "").strip():
             r["use"] = uses.get(str(r.get("key") or "").strip(), "")
+    return records
+
+
+ODATA_PAGE = 50000
+
+
+def _odata(url, fields, where=None, order=None):
+    """Every row of a table served the OData way ($select, $filter, $top, $skip): Arlington County's real estate
+    data (datahub-v2.arlingtonva.us), which hands out at most 50,000 rows a request."""
+    rows = []
+    while True:
+        q = {"$select": ",".join(fields), "$top": ODATA_PAGE, "$skip": len(rows), "$orderby": order or fields[0]}
+        if where:
+            q["$filter"] = where
+        req = urllib.request.Request(url + "?" + urllib.parse.urlencode(q), headers={"User-Agent": "StormSense (VIMS)"})
+        with urllib.request.urlopen(req, timeout=600) as r:
+            page = json.loads(r.read())
+        if not isinstance(page, list):
+            raise RuntimeError(f"{url}: {str(page)[:200]}")
+        rows += page
+        if len(page) < ODATA_PAGE:
+            return rows
+
+
+def fetch_more(src, log=None):
+    """What a locality keeps apart from its parcel polygons ("more": a list of tables, each {"url", "key", "columns":
+    {our name: theirs}, "where"}; "type": "odata" for Arlington's service, else an ArcGIS layer or table read
+    without its geometry). One {parcel key: {our name: value}} per table; where a table has several rows for a parcel
+    (the dwellings on it, an assessment and its later review) the last row's values that are not empty stand.
+    Only the named columns are asked for: these tables also hold the owners' names."""
+    from . import vgin
+    out = []
+    for m in src.get("more", []):
+        cols = m["columns"]
+        fields = [m["key"], *dict.fromkeys(cols.values())]
+        if m.get("type") == "odata":
+            rows = _odata(m["url"], fields, m.get("where"), m.get("order"))
+        else:
+            rows = [f["properties"] for f in vgin.layer_features(m, log, geometry=False, fields=",".join(fields))]
+        table = {}
+        for r in rows:
+            k = str(r.get(m["key"]) or "").strip()
+            if k:
+                table.setdefault(k, {}).update({ours: r[theirs] for ours, theirs in cols.items()
+                                                if str(r.get(theirs) if r.get(theirs) is not None else "").strip()})
+        out.append(table)
+        if log:
+            log(f"  values: {len(table):,} parcels in {m['url'].split('/rest/services/')[-1].split('/api/')[-1]}")
+    return out
+
+
+def add_more(records, tables):
+    """Put the values of fetch_more on the records, where a record has none of its own."""
+    for r in records:
+        k = str(r.get("key") or "").strip()
+        for t in tables:
+            for name, v in t.get(k, {}).items():
+                if not str(r.get(name) if r.get(name) is not None else "").strip():
+                    r[name] = v
     return records
 
 
@@ -127,6 +186,8 @@ def roll(records, src):
         if not k:
             continue
         impr, total, year = _num(r.get("improvement_value")), _num(r.get("total_value")), _num(r.get("year_built"))
+        if not total > 0 and _num(r.get("land_value")) >= 0:     # a roll with land and buildings but no total
+            total = _num(r.get("land_value")) + (impr if impr > 0 else 0.0)
         o = out.setdefault(k, {"impr": 0.0, "total": 0.0, "best": -1.0, "year": np.nan, "use": "", "cls": "", "zip": "", "living": 0.0, "n": 0})
         o["impr"] += impr if impr > 0 else 0.0
         o["total"] += total if total > 0 else 0.0

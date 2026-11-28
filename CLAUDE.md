@@ -184,6 +184,20 @@ project's shared folder (skill code, baselines, notes, station sheet, disclosure
   `store`). maps.nnva.gov goes down for minutes at a time around 3 AM ET: just run again. A HUC-12 no gauge measures is
   left out (`tether_overrides.csv` station `-`, prefix with `*`): `03010205*`, the Back Bay, North Landing and Northwest
   River watersheds south of the Great Bridge lock, which drain to Currituck Sound. Results per city: README "Numbers".
+- Storm drains and values for the 20 localities of 28 Nov (Derek's ask that day; README "What the upriver and Northern
+  Virginia localities publish" has the table): drains in 10 (Alexandria, Arlington, Fairfax, Prince William,
+  Stafford, King George, Henrico, Chesterfield, Hopewell, Petersburg), values in 11 (Richmond, Henrico,
+  Chesterfield, Hanover, Spotsylvania, Fredericksburg, Colonial Heights, King George, Charles City, Fairfax,
+  Arlington); nothing found for Surry, Prince George, New Kent and Caroline. Each from the locality's own service
+  only (copies on other accounts are not used; "Caroline" on services6 is Caroline County, Maryland). What these
+  needed: `vgin.layer_features` (the layer's own object id field, a box for the mapped part of a `--low` county, and
+  a completeness check that survives Henrico's server, which counts features just outside a box); a layer's `where`
+  to split pipes from open channels kept in one layer; `end_type_fields` (Prince William names the structures on the
+  segments, drawn from inflow to outflow); `more` in `value_sources.json` (values, use or year built in tables joined
+  by the parcel number: Fairfax's three tables, Richmond's year built, and Arlington's OData service, `"type":
+  "odata"`); `land_value` where a roll has no total. Never ask a parcel service for more than the named columns:
+  these layers also hold the owners' names. Homes are picked from use codes or zoning read off the counts, and no
+  first flood map year is set (every assumed floor 3 ft).
 - Map page basemap (Derek, 2026-11-27): Satellite (opens here), Streets or Plain; Esri's Web Mercator tiles are drawn
   into the page's UTM canvas (`drawBase` in `templates/map.html`), and the page falls back to Plain where other hosts
   are blocked (artifacts), so check basemaps on a local build (`python3 -m http.server` over the built site), not in
@@ -333,7 +347,8 @@ project's shared folder (skill code, baselines, notes, station sheet, disclosure
   geo.hrsd.com, gis.hrpdcva.gov, property.jamescitycountyva.gov, files.zillowstatic.com and the USACE/HRPDC document
   hosts; since 2026-11-27 api.tidesandcurrents.noaa.gov, waterservices.usgs.gov and nwis.waterservices.usgs.gov, where USGS
   serves readings older than 120 days, plus stn.wim.usgs.gov, apps.usgs.gov, api.waterdata.usgs.gov, pubs.usgs.gov and
-  geodesy.noaa.gov for the high water marks). No Claude session reaches
+  geodesy.noaa.gov for the high water marks; since 2026-11-28 www.fairfaxcounty.gov, gisweb.pwcva.gov,
+  portal.henrico.gov, datahub-v2.arlingtonva.us and services1/services8.arcgis.com for the county layers). No Claude session reaches
   tidesandcurrents.noaa.gov itself, tds.vims.edu or *.github.io; NOAA AWS buckets work.
 - GitHub Actions has full internet (except NOMADS ETSS paths, 403), so put blocked downloads in a
   workflow. Read live pages from a workflow, not the sandbox. A finished job's log is readable from a session with

@@ -40,32 +40,83 @@ def _get(url, params, tries=4):
             time.sleep(3 * (k + 1))
 
 
-def _with_oid(fields):
-    return fields if "OBJECTID" in fields.split(",") or fields == "*" else "OBJECTID," + fields
+def _with_oid(fields, oid="OBJECTID"):
+    return fields if oid in fields.split(",") or fields == "*" else oid + "," + fields
 
 
-def query(layer, where, fields, log=None, geometry=True):
-    """Every feature matching `where`, paged by OBJECTID so nothing is skipped or repeated. Pages until a request
+def oid_field(layer):
+    """The name of a layer's object id field: OBJECTID on most, but not all (King George's layers have FID,
+    Fredericksburg's parcels OBJECTID_1)."""
+    d = _get(layer, {"f": "json"})
+    return d.get("objectIdField") or next((f["name"] for f in d.get("fields") or [] if f.get("type") == "esriFieldTypeOID"),
+                                          "OBJECTID")
+
+
+def _envelope(bbox):
+    return {"geometry": ",".join(f"{v:.6f}" for v in bbox), "geometryType": "esriGeometryEnvelope", "inSR": 4326,
+            "spatialRel": "esriSpatialRelIntersects"}
+
+
+def query(layer, where, fields, log=None, geometry=True, oid="OBJECTID", bbox=None):
+    """Every feature matching `where`, paged by the object id so nothing is skipped or repeated. Pages until a request
     comes back empty, because servers cap a page at their own size (1000 or 2000) and do not always say so.
-    geometry=False asks for the attributes only."""
+    geometry=False asks for the attributes only; `bbox` (west, south, east, north in degrees) for the features that
+    touch that box only; `oid` names the object id field where it is not OBJECTID (oid_field)."""
     out, last = [], -1
     while True:
         d = _get(f"{layer}/query", {
-            "where": f"({where}) AND OBJECTID > {last}", "outFields": _with_oid(fields), "orderByFields": "OBJECTID",
+            "where": f"({where}) AND {oid} > {last}", "outFields": _with_oid(fields, oid), "orderByFields": oid,
             "resultRecordCount": PAGE, "outSR": 4326, "geometryPrecision": 7, "f": "geojson",
-            "returnGeometry": "true" if geometry else "false"})
+            "returnGeometry": "true" if geometry else "false", **(_envelope(bbox) if bbox else {})})
         feats = d.get("features", [])
         if not feats:
             break
         out += feats
-        last = max(f["properties"].get("OBJECTID", f.get("id")) for f in feats)
+        last = max(f["properties"].get(oid, f.get("id")) for f in feats)
         if log:
             log(f"  {len(out)} features")
     return out
 
 
-def count(layer, where):
-    return _get(f"{layer}/query", {"where": where, "returnCountOnly": "true", "f": "json"})["count"]
+def count(layer, where, bbox=None):
+    return _get(f"{layer}/query", {"where": where, "returnCountOnly": "true", "f": "json",
+                                   **(_envelope(bbox) if bbox else {})})["count"]
+
+
+def layer_features(lyr, log=None, bbox=None, geometry=True, fields=None):
+    """Every feature of a layer described the way drainage_sources.json and value_sources.json do ({"url", "where",
+    "fields"}), checked against the layer's own count."""
+    where = lyr.get("where", "1=1")
+    oid = oid_field(lyr["url"])
+    kw = {"oid": oid} if oid != "OBJECTID" else {}
+    if bbox:
+        kw["bbox"] = bbox
+    if not geometry:
+        kw["geometry"] = False
+    feats = query(lyr["url"], where, fields or lyr.get("fields", "*"), log, **kw)
+    n = count(lyr["url"], where, **({"bbox": bbox} if bbox else {}))
+    if len(feats) != n:
+        # Henrico's server counts more inside a box than it hands out (28,810 parcels for 28,218, Nov 2026): its count
+        # and its list of ids take in features just outside the box. So the features of that list which the read
+        # lacks are asked for by id, and those whose shape does touch the box are added: every id is then accounted for.
+        q = {"where": where, **(_envelope(bbox) if bbox else {})}
+        ids = set(_get(f"{lyr['url']}/query", {**q, "returnIdsOnly": "true", "f": "json"}).get("objectIds") or [])
+        have = {f["properties"].get(oid, f.get("id")) for f in feats}
+        rest = sorted(ids - have)
+        if have - ids or (rest and not (bbox and geometry)):
+            raise RuntimeError(f"got {len(feats)} of {n} from {lyr['url']}")
+        from shapely.geometry import box, shape
+        frame, found = box(*bbox), 0
+        for i in range(0, len(rest), 200):
+            some = query(lyr["url"], f"{oid} IN ({','.join(map(str, rest[i:i + 200]))})", fields or lyr.get("fields", "*"),
+                         **({"oid": oid} if oid != "OBJECTID" else {}))
+            found += len(some)
+            feats += [f for f in some if f.get("geometry") and shape(f["geometry"]).intersects(frame)]
+        if found != len(rest):
+            raise RuntimeError(f"got {len(feats)} of {n} from {lyr['url']}")
+        if log:
+            log(f"  {lyr['url'].split('/rest/services/')[-1]}: the server counts {n:,} in the box and has {len(feats):,} there")
+    return feats
 
 
 def roads(fips, log=None):
