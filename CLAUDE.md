@@ -167,6 +167,11 @@ project's shared folder (skill code, baselines, notes, station sheet, disclosure
   Hazus crawlspace default (3 ft, 4 ft after the first FIRM) except where HRPDC has an elevation certificate
   (`ffe.py`); Derek's Newport News survey is still to come. `check_titan.py` scores the extent against TITAN's depth tiles (0.72 overlap downtown at 5.5 ft).
 - Bridges have no deck in the bare-earth DEM: pieces with `bridge` > 0 and buildings `over_water` are never flagged.
+  `bridge` 4 (2026-11-28, `prep.decks`): a deck over low ground found from the road's own profile (a fall of 12 ft
+  within 15 m after 20 m of level road is an abutment; Interstate 95 at Petersburg was a flooded road at 4 ft without
+  it; 150 m at most on a road that is not a highway or a ramp). A road that stops within 150 m of an abutment at the
+  locality's boundary is half of a bridge to the next locality (Four Mile Run; there 10 ft within 20 m is enough).
+  Steep dead ends and ravine roads must stay roads: check a change with a saved table (README "Bridges").
   The Mobjack Norfolk SLR services are RGB extent pictures (no depth). Needs `inundation/requirements.txt`.
 - Hampton Roads (since 2026-11-26): one `prep` per locality FIPS. `drainage_sources.json` has Norfolk, Newport
   News (`snap_m` 1: pipes stop 0.85 m short of the structures), Virginia Beach, Chesapeake and Hampton (lines only:
@@ -241,6 +246,19 @@ project's shared folder (skill code, baselines, notes, station sheet, disclosure
   `spread.open_sea` gives each body of open water one union-find node (same answer), and a locality still too large
   is several rows of areas.csv with a `box` (west south east north; `prep --box`): Accomack (4.30 billion cells, over
   the 32-bit node limit) is `accomack_north`, `accomack_south` and `tangier`.
+- Counties that are mostly upland (2026-11-28, Derek: "complete the remaining localities in coastal Va"): a row of
+  areas.csv with `low` = 1 (`prep --low`: Henrico, Chesterfield, Hanover, Prince George) keeps only the roads and
+  buildings within 1.5 km of ground at or below 10 ft that the tide can be part of (`depth.low_grid` reads one tile
+  row every 64 m, `depth.tidal_low` leaves out shut-in pits such as quarry floors below sea level, `prep.near_low`
+  cuts the frame). Its tables are not the whole locality. The Town of West Point is inside King William's map.
+  `vgin.locality` joins a locality's rows (Prince George's first row is a 2 ha sliver). `depth.read_dem` tries a
+  strip again when a read from NOAA's bucket is cut short (King William, 28 Nov). Above the head of tide (Richmond,
+  Fredericksburg, Little Falls) river flooding from rain is not in these maps.
+- Upriver the elevation data has a river as the water the lidar met, not its bed (the James at Richmond 0 to 2 ft,
+  the Appomattox at Petersburg -1.5 ft), and the only ground at -2 ft can be a quarry (Richmond's goes to -290 ft
+  and was taken for the sea in the first map). A body at -2 ft is tidal water only inside water that runs off the
+  frame's edge at or below 3 ft (`prep.tidal_cells`); a frame without any gets its river lowered to -2 ft
+  (`prep.tidal_surface`, `water_surface_ft` in prep.json). Read the log's "tidal water ... from" line for a new area.
 - A gauge without a forecast in a run (BRDH on 27 Nov 2026) follows the nearest gauge that has one
   (`status.read_levels`; `stations_following` in the summary, `follows` in levels.json, named on the pages).
 - Not wired yet: the push to the AGOL folder "StormSense CREST". Each area's prepared tables and file geodatabase are

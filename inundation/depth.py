@@ -17,6 +17,8 @@ Two sources:
   * a stack of depth grids, one per level (Derek's HUC-12 grids, once hosted): `from_depth_stack` turns
     the depths sampled at a point into the same two numbers.
 """
+import os
+
 import numpy as np
 
 LEVELS_FT = np.round(np.arange(-2.0, 10.0 + 1e-9, 0.25), 2)
@@ -51,6 +53,78 @@ def coned_tiles(bounds):
     return out
 
 
+def _read_strip(r, path, window, tries=4, wait=10):
+    """Band 1 of a window of an open tile. A read cut short on its way from the bucket is read again from the tile
+    opened anew, after a pause that grows with each try; the last failure is raised."""
+    import time
+    import rasterio
+    from rasterio.errors import RasterioIOError
+    for k in range(tries):
+        try:
+            if k == 0:
+                return r.read(1, window=window)
+            with rasterio.open(path) as again:
+                return again.read(1, window=window)
+        except RasterioIOError:
+            if k == tries - 1:
+                raise
+            print(f"{os.path.basename(str(path))}: a strip could not be read, trying again ({k + 1} of {tries - 1})",
+                  flush=True)
+            time.sleep(wait * (k + 1))
+
+
+def low_grid(paths, bounds, limit_ft=LEVELS_FT[-1], step=64):
+    """Where the ground or the water lies at or below `limit_ft` inside `bounds`, on a grid of `step` m cells: a
+    boolean array whose first row is the north edge and first column the west edge. One row of the 1 m tiles is
+    read for each row of cells, whole, so nothing a cell wide is missed along it. A county that reaches from a
+    tidal river to the Piedmont is mostly ground no mapped level can reach; this is the map of the part that can."""
+    import rasterio
+    from rasterio.windows import Window
+    x0, y0, x1, y1 = [int(round(v)) for v in bounds]
+    rows, cols = -(-(y1 - y0) // step), -(-(x1 - x0) // step)
+    low = np.zeros((rows, cols), bool)
+    limit = float(limit_ft) / M_TO_FT
+    for p in paths:
+        with rasterio.open(p) as r:
+            left, top = int(round(r.transform.c)), int(round(r.transform.f))
+            c0, c1 = max(x0, left), min(x1, left + r.width)
+            if c0 >= c1:
+                continue
+            for k in range(rows):
+                q = top - (y1 - k * step)                           # the tile's row at this cell row's north edge
+                if q < 0 or q >= r.height:
+                    continue
+                a = _read_strip(r, p, Window(c0 - left, q, c1 - c0, 1))[0]
+                ok = (a <= limit) & (a > -1000)
+                if r.nodata is not None:
+                    ok &= a != r.nodata
+                at = np.flatnonzero(ok)
+                if len(at):
+                    low[k, np.unique((at + c0 - x0) // step)] = True
+    return low
+
+
+def tidal_low(low, big=500, join=2):
+    """The parts of a low_grid that the tide can be part of, numbered from 1 (0 elsewhere): the largest patch, every
+    patch that runs off the grid's edge and every patch of `big` cells or more. Patches within `join` cells of each
+    other count as one, since the grid can miss a channel between two of its rows. What is left out is low ground
+    shut in by high ground: a quarry floor below sea level, a pit."""
+    from scipy import ndimage
+    if not low.any():
+        return np.zeros(low.shape, np.int32)
+    lab, n = ndimage.label(ndimage.binary_dilation(low, np.ones((3, 3), bool), iterations=join), np.ones((3, 3), bool))
+    lab = np.where(low, lab, 0)
+    size = np.bincount(lab.ravel(), minlength=n + 1)
+    size[0] = 0
+    keep = np.zeros(n + 1, bool)
+    keep[np.argmax(size)] = True
+    keep[size >= big] = True
+    edge = np.unique(np.concatenate([lab[0], lab[-1], lab[:, 0], lab[:, -1]]))
+    keep[edge] = True
+    keep[0] = False
+    return np.where(keep[lab], lab, 0).astype(np.int32)
+
+
 def read_dem(paths, bounds, into=None):
     """Mosaic the tiles over bounds (whole metres). Returns ground in ft NAVD88 (NaN where no data) and
     (x of the west edge, y of the north edge); cells are 1 m. `into` is the path of a .npy file to build the grid
@@ -75,7 +149,7 @@ def read_dem(paths, bounds, into=None):
                 continue
             for q0 in range(r0, r1, 4096):                           # in strips: a whole tile is several GB
                 q1 = min(q0 + 4096, r1)
-                a = r.read(1, window=Window(c0 - left, q0, c1 - c0, q1 - q0))
+                a = _read_strip(r, p, Window(c0 - left, q0, c1 - c0, q1 - q0))
                 bad = (a == r.nodata) | (a < -1000) if r.nodata is not None else (a < -1000)
                 a = a * np.float32(M_TO_FT)
                 a[bad] = np.nan
@@ -125,6 +199,57 @@ def tidal_seeds(dem_ft, level=LEVELS_FT[0], cell_m2=1.0, min_m2=EDGE_BODY_M2):
         if i not in (0, k) and sizes[i] * cell_m2 >= min_m2:
             out.append((int(er[j]), int(ec[j])))
     return out
+
+
+SURFACE_TOP_FT = 3.0       # the tide's water as the lidar met it lies no higher than this
+
+
+SMOOTH_FT = 0.01           # water as the lidar met it is a plane: a cell and its neighbours differ by less than this
+
+
+def flat_water(dem_ft, top_ft=SURFACE_TOP_FT, within=SMOOTH_FT):
+    """True in the cells at or below `top_ft` that lie in a plane with their eight neighbours: water as the
+    elevation data has it where no bed was surveyed (a river's surface slopes a thousandth of a foot per cell;
+    ground is never that even). The outermost cells of such water count too. A strip of a grid needs two rows
+    either side to give the same answer as the whole."""
+    from scipy import ndimage
+    z = np.where(np.isfinite(dem_ft), dem_ft, np.float32(1e6))
+    low = ndimage.minimum_filter(z, 3)
+    even = (z <= top_ft) & (ndimage.maximum_filter(z, 3) - low <= within)
+    # and the water's outermost cells, which have the bank among their neighbours
+    return even | (ndimage.binary_dilation(even, structure=np.ones((3, 3))) & (z <= top_ft) & (z - low <= within))
+
+
+def leaving_water(dem_ft, top_ft=SURFACE_TOP_FT, cell_m2=1.0, min_m2=EDGE_BODY_M2):
+    """True in the cells at or below `top_ft` whose body, of at least `min_m2`, runs off the grid's edge: the tide's
+    water and the low ground beside it. A pit is not in it, however deep (the quarry south of the James at Richmond
+    goes to -290 ft NAVD88, and was the largest body at the lowest level in the city's frame)."""
+    from scipy import ndimage
+    lab, n = ndimage.label(dem_ft <= top_ft, structure=np.ones((3, 3)))
+    sizes = np.bincount(lab.ravel(), minlength=n + 1)
+    edge = np.unique(np.concatenate([lab[0], lab[-1], lab[:, 0], lab[:, -1]]))
+    return np.isin(lab, [i for i in edge.tolist() if i and sizes[i] * cell_m2 >= min_m2])
+
+
+def water_surface(dem_ft, top_ft=SURFACE_TOP_FT, cell_m2=1.0, min_m2=EDGE_BODY_M2, from_ft=LEVELS_FT[0]):
+    """(level, the cells at or below it in the bodies that run off the grid's edge) for a frame without tidal ground.
+
+    Above a river's surveyed bed the elevation data has the water as the lidar met it: the Appomattox at Petersburg
+    and the James at Richmond lie between -2 and +2 ft NAVD88, so no cell of theirs is at the lowest level and
+    nothing could flood from them. The tide's water is
+    then every body of at least `min_m2` that runs off the grid's edge at the lowest level that has one, looked for
+    from `from_ft` to `top_ft`. (None, None) where there is none: the frame has no tidal water."""
+    from scipy import ndimage
+    for level in LEVELS_FT[(LEVELS_FT >= from_ft) & (LEVELS_FT <= top_ft)]:
+        lab, n = ndimage.label(dem_ft <= level, structure=np.ones((3, 3)))
+        if n == 0:
+            continue
+        sizes = np.bincount(lab.ravel())
+        edge = np.unique(np.concatenate([lab[0], lab[-1], lab[:, 0], lab[:, -1]]))
+        ids = [i for i in edge.tolist() if i and sizes[i] * cell_m2 >= min_m2]
+        if ids:
+            return float(level), np.isin(lab, ids)
+    return None, None
 
 
 def seed_list(seed):

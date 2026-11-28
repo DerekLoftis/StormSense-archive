@@ -41,6 +41,21 @@ Nothing heavy happens per run: the rasters are only read in step 1.
   like the Piankatank north of Gloucester (frame: the York and Mobjack Bay) or the York north of James City (frame:
   the James). Until 2026-11-27 only the largest body counted, and the second river's shore was land. A body that
   leaves the frame inside a watershed no gauge stands for (below) is not tidal water (`prep.sea_cells`).
+- A pit is not tidal water (2026-11-28). The quarry south of the James at Richmond goes down to -290 ft NAVD88 and
+  was the largest body at -2 ft in the city's frame, so the first Richmond map flooded from the quarry and the
+  river stayed dry. A body at -2 ft counts only if it lies in water that runs off the frame's edge at or below 3 ft
+  (`depth.leaving_water`, `prep.tidal_cells`); the log names each pit left out.
+- A river without its bed (2026-11-28). Above the surveyed channel the elevation data has the river as the water
+  the lidar met: the James through Richmond lies at 0 to 2 ft and the Appomattox at Petersburg at -1.5 ft, with no
+  ground at -2 ft at all, and Petersburg's first preparation stopped with nothing to flood from. Where a frame has
+  no tidal ground, `prep.tidal_surface` takes the water of 5 hectares or more that runs off the frame's edge at the
+  lowest level that has one (`depth.water_surface`, looked for up to 3 ft) and the even water in the same low
+  ground (`depth.flat_water`: cells at or below 3 ft within 0.01 ft of all their neighbours, which only water as
+  the lidar met it is; the reaches upstream lie a little higher than the one at the edge), writes them into the saved grid at
+  -2 ft and the water spreads from there. A deck or a dock over that water then stands over water like any other
+  (before, three docks at Rocketts Landing were flooded buildings at every high tide). `<name>_prep.json` has the
+  level under `water_surface_ft`. A frame that has tidal ground is left as it is, also where a reach upstream in it
+  is such a surface.
 - Memory: one byte per cell for the result plus the union-find's pages over low ground (`spread.sparse`; the frame
   of King and Queen County is 2.96 billion cells and needed all 16 GB before the untouched pages were kept out).
 - Derek's 0.25 ft HUC-12 depth grids, once hosted (planned: mobjack.vims.edu `VIMS_PHYS`): sample each grid at the
@@ -156,6 +171,31 @@ Windmill Point, 0.68 at Lewisetta. Tangier Island's lanes and yards lie at 0.7 t
 1,219 of its 1,381 road pieces were bridges and 459 of its 581 buildings piers. Elsewhere the change is a handful
 of pieces (11 in Mathews, 8 in Lancaster, none in Norfolk). VGIN's own bridge coding is incomplete (most bridges are `SEG_TYPE` 99), so a proper
 bridge layer (VDOT structures) would be better.
+
+4 (2026-11-28) is a deck over low ground that the road's own profile gives away (`prep.decks`): an overpass or a
+viaduct with no water under it and no bridge code. A road that has run level (within 5 ft for 20 m) cannot then fall
+12 ft within 15 m; where the ground under it does, the road has left the ground at an abutment, and the pieces
+beyond are under the deck as far as the piece where the ground is back within 5 ft of the abutment's height, or
+where the road is over water, if there is one within 600 m along the same street (150 m where the road is not a
+highway or a ramp; `prep.chain` follows a street across VGIN's cuts and from two carriageways into one). A road
+that comes down a bank and stays low is not under a deck, and neither is a low street with one high piece in it
+(another road's deck left in the elevation data), a road that comes down to a landing or crosses a ravine on a
+grade (Beaverdam Road and Marina Drive in Surry fall 3 ft in every 5 m for 100 m and more), or a street that runs
+low for 575 m between two bluffs (River Walk in Middlesex). Interstate 95 by Pocahontas Island in Petersburg was
+the case: 47 ft at the abutment, 3.3 to 4 ft under the deck, a flooded interstate at 4 ft without the rule.
+
+Each locality has only its half of a bridge to the next one: its roads stop in the middle, with no far abutment.
+Where a road stops within 150 m of an abutment, with no other road there and within 100 m of the locality's
+boundary (`prep.at_border`), the pieces between are under the deck, and there a fall of 10 ft within 20 m is an
+abutment. Mount Vernon Avenue and South Arlington Ridge Road over Four Mile Run, between Alexandria and Arlington
+(ground at 1 to 3 ft under them), and Interstate 395 towards Washington were flooded roads at every high tide
+without it. A dead end inside the locality is a dead end.
+
+On the saved tables of localities prepared before the rule, it would take out 96 pieces that can go under by
+10 ft in Portsmouth (ramps and decks of Interstate 264 and the Martin Luther King Freeway), 30 in Gloucester
+(Hickory Fork Road, 130 m at 3 to 4 ft between banks of 40%), 12 in Northampton (Ellens Lane, between two dunes:
+likely not a deck), 8 in Hampton, 6 in Newport News and none in Poquoson: they get it when they are next
+prepared. It finds the Woodrow Wilson Bridge's approaches over Jones Point in Alexandria (382 pieces).
 
 ## Files
 
@@ -329,13 +369,45 @@ At each gauge's forecast peak (most between 4.9 and 6.1 ft NAVD88, about 14:30Z 
 | York County (no pipes found) | 10.5 | – | 2.4 | 1,013 | 457 | $0.99M | 12.9 / 1,274 |
 | James City County | 2.8 | 0.0 | 0.5 | 205 | 103 | $0.33M | 3.4 / 253 |
 | Williamsburg | 0.0 | – | 0.0 | 0 | 0 | $0 | 0.0 / 0 |
-| Gloucester County (no pipes found) | 44.5 | – | 4.4 | 719 | 325 | $1.68M | 49.0 / 858 |
-| Mathews County (no pipes or values found) | 37.7 | – | 6.0 | 957 | – | – | 44.2 / 1,152 |
-| Middlesex County (no pipes or values found) | 1.9 | – | 0.4 | 78 | – | – | 2.4 / 110 |
-| King and Queen County (no pipes or values found; FEMA USA Structures outlines) | 2.6 | – | 0.5 | 24 | – | – | 3.2 / 34 |
-| King William County (no pipes or values found) | 2.2 | – | 0.3 | 112 | – | – | 2.6 / 126 |
-| Essex County (no pipes or values found) | 3.1 | – | 0.6 | 55 | – | – | 3.8 / 89 |
+| Gloucester County (no pipes found) | 44.5 | – | 4.4 | 1,175 | 614 | $2.18M | 49.0 / 1,392 |
+| Mathews County (no pipes or values found) | 37.8 | – | 6.0 | 1,542 | – | – | 44.2 / 1,878 |
+| Middlesex County (no pipes or values found) | 1.3 | – | 0.4 | 56 | – | – | 1.7 / 84 |
+| King and Queen County (no pipes or values found; FEMA USA Structures outlines) | 2.6 | – | 0.5 | 25 | – | – | 3.2 / 35 |
+| King William County (no pipes or values found) | 2.2 | – | 0.3 | 145 | – | – | 2.6 / 161 |
+| Essex County (no pipes or values found) | 3.1 | – | 0.6 | 59 | – | – | 3.8 / 95 |
+| Lancaster County (no pipes or values found) | 8.8 | – | 2.1 | 281 | – | – | 11.2 / 378 |
+| Northumberland County (no pipes or values found) | 3.0 | – | 0.6 | 235 | – | – | 3.6 / 290 |
+| Richmond County (no pipes or values found) | 1.0 | – | 0.2 | 51 | – | – | 1.2 / 66 |
+| Westmoreland County (no pipes or values found) | 2.1 | – | 0.6 | 286 | – | – | 2.7 / 331 |
+| Northampton County (no pipes or values found) | 8.3 | – | 0.8 | 455 | – | – | 9.2 / 486 |
+| Accomack County, south of 37.75 N (no pipes or values found) | 33.7 | – | 4.5 | 891 | – | – | 40.0 / 1,099 |
+| Accomack County, north of 37.75 N (no pipes or values found) | 96.9 | – | 5.9 | 7,422 | – | – | 103.7 / 7,854 |
+| Tangier Island (no pipes or values found) | 3.7 | – | 0.0 | 510 | – | – | 3.7 / 510 |
+| Surry County (no pipes or values found) | 1.1 | – | 0.1 | 107 | – | – | 1.2 / 110 |
+| Prince George County, near tidal water (no pipes or values found) | 0.1 | – | 0.0 | 10 | – | – | 0.2 / 11 |
+| Hopewell (no pipes or values found) | 0.0 | – | 0.0 | 1 | – | – | 0.0 / 1 |
+| Petersburg (no pipes or values found) | 0.0 | – | 0.0 | 0 | – | – | 0.0 / 0 |
+| Colonial Heights (no pipes or values found) | 0.0 | – | 0.0 | 0 | – | – | 0.0 / 0 |
+| Charles City County (no pipes or values found) | 1.1 | – | 0.1 | 5 | – | – | 1.2 / 8 |
+| Chesterfield County, near tidal water (no pipes or values found) | 0.0 | – | 0.0 | 6 | – | – | 0.0 / 8 |
+| Henrico County, near tidal water (no pipes or values found) | 0.0 | – | 0.0 | 8 | – | – | 0.0 / 11 |
+| Richmond (City) (no pipes or values found) | 0.0 | – | 0.0 | 0 | – | – | 0.0 / 0 |
+| New Kent County (no pipes or values found) | 1.0 | – | 0.1 | 80 | – | – | 1.1 / 95 |
+| Hanover County, near tidal water (no pipes or values found) | 0.0 | – | 0.0 | 0 | – | – | 0.0 / 0 |
 
+- The rows from Surry County down (the upper James, 28 Nov) are small because little there lies low: the James and
+  the Appomattox run between bluffs above Hopewell, and the forecast peak was 4.9 ft NAVD88 at Jordan Point, 5.8 at
+  Richmond Locks and 6.3 at Pocahontas. Charles City County has no VGIN footprints at all (6,381 FEMA outlines).
+- The rows from Gloucester down were prepared on 27 and 28 Nov with the gauges by water body, the high tide limit
+  for water under a deck and FEMA's outlines where VGIN has no footprint; the Hampton Roads rows above them are as
+  prepared before those three changes. FEMA's outlines took Mathews from 957 to 1,542 buildings, Gloucester from 719
+  to 1,175 and Northumberland from 69 to 235; the gauge rules took Middlesex from 78 buildings to 56 (its shores now follow
+  Windmill Point, the Piankatank and Tappahannock, not West Point on the York).
+- The Eastern Shore's totals follow two gauges that read far above the rest. NOAA's own preliminary record at
+  Wachapreague peaks at 8.44 ft NAVD88 on 26 Nov (Kiptopeke 4.93, Sewells Point 5.98), and the forecast of 00Z had it
+  at 7.57 ft; Chincoteague's forecast peak was 5.29 ft, and 6,817 of northern Accomack's 7,422 buildings are on that
+  gauge (Chincoteague Island's ground is mostly 3 to 5 ft). Onancock's forecast peak was 2.74 ft, with Saxis at 4.22
+  and Kiptopeke at 5.01 either side of it: a question for the forecast.
 - Norfolk: 360,651 pieces (1,765 km), 93,969 buildings, 9 gauges; 32,598 pipes, 4,956 ditches and 38,352 structures
   in 2,441 networks; one floodwall system. Before the pipes and the floodwall: 34.8 miles and 1,958 buildings.
 - The damage figure is ruled by the first floor: with every home on a slab at grade the same water gives $37.0M in
@@ -373,6 +445,12 @@ watersheds it covers (a code ending in `*` covers every HUC-12 that starts with 
 | `02080106*` | Pamunkey | GS02, WSPV |
 | `0208010202*` | Dragon Swamp | WCKV |
 | `0208010203*` | Piankatank and Milford Haven | WCKV, WMPT |
+| `0208020604*` to `06*` | Chickahominy | USJT (its own gauge at Mamanahunt, GS01, has no trusted readings yet) |
+| `0208020601*` | the James from the falls at Richmond to Hopewell | RICV, JPHV |
+| `0208020602*` | the James from Hopewell to Flowerdew Hundred | JPHV, USJT |
+| `02080207*` | Appomattox | ARPV, JPHV |
+| `020802071002` | the lower Appomattox, Ashton Creek to City Point | JPHV (Pocahontas, at the falls, stands about a foot above the James) |
+| `02070010*` | tidal Potomac from Occoquan Bay to Little Falls, the Anacostia, Four Mile Run | WADC, GTND, AXTV, ALEV, BPAD, LSPV, IHDM |
 
 The seaside gauges ran far above the bay on 26 Nov 2026: Wachapreague reached 8.44 ft NAVD88 (NOAA preliminary) and
 Oyster 6.55 ft before its record stopped, against 4.93 ft at Kiptopeke and 5.21 ft at Chincoteague, so which side
@@ -391,6 +469,34 @@ A county's boundary runs far out into the bay and the ocean, and the frame is 1 
   cut frame is 4.30 billion cells, more than the union-find's 32-bit nodes and about 26 GB of grids, so it is three
   areas: `accomack_north` and `accomack_south` (split at 37.75 N, between Onancock and Parksley) and `tangier`.
 
+## Counties that are mostly upland
+
+Henrico, Chesterfield, Hanover and Prince George reach from a tidal river to the Piedmont, and nearly all of their
+roads and buildings stand higher than any level mapped here. A row of `areas.csv` with `low` = 1 (`prep --low`)
+keeps only what the water could reach:
+
+- `depth.low_grid` reads one row of the 1 m tiles every 64 m, whole, and marks the 64 m cells with ground or water
+  at or below 10 ft NAVD88.
+- `depth.tidal_low` keeps the low patches the tide can be part of: the largest, every one that runs off the frame's
+  edge and every one of 2 km2 or more, with patches within two cells of each other counted as one. A quarry floor
+  below sea level in the middle of the county is left out (two of them sit in Henrico's frame).
+- `prep.near_low` keeps the roads with a vertex, and the buildings with their first point, within 1.5 km of that
+  ground, and cuts the frame to them and to the whole of each low patch they lie near, so that the river they flood
+  from is in the frame.
+
+| County | road segments kept | buildings kept | frame, billion cells |
+|---|---|---|---|
+| Henrico | 314 of 23,014 | 2,963 of 179,682 | 0.49 (1.78 whole) |
+| Chesterfield | 1,935 of 25,594 | 16,167 of 210,830 | 0.74 (2.22 whole) |
+| Prince George | 457 of 2,627 | 5,070 of 30,325 | 0.67 |
+| Hanover | 61 of 7,740 | 975 of 89,063 | 0.26 |
+
+`<name>_prep.json` has the counts under `low_frame`, and the page says what it holds. The tables of such a
+locality are not the whole locality.
+
+The localities' boundary layer holds Prince George County in two rows, a 2 ha sliver first: `vgin.locality` puts
+every row's polygons together.
+
 ## Watersheds without a gauge
 
 A HUC-12 whose water level no StormSense gauge measures is left out rather than tied to the nearest gauge:
@@ -407,6 +513,10 @@ the page says which watersheds are missing. A gauge there (or a Currituck Sound 
 
 - Building rule: half the footprint under 0.5 ft (now) or 0.5 ft at the low side (`wet_low_ft`), Derek's call.
 - Low spots with no pipe to tidal water stay dry; rain is not in it.
+- Above the head of tide (Richmond, Petersburg, Fredericksburg, Little Falls) a river in flood from rain is not in
+  these maps: the gauges at the falls (RICV, ARPV, FEDV) give the tide's level below them. Pocahontas (ARPV) stood
+  about a foot higher than the James at Jordan Point through the week before 26 Nov 2026; whether that is the
+  river's slope at the falls or its datum (NWPS: NAVD88 = stage - 8.03 ft) is not settled.
 - Other buildings than homes get no damage estimate; contents are not estimated; first floor heights are assumed.
 - The water picture on the page is drawn at 5 m (roads and buildings use the 1 m DEM); the tiles would carry 1 m.
 - Historical floods use the tide gauges only (no high water marks, no rain), on today's ground. Chesapeake Bay

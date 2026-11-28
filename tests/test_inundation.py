@@ -687,8 +687,83 @@ def test_water_under_a_deck_is_judged_by_the_gauges_own_high_tide(tmp_path):
     pieces = {"SEG_TYPE": [None] * n, "xm": np.arange(n) * 100.0, "ym": np.zeros(n), "ST_FULL": ["MAIN ST"] * n,
               "road": np.arange(n)}
     ground = np.array([0.8, 0.8, 0.3, 0.8, 1.4, np.nan])
-    assert list(prep.bridges(pieces, ground)) == [1, 1, 1, 1, 0, 1]
-    assert list(prep.bridges(pieces, ground, np.full(n, 0.52))) == [0, 0, 1, 0, 0, 1]
+    none = np.zeros(n, bool)
+    assert list(prep.bridges(pieces, ground, deck=none)) == [1, 1, 1, 1, 0, 1]
+    assert list(prep.bridges(pieces, ground, np.full(n, 0.52), deck=none)) == [0, 0, 1, 0, 0, 1]
+
+
+def test_a_deck_over_low_ground_is_found_from_the_roads_own_profile():
+    """Interstate 95 by Pocahontas Island in Petersburg: VGIN does not code the overpass as a bridge, no water lies
+    under it, and the elevation data has the low ground under the deck (3.3 to 4 ft between embankments at 45 ft)."""
+    pytest.importorskip("scipy")
+    from inundation import prep, segments
+
+    def road(name, xs, y=0.0):
+        return {"type": "Feature", "properties": {"ST_FULL": name, "SEG_TYPE": 99},
+                "geometry": {"type": "LineString", "coordinates": [[x, y] for x in xs]}}
+
+    # one street in two lines that meet at x = 400, the second drawn the other way; a second street that only dips;
+    # a third that comes down a bank and stays low; a side street that meets the first at the same point
+    feats = [road("I 95 NB", [0, 400]), road("I 95 NB", [800, 400]), road("VALLEY RD", [0, 800], 100.0),
+             road("RIVER RD", [0, 800], 200.0), road("SIDE ST", [400, 400.0001], 0.0), road("FRANKLIN ST", [0, 800], 300.0),
+             road("MOUNT VERNON AVE", [0, 150], 400.0), road("MOUNT VERNON AVE", [150, 200], 400.0),
+             road("MOUNT VERNON AVE", [150, 200], 400.0),                              # the last line is there twice
+             road("FERRY RD", [0, 200], 500.0), road("WHARF ST", [200, 260], 500.0),
+             road("MARINA DR", [0, 200], 600.0), road("BEAVERDAM RD", [0, 800], 700.0), road("I 295 SB", [0, 500], 800.0),
+             road("GLEBE RD", [0, 155], 900.0), road("GLEBE RD", [155, 200], 900.0), road("GLEBE RD", [155, 200], 900.0)]
+    feats[-2]["geometry"]["coordinates"][1][1], feats[-1]["geometry"]["coordinates"][1][1] = 906.0, 894.0   # two carriageways
+    feats += [road("RIVER WALK", [0, 800], 1000.0), road("US 360", [0, 800], 1100.0)]
+    feats[-2]["properties"]["MTFCC"], feats[-1]["properties"]["MTFCC"] = "S1400", "S1200PRI"
+    feats[4]["geometry"]["coordinates"] = [[400, 0], [400, 60]]
+    p = segments.split(feats, lambda x, y: (np.asarray(x, float), np.asarray(y, float)))
+    x, y, name = p["xm"], p["ym"], np.array([str(v) for v in p["ST_FULL"]])
+    ground = np.full(len(x), 45.0)
+    i95 = name == "I 95 NB"
+    ground[i95 & (x > 300) & (x < 420)] = 3.5                                          # under the deck
+    up = i95 & (x >= 420) & (x < 570)
+    ground[up] = 3.5 + (x[up] - 420) * 0.25                                            # the far slope, 7.5% up to 41 ft
+    low = name == "FRANKLIN ST"                                                        # a low street that rises a little
+    ground[low] = 8.0 + 2.5 * (x[low] > 500)
+    ground[low & (np.abs(x - 302.5) < 0.1)] = 22.0                                     # under another road's deck, left in the data
+    valley = name == "VALLEY RD"
+    ground[valley] = 45 - 41.5 * np.clip(1 - np.abs(x[valley] - 400) / 100, 0, 1)      # 13% both ways: steep, but a road
+    half = name == "MOUNT VERNON AVE"                                                  # half a bridge: the next locality
+    ground[half] = np.interp(x[half], [0, 160, 175, 200], [13, 13, 2, 2])              # has the other half
+    ferry = name == "FERRY RD"                                                         # the same fall, but the street
+    ground[ferry] = np.interp(x[ferry], [0, 160, 175, 200], [13, 13, 2, 2])            # goes on as another one
+    ground[name == "WHARF ST"] = 2.0
+    fork = name == "GLEBE RD"                                                          # a half bridge again, in two
+    ground[fork] = np.interp(x[fork], [0, 160, 175, 200], [13, 13, 2, 2])              # carriageways from just before it
+    for long in ("RIVER WALK", "US 360"):                                              # 400 m of low ground between two
+        ground[(name == long) & (x > 200) & (x < 600)] = 5.0                           # bluffs: a viaduct if a highway
+    marina = name == "MARINA DR"                                                       # the same fall again, to a dead end
+    ground[marina] = np.interp(x[marina], [0, 160, 175, 200], [13, 13, 2, 2])          # inside the locality
+    ravine = name == "BEAVERDAM RD"                                                    # down a ravine at 18% and up again:
+    ground[ravine] = 7 + 0.18 * 3.2808 * np.clip(np.abs(x[ravine] - 400) - 60, 0, 130)   # steep all the way, never level
+    i295 = name == "I 295 SB"                                                          # off the bluff, over a terrace,
+    ground[i295] = np.where(x[i295] < 100, 59.0, np.where(x[i295] < 300, 7.0, -2.0))   # and out over the river
+    river = name == "RIVER RD"
+    ground[river & (x > 300)] = 3.5                                                    # down a bank, and low from there on
+    nb, loose, via = prep.chain(p)
+    at = np.flatnonzero(i95 & (np.abs(x - 397.5) < 0.1))[0]
+    assert set(name[nb[at]]) == {"I 95 NB"} and abs(x[nb[at]] - 397.5).max() <= 5.01    # across the two lines' ends
+    assert not loose[at].any() and loose[half & (x > 195)].any() and not loose[ferry & (x > 195)].any()
+    assert not prep.decks(p, ground)[half].any()                      # a road's end is a dead end unless told otherwise
+    deck = prep.decks(p, ground, border=half | fork | marina & (x < 100) | river)
+    assert deck[i95 & (x > 300) & (x < 420)].all()                    # the low ground, across the two lines
+    assert deck[i95 & (x >= 420) & (x < 560)].all()                   # and the slope below 40 ft
+    assert not deck[i95 & ((x < 300) | (x > 572))].any()
+    assert not deck[valley].any() and not deck[river].any() and not deck[name == "SIDE ST"].any() and not deck[low].any()
+    assert deck[half & (x > 176)].all() and not deck[half & (x < 160)].any()           # as far as the roads go
+    assert not deck[ferry].any() and not deck[name == "WHARF ST"].any()
+    assert not deck[marina].any() and not deck[ravine].any()
+    assert not deck[name == "RIVER WALK"].any() and deck[(name == "US 360") & (x > 200) & (x < 600)].all()
+    assert deck[fork & (x > 176)].all() and deck[fork & (x > 176)].sum() == 10 and not deck[fork & (x < 160)].any()
+    assert deck[i295 & (x > 100) & (x < 300)].all() and not deck[i295 & ((x < 100) | (x > 300))].any()   # as far as the water
+    code = prep.bridges(p, ground, deck=deck)
+    assert (code[deck & ~i295] == 4).all() and (code[~deck & ~i295] == 0).all()
+    assert set(code[i295 & (x > 300)]) == {1} and set(code[i295 & (x < 95)]) == {0}
+    assert set(code[i295 & (x > 100) & (x < 300)]) == {3, 4}          # the last 60 m are the spans over the bank
 
 
 def test_fema_outlines_fill_in_where_vgin_has_no_footprint(monkeypatch):
@@ -738,3 +813,126 @@ def test_the_pages_carry_what_derek_asked_of_the_maps():
     from inundation import tether
     sts = tether.stations()
     assert {"navd88_above_mllw_ft", "noaa"} <= set(sts[0]) and any(s["noaa"] for s in sts) and not all(s["noaa"] for s in sts)
+
+
+def test_an_elevation_strip_cut_short_is_read_again(tmp_path):
+    """A read from the bucket that ends early (King William, 28 Nov 2026) is tried again from the tile opened anew."""
+    rasterio = pytest.importorskip("rasterio")
+    from rasterio.errors import RasterioIOError
+    from rasterio.transform import from_origin
+    from rasterio.windows import Window
+    from inundation import depth
+    p = str(tmp_path / "t.tif")
+    a = np.arange(48, dtype=np.float32).reshape(6, 8)
+    with rasterio.open(p, "w", driver="GTiff", height=6, width=8, count=1, dtype="float32", crs="EPSG:26918",
+                       transform=from_origin(400000, 4100006, 1, 1)) as w:
+        w.write(a, 1)
+
+    class Short:
+        calls = 0
+
+        def read(self, band, window=None):
+            Short.calls += 1
+            raise RasterioIOError("Read failed.")
+
+    got = depth._read_strip(Short(), p, Window(2, 1, 3, 4), wait=0)
+    assert Short.calls == 1 and (got == a[1:5, 2:5]).all()
+    with pytest.raises(RasterioIOError):
+        depth._read_strip(Short(), str(tmp_path / "missing.tif"), Window(0, 0, 1, 1), tries=2, wait=0)
+    out, corner = depth.read_dem([p], (400000, 4100000, 400008, 4100006))
+    assert out.shape == (6, 8) and corner == (400000, 4100006) and np.allclose(out, a * depth.M_TO_FT)
+
+
+def test_an_upland_county_keeps_what_lies_near_low_ground(tmp_path):
+    """--low: a coarse map of the low ground, its tidal parts, and the roads and buildings near them."""
+    rasterio = pytest.importorskip("rasterio")
+    pytest.importorskip("scipy")
+    from rasterio.transform import from_origin
+    from inundation import depth, prep, vgin
+    a = np.full((4000, 3000), 30.0, np.float32)               # metres: upland
+    a[3600:, :] = -1.0                                        # a river along the south edge, 400 m wide
+    a[3300:3600, 1000:1010] = 1.0                             # a creek 10 m wide running north from it
+    a[1000:1100, 500:600] = -5.0                              # a quarry floor below sea level, shut in
+    a[10, 2500] = -32767.0                                    # no data is not low ground
+    p = str(tmp_path / "t.tif")
+    with rasterio.open(p, "w", driver="GTiff", height=4000, width=3000, count=1, dtype="float32", crs="EPSG:26918",
+                       nodata=-32767.0, transform=from_origin(500000, 4104000, 1, 1)) as w:
+        w.write(a, 1)
+    whole = (500000, 4100000, 503000, 4104000)
+    low = depth.low_grid([p], whole, step=50)
+    assert low.shape == (80, 60) and low[72:].all() and low[66:72, 20].all() and not low[66:72, 21].any()
+    assert low[20:22, 10:12].all() and not low[0].any() and low.sum() == 8 * 60 + 6 + 4
+    assert not depth.low_grid([p], whole, limit_ft=-20.0, step=50).any()        # -5 m is -16.4 ft
+    tidal = depth.tidal_low(low)
+    assert tidal[72:].all() and tidal[66:72, 20].all() and not tidal[20:22, 10:12].any()    # the quarry is left out
+    assert len(np.unique(tidal)) == 2 and not depth.tidal_low(np.zeros((4, 4), bool)).any()
+    flat = lambda x, y: (np.asarray(x, float), np.asarray(y, float))
+    road = lambda *pts: {"geometry": {"type": "LineString", "coordinates": [list(q) for q in pts]}}
+    house = lambda x, y: {"geometry": {"type": "Polygon", "coordinates": [[[x, y], [x + 10, y], [x + 10, y + 10], [x, y]]]}}
+    roads = [road((500100, 4100600), (500300, 4100700)),            # by the river
+             road((501000, 4103900), (501000, 4101200)),            # comes down to within reach of the creek's head
+             road((500500, 4103000), (500600, 4103000)),            # by the quarry only
+             road((502500, 4103900), (502900, 4103900))]            # upland
+    bldgs = [house(502000, 4100900), house(500550, 4102950), house(502000, 4103500)]
+    kr, kb, frame, parts = prep.near_low(roads, bldgs, tidal, whole, flat, margin=600, step=50)
+    assert kr == roads[:2] and kb == bldgs[:1] and parts == 1
+    assert frame == (500000, 4100000, 503000, 4104000)              # the whole river, and the road that runs north
+    kr, kb, frame, parts = prep.near_low(roads[:1], bldgs[:1], tidal, whole, flat, margin=600, step=50)
+    assert frame == (500000, 4100000, 503000, 4101500)              # the low part whole and the house, plus the margin
+    assert prep.near_low(roads[3:], bldgs[2:], tidal, whole, flat, margin=600, step=50)[:2] == ([], [])
+    # a locality the layer holds in two rows is one outline, its main body first
+    sliver = {"type": "Feature", "properties": {"NAME": "X"}, "geometry": {"type": "Polygon", "coordinates": [[[0, 0], [1, 0], [0, 1], [0, 0]]]}}
+    body = {"type": "Feature", "properties": {"NAME": "X"}, "geometry": {"type": "Polygon", "coordinates": [[[0, 0], [9, 0], [9, 9], [5, 12], [0, 9], [0, 0]]]}}
+    one = vgin.one_feature([sliver, body])
+    assert one["geometry"]["type"] == "MultiPolygon" and len(one["geometry"]["coordinates"]) == 2
+    assert one["geometry"]["coordinates"][0] == body["geometry"]["coordinates"] and vgin.one_feature([body]) is body
+    assert prep.bounds_of(one, flat, buffer=0) == (0, 0, 9, 12)
+    rows = prep_areas()
+    assert {r["name"] for r in rows if r.get("low")} >= {"henrico", "chesterfield"} and not any(r.get("low") and r.get("box") for r in rows)
+
+
+def prep_areas():
+    from inundation import site
+    return site.areas()
+
+
+def test_a_river_without_its_bed_is_tidal_water_and_a_pit_is_not(tmp_path):
+    """Richmond and Petersburg: the elevation data has the tidal river as the water's surface (0 to 2 ft), and the
+    only ground below the lowest level is a quarry pit. The pit is not the sea; the river is lowered and becomes it."""
+    pytest.importorskip("scipy")
+    from inundation import prep, spread
+    dem = np.full((1200, 300), 25.0, np.float32)
+    dem[:, 100:160] = (0.8 + 0.0005 * np.arange(1200, dtype=np.float32))[::-1, None]     # the river as the lidar met
+    # it: 1.4 ft where it enters at the top, 0.8 ft where it leaves at the bottom
+    dem[100:1100, 200:290] = -60.0        # a pit larger than the river (9 ha), with a high rim all round
+    dem[600:620, 20:40] = 2.0             # a pond: even water, but nothing joins it to the river
+    assert not depth.leaving_water(dem)[200, 240] and depth.leaving_water(dem)[200, 130]
+    assert depth.flat_water(dem)[5, 130] and depth.flat_water(dem)[610, 30] and depth.flat_water(dem)[5, 100] and not depth.flat_water(dem)[5, 99]
+    tidal, pits, _, step = prep.tidal_cells(dem)
+    assert tidal == [] and len(pits) == 1 and step == 1
+    path = str(tmp_path / "dem_ft.npy")
+    np.save(path, dem)
+    said = []
+    level = prep.tidal_surface(np.load(path, mmap_mode="r"), path, lambda *a: said.append(" ".join(map(str, a))))
+    assert level == 1.25 and "the river's surface" in said[0]          # the lowest level with 5 ha leaving the frame
+    low = np.load(path)
+    assert (low[:, 100:160] == depth.LEVELS_FT[0]).all()                # and the reach above it, 1.25 to 1.4 ft, too
+    assert (low[100:1100, 200:290] == -60).all() and low[0, 0] == 25 and low[610, 30] == 2
+    assert prep.tidal_surface(np.load(path, mmap_mode="r"), path) is None           # a second run finds the river
+    keep = prep.sea_cells(low, (0, 1200), [], {}, None, lambda *a: said.append(" ".join(map(str, a))))
+    assert len(keep) == 1 and 100 <= keep[0][1] < 160 and any("is a pit" in s for s in said)
+    if spread.njit is not None:                 # the spreading itself needs numba
+        out = spread.connect_index(low, depth.LEVELS_FT, seed=keep)
+        assert out[200, 130] == 0 and out[200, 240] == depth.NEVER
+    # a large grid is looked over on every 8th cell and lowered cell by cell
+    big = np.full((7200, 7000), 25.0, np.float32)
+    big[:, 3000:3101] = 0.8
+    big[:2000, 3000:3101] = 1.6           # a reach a step higher
+    big[5000, 3050] = 9.0                 # a pile in the river keeps its height
+    np.save(path, big)
+    assert prep.tidal_surface(np.load(path, mmap_mode="r"), path) == 1.0
+    low = np.load(path, mmap_mode="r")
+    assert (low[2001::97, 3000:3101] == depth.LEVELS_FT[0]).all() and low[5000, 3050] == 9 and low[5000, 2990] == 25
+    assert (low[:1999:97, 3000:3101] == depth.LEVELS_FT[0]).all()
+    whole = depth.flat_water(big[1000:3100, 2990:3110])
+    assert np.array_equal(depth.flat_water(big[1998:2030, 2990:3110])[2:-2], whole[1000:1028])     # strips agree with the whole
