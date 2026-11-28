@@ -77,6 +77,8 @@ project's shared folder (skill code, baselines, notes, station sheet, disclosure
   px30 from web4 (the one web4 read; NAVD CSV + our navd88). `station.py` lines them up with the gauge
   (median obs - member over the last 24 h, >=30 obs; NWS and Tidewatch not shifted); P-ETSS and ETSS also
   keep their surge (`petss_surge_ft`, `etss_surge_ft` in ens72) so the model puts it on our tide.
+  Every member must reach the grid's last point (t0 + 72.0 h, 721 steps): P-ETSS stopped at 71.9 h until
+  2026-11-28, so the final fore72 value lost it and jumped toward the tide.
 - StormSense model member (`surge.py`, `corrector.py`): gauge residual handed over (TAU 12 h) to a
   1/RMSE^2 blend of the members' surges on our tide, then the site predictor-corrector from the last week
   of archived runs. `stormsense_raw` = before the corrector (reference only).

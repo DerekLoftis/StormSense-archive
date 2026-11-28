@@ -174,7 +174,7 @@ def forecast(st, t0, cycle, hours=72):
     SSforecast, low (10th percentile, P-ETSS's 90% exceedance) and high (90th
     percentile, 10% exceedance), surge, surge_low, surge_high and bias; feet MLLW."""
     tt = st["time"]
-    grid = np.array([t0 + k * STEP for k in range(hours * 10)])
+    grid = np.array([t0 + k * STEP for k in range(hours * 10 + 1)])  # t0 to t0 + hours inclusive, as station.grid_for
     sec = lambda a: np.array([x.timestamp() for x in a])
     tide_all = st["TIDE"]
     ok = ~np.isnan(tide_all)
