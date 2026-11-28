@@ -23,7 +23,7 @@ project's shared folder (skill code, baselines, notes, station sheet, disclosure
 | The StormSense run: `python -m stormsense.build` | `.github/workflows/stormsense.yml` here | 00:20/06:20/12:20/18:20 via cron-job.org |
 | StormSense Latest site (fore72, 7day, 30day) | public DerekLoftis/StormSense-latest, `site` branch, https://derekloftis.github.io/StormSense-latest/ | pushed by the run |
 | StormSense Ensemble site (ens72, skill/) | public DerekLoftis/StormSense-ensemble, `site` branch, https://derekloftis.github.io/StormSense-ensemble/ | pushed by the run |
-| Archive of the Latest site as published | `archive-latest.yml` here, `stormsense_<build time>.tar.xz` on `stormsense-YYYY-MM` | :50 hourly |
+| Archive of the Latest site as published | `archive-latest.yml` here, `stormsense_<build time>.tar.xz` on `stormsense-YYYY-MM`; dispatched by each StormSense run with the `site` commit it pushed (input `site_commits`; also rebuilds missed builds from old site commits, which GitHub keeps fetchable by id) | after each run; :50 every 3 h as fallback |
 | Gauge observations, one tarball per day | `archive-obs.yml` here, `obs_YYYY-MM-DD.tar.xz` on `obs-YYYY-MM` | 04:10 daily |
 | Harmonic tide refit | `harmonics.yml` here, commits `harmonics/<ST>.json` | 2nd of month |
 | Verified obs + rescoring (`archiver/verified.py`) | `verified.yml` here, release `verified-YYYY-MM` (final vs preliminary readings, every change > 0.1 ft, the month's runs rescored); `data/verified/status.csv`, `cadence.csv` | 10th monthly 05:30 (Derek 2026-11-27); each month rechecked until NOAA verifies / USGS approves all of it |

@@ -5,12 +5,25 @@
 # several hours late, so this checks every 3 hours (reduced from hourly 2026-11-06 to save Actions
 # compute) and skips a build that is already in the index. It first runs the watchdog
 # (archiver/watchdog.py), which re-dispatches stormsense.yml when the cycle's run never started.
+#
+# Since 2026-11-28 the StormSense run itself dispatches this workflow with `site_commits` set to the
+# commit it has just pushed to StormSense-latest's `site` branch, so every build is archived from
+# exactly what was published, however late GitHub starts the schedule (the schedule had missed 36 of
+# 132 builds since 27 Oct: GitHub ran the 3-hourly cron about 3 times a day). The site branch is
+# replaced on every build, but GitHub keeps the old commits fetchable by id, so `site_commits` (ids
+# separated by spaces) also rebuilds tarballs of builds the schedule missed; each deploy's log in
+# StormSense-latest prints its commit (the line after `git log -1 --format=%H`).
 name: Archive StormSense Latest
 
 on:
   schedule:
     - cron: "50 */3 * * *"
   workflow_dispatch:
+    inputs:
+      site_commits:
+        description: "StormSense-latest site-branch commits to archive (ids separated by spaces); empty archives the live site"
+        type: string
+        default: ""
 
 concurrency:
   group: archive-latest
@@ -23,7 +36,8 @@ permissions:
 jobs:
   archive:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    # a rebuild of many old builds takes about 3 minutes each, 4 at a time
+    timeout-minutes: ${{ github.event.inputs.site_commits && 240 || 20 }}
     steps:
       - uses: actions/checkout@v4
 
@@ -32,12 +46,83 @@ jobs:
           python-version: "3.12"
 
       - name: Re-dispatch a StormSense run that never started
+        if: github.event.inputs.site_commits == ''
         continue-on-error: true
         env:
           GH_TOKEN: ${{ github.token }}
         run: python archiver/watchdog.py
 
+      - name: Archive the named site commits
+        if: github.event.inputs.site_commits != ''
+        env:
+          GH_TOKEN: ${{ github.token }}
+          COMMITS: ${{ github.event.inputs.site_commits }}
+          SITE_REPO: https://github.com/DerekLoftis/StormSense-latest.git
+        run: |
+          set -uo pipefail
+          idx=data/index/stormsense-latest
+          mkdir -p work
+          one() {  # commit id: unpack that build and archive it with its own copy of the index
+            set -o pipefail
+            d=work/$1
+            mkdir -p "$d/site" "$d/out"
+            cp -r "$idx" "$d/index"
+            git init -q "$d/pub"
+            for i in 1 2 3; do git -C "$d/pub" fetch -q --depth 1 "$SITE_REPO" "$1" && break; sleep $((5*i)); done
+            git -C "$d/pub" archive "$1" | tar -x -C "$d/site" || { echo "::error title=commit $1::could not fetch it"; return 1; }
+            python archiver/latest_archive.py --base "$d/site" --index "$d/index" --out "$d/out" > "$d/log.txt" 2>&1
+            rc=$?
+            sed "s|^|$1: |" "$d/log.txt"
+            rm -rf "$d/site" "$d/pub"
+            return $rc
+          }
+          export -f one
+          export idx SITE_REPO
+          # 4 builds at a time (the xz compression is the slow part)
+          failed=0
+          printf '%s\n' $COMMITS | xargs -P 4 -I{} bash -c 'one {}' || failed=1
+          tag=""
+          for d in work/*/; do
+            [ -d "$d/out" ] || continue
+            for f in "$d"/out/*.tar.xz; do
+              [ -e "$f" ] || continue
+              tag=$(sed -n 's/^tag=//p' "$d/log.txt" | tail -1)
+              gh release view "$tag" >/dev/null 2>&1 || \
+                gh release create "$tag" --title "StormSense Latest ${tag#stormsense-}" \
+                  --notes "StormSense Latest runs (fore72, 7day, 30day: html, csv, json), one tarball per 6-hourly cycle. data/index/stormsense-latest/ lists every run and what it holds."
+              gh release upload "$tag" "$f" --clobber || { failed=1; continue; }
+              # the rows this build added to its copy of the index
+              for csvf in "$d"/index/*.csv; do
+                base=$(basename "$csvf")
+                if [ -f "$idx/$base" ]; then
+                  tail -n +$(( $(wc -l < "$idx/$base") + 1 )) "$csvf" > "$d/new_$base"
+                  [ -s "$d/new_$base" ] && echo "$d $base" >> work/added.txt
+                else
+                  cp "$csvf" "$d/new_$base"; echo "$d $base new" >> work/added.txt
+                fi
+              done
+            done
+          done
+          if [ -f work/added.txt ]; then
+            while read -r d base new; do
+              if [ -n "${new:-}" ] && [ ! -f "$idx/$base" ]; then cp "$d/new_$base" "$idx/$base"
+              elif [ -n "${new:-}" ]; then tail -n +2 "$d/new_$base" >> "$idx/$base"
+              else cat "$d/new_$base" >> "$idx/$base"; fi
+            done < work/added.txt
+            # keep each index file in time order (header first)
+            for f in "$idx"/*.csv; do
+              { head -n 1 "$f"; tail -n +2 "$f" | LC_ALL=C sort -u; } > "$f.tmp" && mv "$f.tmp" "$f"
+            done
+            git config user.name "stormsense-archive"
+            git config user.email "actions@users.noreply.github.com"
+            git add "$idx"
+            git diff --cached --quiet || git commit -q -m "Archive StormSense Latest builds from site commits"
+            for i in 1 2 3 4; do git pull --rebase --autostash -q && git push -q && break; sleep $((2**i)); done
+          fi
+          exit $failed
+
       - name: Download the published run
+        if: github.event.inputs.site_commits == ''
         id: fetch
         continue-on-error: true
         run: |
