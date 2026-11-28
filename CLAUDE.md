@@ -210,7 +210,8 @@ project's shared folder (skill code, baselines, notes, station sheet, disclosure
   Nor'Ida or Matthew. The pages draw them in the Historical Floods view with the difference from the map's highest
   water (Norfolk in Isabel: 21 marks, median 0.03 ft below the map).
 - Site (2026-11-27): `inundation/areas.csv` lists the localities (Hampton Roads, the Middle Peninsula, the Northern
-  Neck, the Eastern Shore, the upper James and the Fredericksburg area so far; add a row to add one). `python -m inundation.site --prepared <dir of <name>/> --latest <Latest site> --out site/inundation`
+  Neck, the Eastern Shore, the upper James, the Fredericksburg area and Northern Virginia: all 45 localities of
+  Derek's coastal list since 2026-11-28; add a row to add one). `python -m inundation.site --prepared <dir of <name>/> --latest <Latest site> --out site/inundation`
   writes each locality's page under `<name>/` and `index.html`, the map of all of them (`templates/statewide.html`:
   Leaflet, Esri satellite hybrid or street basemap, opens on the whole coastal zone with every gauge (Derek,
   2026-11-27; a click on a gauge puts its forecast in the plot, Sewells Point's until then), gauges colored by NWS
@@ -248,7 +249,8 @@ project's shared folder (skill code, baselines, notes, station sheet, disclosure
   is several rows of areas.csv with a `box` (west south east north; `prep --box`): Accomack (4.30 billion cells, over
   the 32-bit node limit) is `accomack_north`, `accomack_south` and `tangier`.
 - Counties that are mostly upland (2026-11-28, Derek: "complete the remaining localities in coastal Va"): a row of
-  areas.csv with `low` = 1 (`prep --low`: Henrico, Chesterfield, Hanover, Prince George, Caroline, Spotsylvania, Stafford) keeps only the roads and
+  areas.csv with `low` = 1 (`prep --low`: Henrico, Chesterfield, Hanover, Prince George, Caroline, Spotsylvania, Stafford,
+  Prince William, Fairfax) keeps only the roads and
   buildings within 1.5 km of ground at or below 10 ft that the tide can be part of (`depth.low_grid` reads one tile
   row every 64 m, `depth.tidal_low` leaves out shut-in pits such as quarry floors below sea level, `prep.near_low`
   cuts the frame). Its tables are not the whole locality. The Town of West Point is inside King William's map.
