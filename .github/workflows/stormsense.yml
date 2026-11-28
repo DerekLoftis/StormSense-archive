@@ -8,6 +8,9 @@
 # site to that repository's `site` branch (one commit, history replaced each time) and sends it a
 # `publish` repository_dispatch, which its deploy.yml turns into a GitHub Pages deployment.
 # Without the secret the run still builds and archives, and says that it did not publish.
+# Once the Latest site is pushed, the run dispatches archive-latest.yml with the commit it pushed, so
+# that workflow archives exactly the build that was published (it had missed a third of them when
+# left to GitHub's late 3-hourly schedule).
 #
 # A pull request runs a dry build of a few stations: nothing is uploaded or published; the sites
 # are kept as a workflow artifact.
@@ -29,6 +32,7 @@ concurrency:
 
 permissions:
   contents: write
+  actions: write  # dispatches archive-latest.yml for the published build
 
 env:
   LATEST_REPO: DerekLoftis/StormSense-latest
@@ -83,6 +87,7 @@ jobs:
         if: steps.build.outcome == 'success' && github.event_name != 'pull_request'
         env:
           TOKEN: ${{ secrets.STORMSENSE_PUBLISH_TOKEN }}
+          GH_TOKEN: ${{ github.token }}
         run: |
           if [ -z "$TOKEN" ]; then
             echo "::warning title=not published::STORMSENSE_PUBLISH_TOKEN is not set; the run was built and archived but the public sites were not updated."
@@ -116,7 +121,15 @@ jobs:
             curl -sSf -X POST -H "Authorization: Bearer ${TOKEN}" -H "Accept: application/vnd.github+json" \
               "https://api.github.com/repos/$2/dispatches" -d '{"event_type":"publish"}'
           }
-          publish site/latest "$LATEST_REPO" || failed=1
+          if publish site/latest "$LATEST_REPO"; then
+            # archive exactly this build (archive-latest.yml's schedule still archives the live site
+            # when this dispatch is lost)
+            SHA=$(git -C site/latest rev-parse HEAD)
+            gh workflow run archive-latest.yml --ref "$GITHUB_REF_NAME" -f site_commits="$SHA" \
+              || echo "::warning title=snapshot not requested::could not dispatch archive-latest.yml for site commit $SHA"
+          else
+            failed=1
+          fi
           publish site/ensemble "$ENSEMBLE_REPO" || failed=1
           exit $failed
 

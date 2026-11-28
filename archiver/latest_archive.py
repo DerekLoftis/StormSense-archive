@@ -1,6 +1,6 @@
 """Archive the run StormSense Latest has just published.
 
-    python archiver/latest_archive.py [--base URL] [--index data/index/stormsense-latest] [--out out]
+    python archiver/latest_archive.py [--base URL or DIR] [--index data/index/stormsense-latest] [--out out]
 
 Reads latest.json from the public StormSense Latest site; if its "updated" time is not in the
 run index yet, downloads every file index.html links (fore72, 7day, 30day: html, csv, json)
@@ -12,6 +12,12 @@ with manifest.csv listing every file), and appends to the monthly index CSVs:
     runs_YYYY-MM.csv      one row per archived run
     stations_YYYY-MM.csv  one row per run, station, product and datum: which formats it holds,
                           rows, first and last time, and the guidance named in the JSON source
+
+--base can also be a local folder holding the site as built: the StormSense run archives its own
+build that way (site/latest, right after publishing it, so no build goes unarchived when GitHub
+starts this workflow late), and archive-latest.yml's `site_commits` input rebuilds missed tarballs
+from old commits of the public repo's `site` branch (each build is one commit there; GitHub keeps
+the replaced commits fetchable by their id, which each deploy's log prints).
 
 Tarballs are named by build time because GitHub starts the scheduled builds hours late or skips
 them; the index's cycle column is the 00/06/12/18Z slot the build ran in, and petss_cycle names the
@@ -65,8 +71,16 @@ def bust(url):
     return f"{url}{'&' if '?' in url else '?'}t={int(time.time())}"
 
 
+def read(base, path):
+    """One file of the site: from a local folder, or over HTTP past the CDN's cache."""
+    if os.path.isdir(base):
+        with open(os.path.join(base, path), "rb") as f:
+            return f.read()
+    return get(bust(base + path))
+
+
 def read_latest(base):
-    doc = json.loads(get(bust(base + "latest.json")))
+    doc = json.loads(read(base, "latest.json"))
     updated = datetime.strptime(doc["updated"], "%Y-%m-%d %H:%M UTC").replace(tzinfo=timezone.utc)
     return doc, updated
 
@@ -103,7 +117,7 @@ def linked_files(base, page):
     files += [h for h in hrefs if h.startswith("metadata/") and h.endswith(".json")]
     chart = next((h for h in files if h.endswith(".html")), None)
     if chart:
-        text = get(bust(base + chart)).decode("utf-8", "replace")
+        text = read(base, chart).decode("utf-8", "replace")
         for src in re.findall(r'<script[^>]+src="([^"]+)"', text):
             if src.startswith("../") and "://" not in src:
                 files.append(src[3:])
@@ -125,7 +139,7 @@ def fetch_all(base, paths):
     got, missing = {}, []
 
     def one(p):
-        return p, get(bust(base + p))
+        return p, read(base, p)
 
     with concurrent.futures.ThreadPoolExecutor(8) as ex:
         futs = [ex.submit(one, p) for p in paths]
@@ -154,7 +168,7 @@ def main():
     ap.add_argument("--index", default="data/index/stormsense-latest")
     ap.add_argument("--out", default="out")
     a = ap.parse_args()
-    base = a.base if a.base.endswith("/") else a.base + "/"
+    base = a.base if os.path.isdir(a.base) or a.base.endswith("/") else a.base + "/"
 
     doc, updated = read_latest(base)
     cycle = cycle_of(updated)
@@ -167,7 +181,7 @@ def main():
         return 0
 
     for attempt in range(3):
-        page = get(bust(base + "index.html")).decode("utf-8", "replace")
+        page = read(base, "index.html").decode("utf-8", "replace")
         paths = list(dict.fromkeys(FIXED + linked_files(base, page)))
         got, missing = fetch_all(base, paths)
         doc2, updated2 = read_latest(base)
