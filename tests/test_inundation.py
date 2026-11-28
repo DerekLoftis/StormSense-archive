@@ -705,7 +705,10 @@ def test_a_deck_over_low_ground_is_found_from_the_roads_own_profile():
     # one street in two lines that meet at x = 400, the second drawn the other way; a second street that only dips;
     # a third that comes down a bank and stays low; a side street that meets the first at the same point
     feats = [road("I 95 NB", [0, 400]), road("I 95 NB", [800, 400]), road("VALLEY RD", [0, 800], 100.0),
-             road("RIVER RD", [0, 800], 200.0), road("SIDE ST", [400, 400.0001], 0.0), road("FRANKLIN ST", [0, 800], 300.0)]
+             road("RIVER RD", [0, 800], 200.0), road("SIDE ST", [400, 400.0001], 0.0), road("FRANKLIN ST", [0, 800], 300.0),
+             road("MOUNT VERNON AVE", [0, 150], 400.0), road("MOUNT VERNON AVE", [150, 200], 400.0),
+             road("MOUNT VERNON AVE", [150, 200], 400.0),                              # the last line is there twice
+             road("FERRY RD", [0, 200], 500.0), road("WHARF ST", [200, 260], 500.0)]
     feats[4]["geometry"]["coordinates"] = [[400, 0], [400, 60]]
     p = segments.split(feats, lambda x, y: (np.asarray(x, float), np.asarray(y, float)))
     x, y, name = p["xm"], p["ym"], np.array([str(v) for v in p["ST_FULL"]])
@@ -718,17 +721,25 @@ def test_a_deck_over_low_ground_is_found_from_the_roads_own_profile():
     ground[low] = 8.0 + 2.5 * (x[low] > 500)
     ground[low & (np.abs(x - 302.5) < 0.1)] = 22.0                                     # under another road's deck, left in the data
     valley = name == "VALLEY RD"
-    ground[valley] = 45 - 41.5 * np.clip(1 - np.abs(x[valley] - 400) / 300, 0, 1)      # 14% both ways: steep, but a road
+    ground[valley] = 45 - 41.5 * np.clip(1 - np.abs(x[valley] - 400) / 100, 0, 1)      # 13% both ways: steep, but a road
+    half = name == "MOUNT VERNON AVE"                                                  # half a bridge: the next locality
+    ground[half] = np.interp(x[half], [0, 160, 175, 200], [13, 13, 2, 2])              # has the other half
+    ferry = name == "FERRY RD"                                                         # the same fall, but the street
+    ground[ferry] = np.interp(x[ferry], [0, 160, 175, 200], [13, 13, 2, 2])            # goes on as another one
+    ground[name == "WHARF ST"] = 2.0
     river = name == "RIVER RD"
     ground[river & (x > 300)] = 3.5                                                    # down a bank, and low from there on
-    nb = prep.chain(p)
+    nb, loose = prep.chain(p)
     at = np.flatnonzero(i95 & (np.abs(x - 397.5) < 0.1))[0]
     assert set(name[nb[at]]) == {"I 95 NB"} and abs(x[nb[at]] - 397.5).max() <= 5.01    # across the two lines' ends
+    assert not loose[at].any() and loose[half & (x > 195)].any() and not loose[ferry & (x > 195)].any()
     deck = prep.decks(p, ground)
     assert deck[i95 & (x > 300) & (x < 420)].all()                    # the low ground, across the two lines
     assert deck[i95 & (x >= 420) & (x < 560)].all()                   # and the slope below 40 ft
     assert not deck[i95 & ((x < 300) | (x > 572))].any()
     assert not deck[valley].any() and not deck[river].any() and not deck[name == "SIDE ST"].any() and not deck[low].any()
+    assert deck[half & (x > 176)].all() and not deck[half & (x < 160)].any()           # as far as the roads go
+    assert not deck[ferry].any() and not deck[name == "WHARF ST"].any()
     code = prep.bridges(p, ground)
     assert (code[deck] == 4).all() and (code[~deck] == 0).all()
 
