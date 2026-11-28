@@ -386,24 +386,36 @@ At each gauge's forecast peak (most between 4.9 and 6.1 ft NAVD88, about 14:30Z 
 | Accomack County, south of 37.75 N (no pipes or values found) | 33.7 | – | 4.5 | 891 | – | – | 40.0 / 1,099 |
 | Accomack County, north of 37.75 N (no pipes or values found) | 96.9 | – | 5.9 | 7,422 | – | – | 103.7 / 7,854 |
 | Tangier Island (no pipes or values found) | 3.7 | – | 0.0 | 510 | – | – | 3.7 / 510 |
-| Surry County (no pipes or values found) | 1.1 | – | 0.1 | 107 | – | – | 1.2 / 110 |
-| Prince George County, near tidal water (no pipes or values found) | 0.1 | – | 0.0 | 10 | – | – | 0.2 / 11 |
-| Hopewell (no pipes or values found) | 0.0 | – | 0.0 | 1 | – | – | 0.0 / 1 |
-| Petersburg (no pipes or values found) | 0.0 | – | 0.0 | 0 | – | – | 0.0 / 0 |
-| Colonial Heights (no pipes or values found) | 0.0 | – | 0.0 | 0 | – | – | 0.0 / 0 |
-| Charles City County (no pipes or values found) | 1.1 | – | 0.1 | 5 | – | – | 1.2 / 8 |
-| Chesterfield County, near tidal water (no pipes or values found) | 0.0 | – | 0.0 | 6 | – | – | 0.0 / 8 |
-| Henrico County, near tidal water (no pipes or values found) | 0.0 | – | 0.0 | 8 | – | – | 0.0 / 11 |
-| Richmond (City) (no pipes or values found) | 0.0 | – | 0.0 | 0 | – | – | 0.0 / 0 |
-| New Kent County (no pipes or values found) | 1.0 | – | 0.1 | 80 | – | – | 1.1 / 95 |
-| Hanover County, near tidal water (no pipes or values found) | 0.0 | – | 0.0 | 0 | – | – | 0.0 / 0 |
+| Surry County (no pipes or values looked for) | 1.1 | – | 0.1 | 107 | – | – | 1.2 / 110 |
+| Prince George County, near tidal water (no pipes or values looked for) | 0.1 | – | 0.0 | 10 | – | – | 0.2 / 11 |
+| Hopewell (no pipes or values looked for) | 0.0 | – | 0.0 | 1 | – | – | 0.0 / 1 |
+| Petersburg (no pipes or values looked for) | 0.0 | – | 0.0 | 0 | – | – | 0.0 / 0 |
+| Colonial Heights (no pipes or values looked for) | 0.0 | – | 0.0 | 0 | – | – | 0.0 / 0 |
+| Charles City County (no pipes or values looked for) | 1.1 | – | 0.1 | 5 | – | – | 1.2 / 8 |
+| Chesterfield County, near tidal water (no pipes or values looked for) | 0.0 | – | 0.0 | 6 | – | – | 0.0 / 8 |
+| Henrico County, near tidal water (no pipes or values looked for) | 0.0 | – | 0.0 | 8 | – | – | 0.0 / 11 |
+| Richmond (City) (no pipes or values looked for) | 0.0 | – | 0.0 | 0 | – | – | 0.0 / 0 |
+| New Kent County (no pipes or values looked for) | 1.0 | – | 0.1 | 80 | – | – | 1.1 / 95 |
+| Hanover County, near tidal water (no pipes or values looked for) | 0.0 | – | 0.0 | 0 | – | – | 0.0 / 0 |
 | Caroline County, near tidal water (no pipes or values looked for) | 0.0 | – | 0.0 | 2 | – | – | 0.0 / 3 |
 | Spotsylvania County, near tidal water (no pipes or values looked for) | 0.0 | – | 0.0 | 0 | – | – | 0.0 / 0 |
 | Fredericksburg (no pipes or values looked for) | 0.0 | – | 0.0 | 0 | – | – | 0.0 / 0 |
 | King George County (no pipes or values looked for) | 0.3 | – | 0.1 | 12 | – | – | 0.4 / 18 |
 | Stafford County, near tidal water (no pipes or values looked for) | 0.1 | – | 0.0 | 2 | – | – | 0.1 / 8 |
+| Prince William County, near tidal water (no pipes or values looked for) | 1.4 | – | 0.4 | 13 | – | – | 1.8 / 17 |
+| Fairfax County, near tidal water (no pipes or values looked for) | 0.1 | – | 0.0 | 19 | – | – | 0.1 / 22 |
+| Arlington County (no pipes or values looked for) | 0.0 | – | 0.0 | 1 | – | – | 0.0 / 2 |
+| Alexandria (no pipes or values looked for) | 0.3 | – | 0.0 | 5 | – | – | 0.4 / 9 |
 
-- The rows from Caroline County down (the Fredericksburg area, 28 Nov): the forecast peak was 3.7 ft NAVD88 at
+- The rows from Prince William County down (Northern Virginia, 28 Nov): the forecast peak was 4.4 ft NAVD88 at
+  Alexandria's Potomac gauge, 3.9 at Four Mile Run, 4.3 at the Washington Channel, 5.1 at Georgetown, 3.8 at
+  Leesylvania and 3.6 at Indian Head. Alexandria's flooded roads are King, Union, Strand and Prince Streets in Old
+  Town, where the ground is 1.9 to 3 ft. Prince William's are mostly unnamed roads through the marsh of the Occoquan
+  Bay refuge, at 1.2 to 3 ft, and its four buildings in the water at the run's start are shore structures on ground
+  at 1.1 to 1.3 ft. Ten of Fairfax's nineteen buildings stand on the Occoquan at Colchester, the others on Dogue and
+  Little Hunting Creeks and Pohick Bay. Arlington's one is a 36 m2 structure in the Columbia Island lagoon. The
+  Potomac itself is the District's and Maryland's: only Virginia's shore is mapped.
+- The rows from Caroline County to Stafford County (the Fredericksburg area, 28 Nov): the forecast peak was 3.7 ft NAVD88 at
   Fredericksburg, 3.4 at Tappahannock, 4.4 at Dahlgren, 3.8 at Leesylvania and 2.9 at Crow's Nest. King George's
   flooded roads and nine of its buildings follow Dahlgren. Through Fredericksburg the elevation data has the
   Rappahannock's surface at 5.0 ft (from the railroad bridge to above the city dock) and 6.5 ft at the Chatham
@@ -485,8 +497,8 @@ A county's boundary runs far out into the bay and the ocean, and the frame is 1 
 
 ## Counties that are mostly upland
 
-Henrico, Chesterfield, Hanover, Prince George, Caroline, Spotsylvania and Stafford reach from a tidal river to the
-Piedmont, and nearly all of their
+Henrico, Chesterfield, Hanover, Prince George, Caroline, Spotsylvania, Stafford, Prince William and Fairfax reach
+from a tidal river to the Piedmont, and nearly all of their
 roads and buildings stand higher than any level mapped here. A row of `areas.csv` with `low` = 1 (`prep --low`)
 keeps only what the water could reach:
 
@@ -508,6 +520,8 @@ keeps only what the water could reach:
 | Caroline | 240 of 3,339 | 1,817 of 27,853 | 0.57 |
 | Spotsylvania | 372 of 9,712 | 3,644 of 96,492 | 0.14 |
 | Stafford | 1,783 of 8,106 | 14,726 of 68,438 | 0.76 |
+| Prince William | 5,518 of 26,614 | 27,287 of 176,143 | 0.36 |
+| Fairfax | 5,847 of 55,763 | 30,090 of 272,000 | 0.93 |
 
 `<name>_prep.json` has the counts under `low_frame`, and the page says what it holds. The tables of such a
 locality are not the whole locality.
@@ -539,6 +553,9 @@ the page says which watersheds are missing. A gauge there (or a Currituck Sound 
 - The water picture on the page is drawn at 5 m (roads and buildings use the 1 m DEM); the tiles would carry 1 m.
 - Historical floods use the tide gauges only (no high water marks, no rain), on today's ground. Chesapeake Bay
   Bridge Tunnel's old station (8638863) and other historic stations are on an estimated NAVD88.
+- Storm drain layers and parcel values have not been looked for in the localities added on 28 Nov (the upper James,
+  the Fredericksburg area, Northern Virginia): their water travels over the surface only and they have no damage
+  estimate. Alexandria, Arlington and Fairfax publish their stormwater networks.
 - No storm drain layers were found for Suffolk, Poquoson, Isle of Wight, York, Gloucester, Mathews, Middlesex, King
   and Queen, King William or Essex, so their water travels over the surface only. HRPDC's regional parcels carry
   values for Williamsburg, Gloucester, Isle of Wight, James City, York and Franklin, but not for Hampton, Poquoson or
