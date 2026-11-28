@@ -165,7 +165,7 @@ td a{color:inherit;font-weight:600;text-decoration-color:var(--accent)}
   <div class="cols">
     <div class="card">
       <div class="mapbox">
-        <div id="map" aria-label="Map of water depth over the ground at the selected time, for every locality prepared so far, with every StormSense gauge. Click a locality for its counts and its detailed map, a gauge for its forecast."></div>
+        <div id="map" aria-label="Map of water depth over the ground at the selected time, for every locality of Virginia's coastal zone, with every StormSense gauge. Click a locality for its counts and its detailed map, a gauge for its forecast."></div>
         <span class="seg base" role="group" aria-label="Basemap">
           <button type="button" data-b="sat" aria-pressed="true">Satellite</button>
           <button type="button" data-b="streets" aria-pressed="false">Streets</button>
@@ -281,7 +281,7 @@ function setup(){
   $("disc").textContent = G.disclaimer;
   $("ramp").innerHTML = "<b>Water depth (ft)</b>" + DEPTH.map(function(h, i){ return '<span><i style="background:' + h + '"></i>' + (i === 0 ? "≤" : "") + DEPTH_LABEL[i] + "</span>"; }).join("");
   var fol = []; for (var fid in LV.stations){ var ff = LV.stations[fid].follows; if (ff) fol.push(fid + " follows " + ff); }
-  $("areaNote").textContent = G.areas.length + " localities are prepared so far; more are added region by region. Counts are for the time or level selected above." + (fol.length ? " Gauges without a forecast in this run follow the nearest gauge that has one: " + fol.join(", ") + "." : "");
+  $("areaNote").textContent = "These " + G.areas.length + " maps cover every locality of Virginia's coastal zone (Accomack County is three maps, and the Town of West Point is in King William's). Counts are for the time or level selected above." + (fol.length ? " Gauges without a forecast in this run follow the nearest gauge that has one: " + fol.join(", ") + "." : "");
   PG = {id:G.plot_gauge.id, name:G.plot_gauge.name};
   $("gkeys").innerHTML = "<b>Gauges</b>" + ["none","action","minor","moderate","major","na"].map(function(k){ return '<span><i class="dot" style="background:' + CAT[k] + '"></i>' + CAT_NAME[k] + "</span>"; }).join("") +
     '<span><i class="ring"></i>Ring: the highest category forecast in 72 hours</span>';
