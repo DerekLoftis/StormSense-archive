@@ -249,6 +249,11 @@ project's shared folder (skill code, baselines, notes, station sheet, disclosure
   `vgin.locality` joins a locality's rows (Prince George's first row is a 2 ha sliver). `depth.read_dem` tries a
   strip again when a read from NOAA's bucket is cut short (King William, 28 Nov). Above the head of tide (Richmond,
   Fredericksburg, Little Falls) river flooding from rain is not in these maps.
+- Upriver the elevation data has a river as the water the lidar met, not its bed (the James at Richmond 0 to 2 ft,
+  the Appomattox at Petersburg -1.5 ft), and the only ground at -2 ft can be a quarry (Richmond's goes to -290 ft
+  and was taken for the sea in the first map). A body at -2 ft is tidal water only inside water that runs off the
+  frame's edge at or below 3 ft (`prep.tidal_cells`); a frame without any gets its river lowered to -2 ft
+  (`prep.tidal_surface`, `water_surface_ft` in prep.json). Read the log's "tidal water ... from" line for a new area.
 - A gauge without a forecast in a run (BRDH on 27 Nov 2026) follows the nearest gauge that has one
   (`status.read_levels`; `stations_following` in the summary, `follows` in levels.json, named on the pages).
 - Not wired yet: the push to the AGOL folder "StormSense CREST". Each area's prepared tables and file geodatabase are

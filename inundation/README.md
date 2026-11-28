@@ -41,6 +41,21 @@ Nothing heavy happens per run: the rasters are only read in step 1.
   like the Piankatank north of Gloucester (frame: the York and Mobjack Bay) or the York north of James City (frame:
   the James). Until 2026-11-27 only the largest body counted, and the second river's shore was land. A body that
   leaves the frame inside a watershed no gauge stands for (below) is not tidal water (`prep.sea_cells`).
+- A pit is not tidal water (2026-11-28). The quarry south of the James at Richmond goes down to -290 ft NAVD88 and
+  was the largest body at -2 ft in the city's frame, so the first Richmond map flooded from the quarry and the
+  river stayed dry. A body at -2 ft counts only if it lies in water that runs off the frame's edge at or below 3 ft
+  (`depth.leaving_water`, `prep.tidal_cells`); the log names each pit left out.
+- A river without its bed (2026-11-28). Above the surveyed channel the elevation data has the river as the water
+  the lidar met: the James through Richmond lies at 0 to 2 ft and the Appomattox at Petersburg at -1.5 ft, with no
+  ground at -2 ft at all, and Petersburg's first preparation stopped with nothing to flood from. Where a frame has
+  no tidal ground, `prep.tidal_surface` takes the water of 5 hectares or more that runs off the frame's edge at the
+  lowest level that has one (`depth.water_surface`, looked for up to 3 ft) and the even water joined to it
+  (`depth.flat_water`: cells at or below 3 ft within 0.01 ft of all their neighbours, which only water as the lidar
+  met it is; the reaches upstream lie a little higher than the one at the edge), writes them into the saved grid at
+  -2 ft and the water spreads from there. A deck or a dock over that water then stands over water like any other
+  (before, three docks at Rocketts Landing were flooded buildings at every high tide). `<name>_prep.json` has the
+  level under `water_surface_ft`. A frame that has tidal ground is left as it is, also where a reach upstream in it
+  is such a surface.
 - Memory: one byte per cell for the result plus the union-find's pages over low ground (`spread.sparse`; the frame
   of King and Queen County is 2.96 billion cells and needed all 16 GB before the untouched pages were kept out).
 - Derek's 0.25 ft HUC-12 depth grids, once hosted (planned: mobjack.vims.edu `VIMS_PHYS`): sample each grid at the
@@ -393,6 +408,7 @@ watersheds it covers (a code ending in `*` covers every HUC-12 that starts with 
 | `0208010203*` | Piankatank and Milford Haven | WCKV, WMPT |
 | `0208020604*` to `06*` | Chickahominy | USJT (its own gauge at Mamanahunt, GS01, has no trusted readings yet) |
 | `02080207*` | Appomattox | ARPV, JPHV |
+| `020802071002` | the lower Appomattox, Ashton Creek to City Point | JPHV (Pocahontas, at the falls, stands about a foot above the James) |
 | `02070010*` | tidal Potomac from Occoquan Bay to Little Falls, the Anacostia, Four Mile Run | WADC, GTND, AXTV, ALEV, BPAD, LSPV, IHDM |
 
 The seaside gauges ran far above the bay on 26 Nov 2026: Wachapreague reached 8.44 ft NAVD88 (NOAA preliminary) and

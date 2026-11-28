@@ -428,6 +428,9 @@ def main(argv=None):
     w, s = inv(bounds[0], bounds[1]); e, n = inv(bounds[2], bounds[3])
     hucs = cached(f"{a.work}/huc12.geojson", lambda: {"type": "FeatureCollection", "features": tether.huc12((w, s, e, n))})["features"]
     forced = tether.overrides()
+    surface_ft = tidal_surface(dem, dem_path, log)
+    if surface_ft is not None:
+        dem = np.load(dem_path, mmap_mode="r")
     sea = sea_cells(dem, origin, hucs, forced, fwd, log)
     net = None
     if dsrc:
@@ -576,16 +579,95 @@ def main(argv=None):
                    "ungauged": None if not ungauged else {"huc12": ungauged, **n_ungauged,
                                                           "why": "no StormSense gauge stands for this water (tether_overrides.csv)"},
                    "low_frame": low_doc,
+                   "water_surface_ft": surface_ft,
                    "prepared_utc": time.strftime("%Y-%m-%dT%H:%MZ", time.gmtime())}, fh, indent=1)
     log("wrote", a.out)
+
+
+def tidal_cells(dem):
+    """(a cell in each body of tidal water at the lowest level, the largest first; a cell in each body that is a
+    pit; the grid they were found on; every how many cells that grid takes).
+
+    depth.tidal_seeds names the largest body and those that run off the grid's edge. One of them is tidal water only
+    if it lies in water that leaves the frame at an ordinary tide's height (depth.leaving_water)."""
+    from . import spread
+    step = spread.seed_step(dem)
+    coarse = np.asarray(dem[::step, ::step])
+    try:
+        cells = depth.tidal_seeds(coarse, cell_m2=step * step)
+    except ValueError:
+        return [], [], coarse, step
+    leaving = depth.leaving_water(coarse, cell_m2=step * step)
+    return ([(r * step, c * step) for r, c in cells if leaving[r, c]],
+            [(r * step, c * step) for r, c in cells if not leaving[r, c]], coarse, step)
+
+
+def tidal_surface(dem, dem_path, log=lambda *_: None):
+    """Lowers the tide's water to the lowest level in a frame whose elevation data has no tidal ground there, and
+    returns the level the water was found at (None where the frame has tidal ground, as nearly all do).
+
+    depth.water_surface finds the river as the lidar met it where it runs off the frame's edge, and the rest of it
+    is the even water joined to that (depth.flat_water: the reaches upstream lie a little higher, the James at
+    Richmond from 0.25 ft at the city line to 1.8 ft below the falls). Its cells are written into the saved grid at
+    the lowest level, so the water spreads from the river, a deck or a dock over it stands over water, and a second
+    run finds the sea."""
+    from scipy import ndimage
+    tidal, _, coarse, step = tidal_cells(dem)
+    if tidal:
+        return None
+    lowest = depth.LEVELS_FT[0]
+    level, water = depth.water_surface(coarse, cell_m2=step * step)
+    if level is None:
+        raise SystemExit(f"no tidal water in the frame: no ground at or below {lowest:g} ft that water joins to the frame's "
+                         f"edge, and no water of {depth.EDGE_BODY_M2 / 1e4:g} ha that leaves the frame at or below "
+                         f"{depth.SURFACE_TOP_FT:g} ft")
+    h, w = dem.shape
+    flat = np.zeros((h, w), bool)
+    for r0 in range(0, h, 1024):                                 # in strips, each read with two rows either side
+        a0, r1 = max(r0 - 2, 0), min(r0 + 1024, h)
+        flat[r0:r1] = depth.flat_water(np.asarray(dem[a0:min(r1 + 2, h)]))[r0 - a0:r0 - a0 + r1 - r0]
+    some = flat
+    if step > 1:                                                 # the coarse cells with even water in them
+        ch, cw = coarse.shape
+        some = np.zeros((ch, cw), bool)
+        for i in range(step):
+            for j in range(step):
+                part = flat[i::step, j::step]
+                some[:part.shape[0], :part.shape[1]] |= part
+    lab, _ = ndimage.label(some | water, structure=np.ones((3, 3)))
+    river = np.isin(lab, np.unique(lab[water]))
+    if step > 1:
+        river = ndimage.binary_dilation(river, structure=np.ones((3, 3)))
+    grid = np.load(dem_path, mmap_mode="r+")
+    n, rows = 0, 256 * step
+    for r0 in range(0, h, rows):                                 # in strips: the grid is on disk
+        part = grid[r0:r0 + rows]
+        m = river[r0 // step:r0 // step + 256]
+        if step > 1:                                             # the coarse cells' water, cell by cell
+            m = np.repeat(np.repeat(m, step, 0), step, 1)[:part.shape[0], :part.shape[1]]
+        m = m & (flat[r0:r0 + rows] | (np.asarray(part) <= level))
+        part[m] = lowest
+        n += int(m.sum())
+    grid.flush()
+    log(f"no tidal ground at or below {lowest:g} ft: the elevation data has the river's surface, not its bed. Tidal "
+        f"water is the water that leaves the frame at or below {level:+.2f} ft and the even water joined to it, {n / 1e4:,.0f} ha")
+    return level
 
 
 def sea_cells(dem, origin, hucs, forced, fwd, log=lambda *_: None):
     """The cells the water spreads from: one in each body of tidal water (depth.tidal_seeds: the largest, and every
     estuary that leaves the grid and meets it outside). A body that leaves the grid inside a watershed no gauge
-    stands for (tether_overrides.csv `-`: Back Bay, the North Landing River, the Blackwater) is not the sea."""
-    from . import spread
-    cells = spread.seed_cells(dem, depth.LEVELS_FT[0])
+    stands for (tether_overrides.csv `-`: Back Bay, the North Landing River, the Blackwater) is not the sea, and
+    neither is a pit (tidal_cells)."""
+    def where(q):
+        return f"{origin[0] + q[1]:.0f} E {origin[1] - q[0]:.0f} N"
+
+    cells, pits, _, _ = tidal_cells(dem)
+    for q in pits:
+        log(f"  the ground at or below {depth.LEVELS_FT[0]:g} ft at {where(q)} is a pit, not tidal water: no water joins it "
+            f"to the frame's edge at or below {depth.SURFACE_TOP_FT:g} ft")
+    if not cells:
+        raise SystemExit("no tidal water in the frame: nothing to flood from")
     keep = cells[:1]
     if len(cells) > 1:
         r, c = (np.array([q[i] for q in cells[1:]], float) for i in (0, 1))
@@ -596,7 +678,8 @@ def sea_cells(dem, origin, hucs, forced, fwd, log=lambda *_: None):
             else:
                 keep.append(q)
     log(f"tidal water: {len(keep)} bod{'y' if len(keep) == 1 else 'ies'} at {depth.LEVELS_FT[0]:+.0f} ft"
-        + (" (the largest, and those that run off the grid's edge)" if len(keep) > 1 else ""))
+        + (" (the largest, and those that run off the grid's edge)" if len(keep) > 1 else "")
+        + ", from " + "; ".join(where(q) for q in keep[:6]))
     return keep
 
 

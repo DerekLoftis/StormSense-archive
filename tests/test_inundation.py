@@ -819,3 +819,43 @@ def test_an_upland_county_keeps_what_lies_near_low_ground(tmp_path):
 def prep_areas():
     from inundation import site
     return site.areas()
+
+
+def test_a_river_without_its_bed_is_tidal_water_and_a_pit_is_not(tmp_path):
+    """Richmond and Petersburg: the elevation data has the tidal river as the water's surface (0 to 2 ft), and the
+    only ground below the lowest level is a quarry pit. The pit is not the sea; the river is lowered and becomes it."""
+    from inundation import prep, spread
+    dem = np.full((1200, 300), 25.0, np.float32)
+    dem[:, 100:160] = (0.8 + 0.0005 * np.arange(1200, dtype=np.float32))[::-1, None]     # the river as the lidar met
+    # it: 1.4 ft where it enters at the top, 0.8 ft where it leaves at the bottom
+    dem[100:1100, 200:290] = -60.0        # a pit larger than the river (9 ha), with a high rim all round
+    dem[600:620, 20:40] = 2.0             # a pond: even water, but nothing joins it to the river
+    assert not depth.leaving_water(dem)[200, 240] and depth.leaving_water(dem)[200, 130]
+    assert depth.flat_water(dem)[5, 130] and depth.flat_water(dem)[610, 30] and depth.flat_water(dem)[5, 100] and not depth.flat_water(dem)[5, 99]
+    tidal, pits, _, step = prep.tidal_cells(dem)
+    assert tidal == [] and len(pits) == 1 and step == 1
+    path = str(tmp_path / "dem_ft.npy")
+    np.save(path, dem)
+    said = []
+    level = prep.tidal_surface(np.load(path, mmap_mode="r"), path, lambda *a: said.append(" ".join(map(str, a))))
+    assert level == 1.25 and "the river's surface" in said[0]          # the lowest level with 5 ha leaving the frame
+    low = np.load(path)
+    assert (low[:, 100:160] == depth.LEVELS_FT[0]).all()                # and the reach above it, 1.25 to 1.4 ft, too
+    assert (low[100:1100, 200:290] == -60).all() and low[0, 0] == 25 and low[610, 30] == 2
+    assert prep.tidal_surface(np.load(path, mmap_mode="r"), path) is None           # a second run finds the river
+    keep = prep.sea_cells(low, (0, 1200), [], {}, None, lambda *a: said.append(" ".join(map(str, a))))
+    assert len(keep) == 1 and 100 <= keep[0][1] < 160 and any("is a pit" in s for s in said)
+    out = spread.connect_index(low, depth.LEVELS_FT, seed=keep)
+    assert out[200, 130] == 0 and out[200, 240] == depth.NEVER
+    # a large grid is looked over on every 8th cell and lowered cell by cell
+    big = np.full((7200, 7000), 25.0, np.float32)
+    big[:, 3000:3101] = 0.8
+    big[:2000, 3000:3101] = 1.6           # a reach a step higher
+    big[5000, 3050] = 9.0                 # a pile in the river keeps its height
+    np.save(path, big)
+    assert prep.tidal_surface(np.load(path, mmap_mode="r"), path) == 1.0
+    low = np.load(path, mmap_mode="r")
+    assert (low[2001::97, 3000:3101] == depth.LEVELS_FT[0]).all() and low[5000, 3050] == 9 and low[5000, 2990] == 25
+    assert (low[:1999:97, 3000:3101] == depth.LEVELS_FT[0]).all()
+    whole = depth.flat_water(big[1000:3100, 2990:3110])
+    assert np.array_equal(depth.flat_water(big[1998:2030, 2990:3110])[2:-2], whole[1000:1028])     # strips agree with the whole

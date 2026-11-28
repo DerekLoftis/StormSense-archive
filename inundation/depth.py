@@ -201,6 +201,57 @@ def tidal_seeds(dem_ft, level=LEVELS_FT[0], cell_m2=1.0, min_m2=EDGE_BODY_M2):
     return out
 
 
+SURFACE_TOP_FT = 3.0       # the tide's water as the lidar met it lies no higher than this
+
+
+SMOOTH_FT = 0.01           # water as the lidar met it is a plane: a cell and its neighbours differ by less than this
+
+
+def flat_water(dem_ft, top_ft=SURFACE_TOP_FT, within=SMOOTH_FT):
+    """True in the cells at or below `top_ft` that lie in a plane with their eight neighbours: water as the
+    elevation data has it where no bed was surveyed (a river's surface slopes a thousandth of a foot per cell;
+    ground is never that even). The outermost cells of such water count too. A strip of a grid needs two rows
+    either side to give the same answer as the whole."""
+    from scipy import ndimage
+    z = np.where(np.isfinite(dem_ft), dem_ft, np.float32(1e6))
+    low = ndimage.minimum_filter(z, 3)
+    even = (z <= top_ft) & (ndimage.maximum_filter(z, 3) - low <= within)
+    # and the water's outermost cells, which have the bank among their neighbours
+    return even | (ndimage.binary_dilation(even, structure=np.ones((3, 3))) & (z <= top_ft) & (z - low <= within))
+
+
+def leaving_water(dem_ft, top_ft=SURFACE_TOP_FT, cell_m2=1.0, min_m2=EDGE_BODY_M2):
+    """True in the cells at or below `top_ft` whose body, of at least `min_m2`, runs off the grid's edge: the tide's
+    water and the low ground beside it. A pit is not in it, however deep (the quarry south of the James at Richmond
+    goes to -290 ft NAVD88, and was the largest body at the lowest level in the city's frame)."""
+    from scipy import ndimage
+    lab, n = ndimage.label(dem_ft <= top_ft, structure=np.ones((3, 3)))
+    sizes = np.bincount(lab.ravel(), minlength=n + 1)
+    edge = np.unique(np.concatenate([lab[0], lab[-1], lab[:, 0], lab[:, -1]]))
+    return np.isin(lab, [i for i in edge.tolist() if i and sizes[i] * cell_m2 >= min_m2])
+
+
+def water_surface(dem_ft, top_ft=SURFACE_TOP_FT, cell_m2=1.0, min_m2=EDGE_BODY_M2, from_ft=LEVELS_FT[0]):
+    """(level, the cells at or below it in the bodies that run off the grid's edge) for a frame without tidal ground.
+
+    Above a river's surveyed bed the elevation data has the water as the lidar met it: the Appomattox at Petersburg
+    and the James at Richmond lie between -2 and +2 ft NAVD88, so no cell of theirs is at the lowest level and
+    nothing could flood from them. The tide's water is
+    then every body of at least `min_m2` that runs off the grid's edge at the lowest level that has one, looked for
+    from `from_ft` to `top_ft`. (None, None) where there is none: the frame has no tidal water."""
+    from scipy import ndimage
+    for level in LEVELS_FT[(LEVELS_FT >= from_ft) & (LEVELS_FT <= top_ft)]:
+        lab, n = ndimage.label(dem_ft <= level, structure=np.ones((3, 3)))
+        if n == 0:
+            continue
+        sizes = np.bincount(lab.ravel())
+        edge = np.unique(np.concatenate([lab[0], lab[-1], lab[:, 0], lab[:, -1]]))
+        ids = [i for i in edge.tolist() if i and sizes[i] * cell_m2 >= min_m2]
+        if ids:
+            return float(level), np.isin(lab, ids)
+    return None, None
+
+
 def seed_list(seed):
     """[(row, col), ...] from one cell or a list of them."""
     return [tuple(int(v) for v in seed)] if np.ndim(seed) == 1 else [tuple(int(v) for v in q) for q in seed]

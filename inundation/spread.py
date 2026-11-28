@@ -42,12 +42,16 @@ def own_level(dem_ft, levels, blocked=None, rows=2048, path=None):
     return g
 
 
+def seed_step(dem_ft, step=8):
+    """Every how many cells a grid is looked over for its tidal water: each one, or every `step`-th of a large grid."""
+    return 1 if dem_ft.size <= 50_000_000 else step
+
+
 def seed_cells(dem_ft, level, step=8):
     """A cell in each body of tidal water at the lowest level (depth.tidal_seeds), found on every `step`-th cell of
     a large grid."""
     from . import depth
-    if dem_ft.size <= 50_000_000:
-        return depth.tidal_seeds(np.asarray(dem_ft), level)
+    step = seed_step(dem_ft, step)
     return [(r * step, c * step) for r, c in depth.tidal_seeds(np.asarray(dem_ft[::step, ::step]), level, cell_m2=step * step)]
 
 
