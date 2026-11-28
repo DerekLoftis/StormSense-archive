@@ -81,6 +81,29 @@ def outline(prepared, name, st):
     return [[[round(v, 5) for v in inv(x, y)] for x, y in ((x0, y0), (x1, y0), (x1, y1), (x0, y1), (x0, y0))]]
 
 
+def zone_outline(st, rings):
+    """The page's lines between its gauges' areas (static.json `zones`), cut to the locality itself and turned
+    into [[[lon, lat], ...], ...] for the map of all areas."""
+    import shapely
+    from pyproj import Transformer
+    from shapely.geometry import LineString, Polygon
+    lines = (st.get("zones") or {}).get("lines") or []
+    if not lines:
+        return []
+    fwd = Transformer.from_crs(4326, st["epsg"], always_xy=True).transform
+    inv = Transformer.from_crs(st["epsg"], 4326, always_xy=True).transform
+    land = shapely.unary_union([Polygon(np.column_stack(fwd(*np.asarray(r, float).T))).buffer(0) for r in rings if len(r) >= 4])
+    out = []
+    for flat in lines:
+        xy = np.asarray(flat, float).reshape(-1, 2)
+        g = LineString(np.column_stack([st["x0"] + xy[:, 0] * st["unit_m"], st["ytop"] - xy[:, 1] * st["unit_m"]])).intersection(land)
+        for part in getattr(g, "geoms", [g]):
+            if part.geom_type == "LineString" and part.length > 50:
+                lon, lat = inv(*np.asarray(part.coords).T)
+                out.append([[round(float(x), 5), round(float(y), 5)] for x, y in zip(lon, lat)])
+    return out
+
+
 def small_overview(page_dir, raster):
     """tiles/z1.png: the overview thinned to OVERVIEW_SMALL pixels, for the far view of the map of all areas."""
     from PIL import Image
@@ -110,6 +133,10 @@ def build(prepared, latest, out, log=print):
             st = json.load(fh)
         with open(os.path.join(src, f"{name}_prep.json")) as fh:
             prep = json.load(fh)
+        if "zones" not in st:              # a page prepared before the gauge boundaries: read them off its overview
+            st["zones"] = page.zones_of(os.path.join(src, "page"), st["raster"], st["unit_m"])
+            with open(os.path.join(src, "page", "static.json"), "w") as fh:
+                json.dump(st, fh, separators=(",", ":"))
         st["raster"]["small"] = small_overview(os.path.join(src, "page"), st["raster"])
         for f in os.listdir(os.path.join(src, "page")):
             p = os.path.join(src, "page", f)
@@ -123,7 +150,8 @@ def build(prepared, latest, out, log=print):
         xs, ys = [p[0] for r in rings for p in r], [p[1] for r in rings for p in r]
         doc.append({"name": name, "title": a["title"], "fips": a["fips"], "region": a["region"], "epsg": st["epsg"],
                     "x0": st["x0"], "ytop": st["ytop"], "raster": st["raster"], "stations": [g["id"] for g in st["stations"]],
-                    "outline": rings, "bbox": [min(xs), min(ys), max(xs), max(ys)], "curves": curves(roads, bldgs, prep),
+                    "outline": rings, "zones": zone_outline(st, rings), "bbox": [min(xs), min(ys), max(xs), max(ys)],
+                    "curves": curves(roads, bldgs, prep),
                     "values": bool(st.get("values")), "roads_total_mi": st["totals"]["road_miles"],
                     "buildings_total": st["totals"]["buildings"], "totals": summary["totals"]})
         summaries[name] = summary

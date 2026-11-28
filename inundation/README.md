@@ -294,16 +294,39 @@ python -m inundation.status --prepared prepared --name norfolk --site <StormSens
   written as `page/tiles/z0.png` (the whole area, at most 2048 pixels) plus 1024-pixel tiles the page loads as the
   reader zooms in. One big picture (`extent.png`, before 2026-11-27) did not draw on phones. Cells in a watershed no
   gauge measures are left empty.
+- Water depth in the rivers, creeks and bay (Derek, 2026-11-28: at an ordinary tide no blue was drawn, so nobody
+  could tell that the flood layer worked): a cell that is under water at an ordinary high tide (level index at or
+  below `water_index`, 1.25 ft NAVD88) carries its bed in the tile's blue channel instead of its ground, on a scale
+  of its own (`raster.bed0_ft` 1.3 ft down in `bed_step_ft` 0.06 ft steps; code 255 is 13.9 ft below NAVD88 or
+  deeper). The page draws the gauge's level minus the bed there, in the same eleven blues and from the same
+  shoreline as the flood depth, so the water darkens as the tide rises and pales as it falls, and the tide flats and
+  marshes come and go. Tiles with this are `raster.v` 3; a page prepared before (no `v`) keeps the old picture and
+  hides the layer's checkbox ("Water depth in the rivers, creeks and bay", on by default). Upriver the elevation data
+  has a river's surface, not its bed, so the depth drawn there is small.
+- Datum and units (Derek, 2026-11-28): buttons before the forecast buttons switch every level on the page between
+  NAVD88 and MLLW and between feet and metres: the counts' captions, the plot and its flood stages, the gauge table,
+  the depth ramp, the popups, the past floods and high water marks, and the notes. Data stay in ft NAVD88; MLLW is
+  each gauge's own offset (`levels.json` station `mllw`, from `stations.csv`), so one map level reads differently at
+  two gauges. `?datum=MLLW|NAVD` and `?units=m|ft` set them from a link; a viewer's choice is remembered in the
+  browser (`stormsense-datum`, `stormsense-units`) and shared with the map of all localities. Road lengths are
+  miles, or kilometres in metres.
+- Gauge boundaries (Derek, 2026-11-28): gray dashed lines between the areas that follow different gauges, each area
+  labelled "follows <gauge>" (`static.json` `zones`: `lines` in page units and `labels`; `page.zone_lines` traces
+  the edges of the overview picture's gauge channel and thins them). On by default on a locality's page, off on the
+  map of all localities (there cut to each locality's outline, `areas.json` `zones`). `site.build` works them out
+  for a page prepared before they existed.
 - Basemap (Derek, 2026-11-27: the plain background made the flooding hard to place): Satellite (Esri World Imagery
   with its road and place-name layers; the page opens on it), Streets (World Street Map) or Plain (the page's own
   drawing of land, water, roads and buildings). The page's view is the area's UTM grid, so each Web Mercator map tile
   is drawn through the affine map of three of its corners (`drawBase`; `utm` and `lonlat` are Krueger's series).
-  Over a basemap the flood picture leaves ordinary tidal water clear and the page's own road network and building
-  outlines are not drawn, only the flagged ones. Where the map tiles cannot be loaded (a Claude artifact blocks other
+  Over a basemap the page's own road network and building outlines are not drawn, only the flagged ones (and with
+  the water depth layer off, or on a page prepared before it, ordinary tidal water is left clear). Where the map tiles cannot be loaded (a Claude artifact blocks other
   hosts) the page falls back to Plain and says so. A viewer's own choice is remembered in the browser.
 - Views: Now, Forecast peak (the page opens here), Last observed, Historical Floods, Scenario. Scenario sets one
-  water level for every gauge, -2 to 10 ft NAVD88 in 0.25 ft steps, and the roads, buildings and damage follow it; it
-  opens at the step nearest 7 ft above MLLW at Sewells Point.
+  water level for every gauge, 0 to 10 ft in 0.25 ft steps or 0 to 3 m in 0.1 m steps on the selected datum (Derek,
+  2026-11-28; both ends of the axis are labelled; with MLLW it is MLLW at the plot's gauge, and the same NAVD88
+  level everywhere), and the roads, buildings and damage follow it; it opens at the step nearest 7 ft above MLLW at
+  Sewells Point.
 - "StormSense Prediction Plot / Anticipated Impacts in the Next 72 Hours": the forecast at the NOAA tide gauge nearest
   the area's centre, one inside the area first (`static.json` `plot_gauge`: Sewells Point for Norfolk, Portsmouth and
   Hampton, Yorktown for Newport News, Money Point for Chesapeake, the Bay Bridge Tunnel for Virginia Beach), with
@@ -331,7 +354,11 @@ water level, so the far view never loads the road and building tables. From zoom
 `static.json` of each locality in view (its own page's data) and draws every flooded or ponded road piece and
 flooded building on the water; a click on one gives its depth, ground and gauge, a click elsewhere in a locality its
 counts and the link to its own map. The plot is Sewells Point's forecast until a gauge is clicked: then it is that
-gauge's, with its flood levels (Derek, 2026-11-27).
+gauge's, with its flood levels (Derek, 2026-11-27), and the four counts and the plot's road and building lines cover
+only the roads and buildings that follow that gauge, so they rise and fall with its water (Derek, 2026-11-28: the
+whole coast's counts beside one gauge's forecast looked out of phase). "Whole coastal zone" above the plot brings the
+totals back. The datum and units buttons, the water depth layer and the gauge boundaries work as on a locality's
+page; water outside every locality's outline (the Potomac, which is Maryland's, and the open bay) is not drawn here.
 
 Gauges, on the map of all localities and on each locality's own: the dot has the color of the National Weather
 Service flood category of the gauge's level at the selected time (green below Action, yellow Action, orange Minor,
@@ -339,7 +366,8 @@ red Moderate, purple Major, navy where no levels are set, grey without a reading
 the highest category its forecast reaches in the 72 hours. Zoomed out, the map of all localities labels the gauges
 with their abbreviations (a label that would sit on another gives way: the plot's gauge, the highest category and
 NOAA's gauges keep theirs); from zoom 10.5 in, the label also carries the level. When no gauge that a prepared
-locality follows is at Action, a note under the map says that this is why there is no blue to see.
+locality follows is at Action, a note under the map says that no land is flooded and the blue is the water in the
+rivers and the bay.
 
 `.github/workflows/inundation.yml` runs it after every StormSense run and publishes to GitHub Pages at
 https://derekloftis.github.io/StormSense-archive/inundation/ (and to release `inundation-pages`). GitHub Pages

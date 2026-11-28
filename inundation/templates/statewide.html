@@ -123,6 +123,10 @@ select{font:inherit;font-size:13.5px;color:var(--ink);background:var(--panel);bo
 .leaflet-control-attribution{font-size:10.5px;max-width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .base button{padding:4px 10px;font-size:12.5px}
 td a{color:inherit;font-weight:600;text-decoration-color:var(--accent)}
+.layers label{display:inline-flex;align-items:center;gap:6px;cursor:pointer}
+.layers input{margin:0;accent-color:var(--navy)}
+.keys .sw.zone,.sw.zone{background:none;border-top:2px dashed #7d8791;height:0;border-radius:0}
+.ctl{display:inline-flex;align-items:center;flex-wrap:wrap;gap:4px 0;max-width:100%}
 </style>
 
 <div class="wrap">
@@ -146,19 +150,25 @@ td a{color:inherit;font-weight:600;text-decoration-color:var(--accent)}
       <button id="bScen" type="button" aria-pressed="false">Scenario</button>
     </span>
     <button id="bPlay" type="button" aria-pressed="false">▶ Play 72 hours</button>
-    <span id="modeBox"><span class="lbl">Forecast</span><span class="seg" id="mode" role="group" aria-label="Forecast line">
+    <span class="ctl"><span class="lbl">Datum</span><span class="seg" id="datum" role="group" aria-label="Vertical datum of the water levels">
+      <button type="button" data-v="MLLW" aria-pressed="false">MLLW</button>
+      <button type="button" data-v="NAVD" aria-pressed="true">NAVD88</button></span></span>
+    <span class="ctl"><span class="lbl">Units</span><span class="seg" id="units" role="group" aria-label="Units">
+      <button type="button" data-v="ft" aria-pressed="true">Feet</button>
+      <button type="button" data-v="m" aria-pressed="false">Meters</button></span></span>
+    <span id="modeBox" class="ctl"><span class="lbl">Forecast</span><span class="seg" id="mode" role="group" aria-label="Forecast line">
       <button type="button" data-v="p10" aria-pressed="false">Low (10%)</button>
       <button type="button" data-v="f" aria-pressed="true">Forecast</button>
       <button type="button" data-v="p90" aria-pressed="false">High (90%)</button></span></span>
   </div>
   <div class="controls bar" id="scenBar" hidden>
-    <p class="note">Scenario: drag the slider or the plot to set one water level for every gauge, from -2 to 10 ft NAVD88 in 0.25 ft steps. No forecast is involved: the depths, the roads and the buildings follow the level you set.</p>
+    <p class="note" id="scenNote"></p>
   </div>
 
   <div class="strip">
-    <div class="tile"><span class="k"><span class="sw" style="background:var(--flooded)"></span>Roads flooded</span><span class="v" id="vFlood">–</span><span class="d">more than 0.5 ft of water</span></div>
-    <div class="tile"><span class="k"><span class="sw" style="background:var(--ponded)"></span>Roads ponded</span><span class="v" id="vPond">–</span><span class="d">0.25 to 0.5 ft of water</span></div>
-    <div class="tile"><span class="k"><span class="sw box" style="background:var(--building)"></span>Buildings flooded</span><span class="v" id="vBldg">–</span><span class="d">more than 0.5 ft over the ground at the building</span></div>
+    <div class="tile"><span class="k"><span class="sw" style="background:var(--flooded)"></span>Roads flooded</span><span class="v" id="vFlood">–</span><span class="d" id="dFlood">more than 0.5 ft of water</span></div>
+    <div class="tile"><span class="k"><span class="sw" style="background:var(--ponded)"></span>Roads ponded</span><span class="v" id="vPond">–</span><span class="d" id="dPond">0.25 to 0.5 ft of water</span></div>
+    <div class="tile"><span class="k"><span class="sw box" style="background:var(--building)"></span>Buildings flooded</span><span class="v" id="vBldg">–</span><span class="d" id="dBldg">more than 0.5 ft over the ground at the building</span></div>
     <div class="tile"><span class="k"><span class="sw box" style="background:var(--building)"></span>Est. damage to homes</span><span class="v" id="vDmg">–</span><span class="d" id="dDmg">structure only, where assessed values are public</span></div>
   </div>
 
@@ -171,8 +181,12 @@ td a{color:inherit;font-weight:600;text-decoration-color:var(--accent)}
           <button type="button" data-b="streets" aria-pressed="false">Streets</button>
         </span>
       </div>
-      <div class="ramp" id="ramp" aria-label="Water depth in feet, by color"></div>
-      <div class="keys"><span><i class="sw" style="background:var(--flooded)"></i>Road flooded, over 0.5 ft</span><span><i class="sw" style="background:var(--ponded)"></i>Road ponded, 0.25 to 0.5 ft</span><span><i class="sw sq" style="background:var(--building)"></i>Flood Affected Structure, over 0.5 ft</span></div>
+      <div class="keys layers">
+        <label id="lBathyBox"><input type="checkbox" id="lBathy" checked>Water depth in the rivers, creeks and bay</label>
+        <label id="lZonesBox"><input type="checkbox" id="lZones"><i class="sw zone"></i>Gauge boundaries: which gauge each place follows</label>
+      </div>
+      <div class="ramp" id="ramp" aria-label="Water depth by color"></div>
+      <div class="keys"><span><i class="sw" style="background:var(--flooded)"></i><span id="cFlood">Road flooded, over 0.5 ft</span></span><span><i class="sw" style="background:var(--ponded)"></i><span id="cPond">Road ponded, 0.25 to 0.5 ft</span></span><span><i class="sw sq" style="background:var(--building)"></i><span id="cBldg">Flood Affected Structure, over 0.5 ft</span></span></div>
       <div class="keys" id="gkeys" aria-label="Gauge colors: the NWS flood category of each gauge"></div>
       <p class="note"><span id="dryNote"></span><span id="detailNote">Zoom in to street level to see each flooded road and building.</span> Click a locality for its counts and its own map, where past floods can be replayed and every building's value and estimated damage opened.</p>
     </div>
@@ -181,6 +195,9 @@ td a{color:inherit;font-weight:600;text-decoration-color:var(--accent)}
       <div class="card">
         <h2 id="plotTitle">StormSense Prediction Plot</h2>
         <p class="plotsub" id="plotSub">Anticipated Impacts in the Next 72 Hours</p>
+        <span class="ctl"><span class="lbl">Roads and buildings</span><span class="seg" id="scope" role="group" aria-label="Which roads and buildings the plot and the counts above cover">
+          <button type="button" data-v="all" aria-pressed="true">Whole coastal zone</button>
+          <button type="button" data-v="gauge" aria-pressed="false" id="bScope">Nearest SWPT</button></span></span>
         <div class="chips" id="plotKey"></div>
         <div class="chart" id="cPlot"></div>
         <input type="range" id="time" min="0" max="1" step="1" value="0" aria-label="Time in the forecast">
@@ -190,9 +207,11 @@ td a{color:inherit;font-weight:600;text-decoration-color:var(--accent)}
       <div class="card">
         <h2>How to read this</h2>
         <ul class="plain">
-          <li>The blues show how deep the water stands over the ground, in 5 m cells: each gauge's level at the selected time minus the ground, where the water can reach from tidal water. Every cell follows its nearest StormSense gauge.</li>
-          <li>Road centerlines from VGIN are cut into 5 m pieces: a piece counts as ponded once the water over it is 0.25 ft deep and as flooded once it is more than 0.5 ft deep. A building footprint (VGIN's, or FEMA's outline where VGIN has none) counts once the water stands more than 0.5 ft over the ground at the building. Counts between two quarter-foot levels are read off a straight line.</li>
-          <li>Each gauge's dot has the color of the National Weather Service flood category of its water level at the selected time: green below Action, yellow Action, orange Minor, red Moderate, purple Major. A ring around it has the color of the highest category its forecast reaches in the 72 hours. Click a gauge to put its forecast in the plot.</li>
+          <li id="hr1"></li>
+          <li id="hr2"></li>
+          <li>Each gauge's dot has the color of the National Weather Service flood category of its water level at the selected time: green below Action, yellow Action, orange Minor, red Moderate, purple Major. A ring around it has the color of the highest category its forecast reaches in the 72 hours.</li>
+          <li>Click a gauge to put its forecast in the plot. The plot and the four counts then cover only the roads and buildings nearest that gauge, so they rise and fall with its water; "Whole coastal zone" above the plot brings every gauge's back. The gray dashed gauge boundaries, when switched on under the map, show which gauge each place follows.</li>
+          <li id="hr3" hidden></li>
           <li>Damage is estimated for homes only, from the assessed building value and the USACE depth-damage curves, in localities that publish assessed values.</li>
           <li>This is a pilot. Rain and waves are not in it, bridges and tunnels are not evaluated, and it has not yet been checked against observed flooding.</li>
         </ul>
@@ -214,7 +233,7 @@ td a{color:inherit;font-weight:600;text-decoration-color:var(--accent)}
 "use strict";
 var $ = function(id){ return document.getElementById(id); };
 var G, LV, A = null, R = {src:{}, tick:0, tl:{}}, T = {i:0, mode:"f", obs:false, view:"fc", playing:null}, C = {};
-var map, depthLayer, marks = {}, rings = {}, shapes = [], PG = null;      // PG: the gauge whose forecast the plot shows
+var map, depthLayer, zoneLayer, zoneLines = [], marks = {}, rings = {}, shapes = [], PG = null;      // PG: the gauge whose forecast the plot shows
 // National Weather Service flood categories, in the colors of its river and tide gauge maps
 var CAT = {none:"#1a9850", action:"#ffe600", minor:"#ff9900", moderate:"#e60000", major:"#c800e6", open:"#0b3954", na:"#8a8f98"};
 var CAT_NAME = {none:"Below Action", action:"Action", minor:"Minor", moderate:"Moderate", major:"Major", open:"No flood levels set", na:"No reading"};
@@ -240,13 +259,38 @@ function fmtMi(v){ v = Math.max(0, v); return v >= 10 ? v.toFixed(1) : v.toFixed
 function fmtBig(v){ return v >= 1e9 ? "$" + (v / 1e9).toFixed(2) + " billion" : v >= 1e6 ? "$" + (v / 1e6).toFixed(v >= 1e7 ? 0 : 1) + " million" : v >= 1e4 ? "$" + Math.round(v / 1e3) + " thousand" : "$" + Math.round(v).toLocaleString("en-US"); }
 function tAt(i){ return new Date(A.t0ms + i * A.step_min * 60000); }
 function utc(d){ return d.toISOString().slice(11,16) + " UTC"; }
-function scenLevel(i){ return Math.round((G.levels.start + i * G.levels.step) * 100) / 100; }
-function mllw(v, id){ var s = id && G.stations[id], off = s ? s.mllw : (G.mllw_ref || {}).navd88_above_mllw_ft; return off != null ? (v + off).toFixed(2) + " ft above MLLW" : ""; }
+// Datum and units of everything shown (Derek, 2026-11-28). The data are feet above NAVD88; a level on MLLW is the
+// level plus its own gauge's offset (NAVD88 above MLLW there), so the same water has another number at each gauge.
+var U = {datum:"NAVD", units:"ft"}, M_FT = 0.3048, KM_MI = 1.609344, SC = null;      // SC: the gauge whose roads and buildings are counted (null: every gauge's)
+function pref(key, ok, def){ var m = new RegExp("[?&]" + key + "=([^&#]+)").exec(location.search), v = m ? decodeURIComponent(m[1]) : null;
+  if (!v) try { v = localStorage.getItem("stormsense-" + key); } catch (e) {}
+  if (v && key === "datum") v = v.toUpperCase().replace("NAVD88", "NAVD"); if (v && key === "units") v = /^m/i.test(v) ? "m" : "ft";
+  return ok.indexOf(v) >= 0 ? v : def; }
+function uName(){ return U.units; }
+function dName(){ return U.datum === "MLLW" ? "MLLW" : "NAVD88"; }
+function uf(){ return U.units === "m" ? M_FT : 1; }
+function goff(o){ return U.datum === "MLLW" && o != null ? o : 0; }
+function toU(v, o){ return (v + goff(o)) * uf(); }               // a level in ft NAVD88 as shown; o: NAVD88 above MLLW at its gauge
+function fLv(v, o, d){ return toU(v, o).toFixed(d == null ? 2 : d); }
+function fLvU(v, o, d){ return fLv(v, o, d) + " " + uName() + " " + dName(); }
+function alt(v, o){ if (o == null) return ""; var m = U.datum === "MLLW"; return ((m ? v : v + o) * uf()).toFixed(2) + " " + uName() + " " + (m ? "NAVD88" : "MLLW"); }   // the same level on the other datum
+function fLen(v, d){ return (v * uf()).toFixed(d == null ? 2 : d) + " " + uName(); }      // a depth or a difference of two levels
+function tidy(v, d){ return String(parseFloat(v.toFixed(d))); }
+function fLenT(v){ return tidy(v * uf(), 2) + " " + uName(); }
+function mi(v){ return U.units === "m" ? v * KM_MI : v; }        // road miles, as miles or kilometres
+function roadU(long){ return U.units === "m" ? "km" : long ? "miles" : "mi"; }
 function paren(t){ return t ? " (" + t + ")" : ""; }
+function off(id){ var g = G.stations[id]; return g && g.mllw != null ? g.mllw : ro(); }        // NAVD88 above MLLW at a gauge
+function ro(){ var g = G.mllw_ref; return g ? g.navd88_above_mllw_ft : null; }                  // ... at Sewells Point, where the scenario's MLLW is given
+// Scenario levels: 0 to 10 ft in 0.25 ft steps, or 0 to 3 m in 0.1 m steps, on the selected datum
+function scenSet(){ var m = U.units === "m", st = m ? 0.1 : 0.25; R.scen = {st:st, n:Math.round((m ? 3 : 10) / st) + 1}; }
+function scenDisp(i){ return Math.round(i * R.scen.st * 100) / 100; }
+function scenLevel(i){ return Math.round((scenDisp(i) / uf() - goff(ro())) * 100) / 100; }      // ft NAVD88
+function scenIndex(navd){ return Math.max(0, Math.min(R.scen.n - 1, Math.round(toU(navd, ro()) / R.scen.st))); }
 function cat(id, v){ if (v == null) return "na"; var fl = (LV.stations[id] || {}).flood_levels_ft || {}, c = fl.action == null && fl.minor == null ? "open" : "none";
   ["action","minor","moderate","major"].forEach(function(k){ if (fl[k] != null && v >= fl[k]) c = k; }); return c; }
 function top(id){ var s = LV.stations[id], a = s && (s[T.mode] || s.f), hi = null, at = -1; if (!a) return null; for (var i = 0; i < a.length; i++) if (a[i] != null && (hi == null || a[i] > hi)){ hi = a[i]; at = i; } return hi == null ? null : {v:hi, i:at}; }
-function stepLabel(i){ return T.view === "scen" ? scenLevel(i).toFixed(2) + " ft NAVD88" : fShort.format(tAt(i)); }
+function stepLabel(i){ return T.view === "scen" ? scenDisp(i).toFixed(2) + " " + uName() + " " + dName() : fShort.format(tAt(i)); }
 
 // Longitude and latitude to UTM (GRS80, Krueger's series to n^3: good to a millimetre); the areas' grids are in UTM
 function utm(lon, lat, epsg){ var zone = epsg % 100, lon0 = zone * 6 - 183, a = 6378137, f = 1 / 298.257222101, n = f / (2 - f), n2 = n * n, n3 = n2 * n;
@@ -264,13 +308,13 @@ Promise.all([getJSON("areas.json"), getJSON("levels.json")]).then(function(r){ G
 function level(id){ if (T.view === "scen") return scenLevel(T.i); var s = LV.stations[id]; if (!s) return null;
   if (T.obs) return s.obs_ft == null ? null : s.obs_ft; var v = s[T.mode] && s[T.mode][T.i]; return v == null ? (s.f[T.i] == null ? null : s.f[T.i]) : v; }
 function at(c, v){ if (v == null) return 0; var k = (v - G.levels.start) / G.levels.step, n = c.length; if (k <= 0) return k < 0 ? 0 : c[0]; if (k >= n - 1) return c[n - 1]; var i = Math.floor(k); return c[i] + (c[i + 1] - c[i]) * (k - i); }
-function counts(a, lv){ var o = {f:0, p:0, b:0, d:0}; for (var id in a.curves){ var c = a.curves[id], v = lv(id); o.f += at(c.f, v); o.p += at(c.p, v); o.b += at(c.b, v); if (c.d) o.d += at(c.d, v); } return o; }
-function totals(lv){ var o = {f:0, p:0, b:0, d:0}; G.areas.forEach(function(a){ var c = counts(a, lv); o.f += c.f; o.p += c.p; o.b += c.b; o.d += c.d; }); return o; }
-function timeline(){ var n = A.n, key = T.view + T.mode; if (R.tl[key]){ R.tlF = R.tl[key][0]; R.tlP = R.tl[key][1]; R.tlB = R.tl[key][2]; return; }
+function counts(a, lv, only){ var o = {f:0, p:0, b:0, d:0}; for (var id in a.curves){ if (only && id !== only) continue; var c = a.curves[id], v = lv(id); o.f += at(c.f, v); o.p += at(c.p, v); o.b += at(c.b, v); if (c.d) o.d += at(c.d, v); } return o; }
+function totals(lv){ var o = {f:0, p:0, b:0, d:0}; G.areas.forEach(function(a){ var c = counts(a, lv, SC); o.f += c.f; o.p += c.p; o.b += c.b; o.d += c.d; }); return o; }
+function timeline(){ var n = A.n, key = T.view + T.mode + (SC || "") + (T.view === "scen" ? U.datum + U.units : ""); if (R.tl[key]){ R.tlF = R.tl[key][0]; R.tlP = R.tl[key][1]; R.tlB = R.tl[key][2]; return; }
   var F = new Float32Array(n), P = new Float32Array(n), B = new Float32Array(n), keep = T.i, obs = T.obs; T.obs = false;
   for (var i = 0; i < n; i++){ T.i = i; var o = totals(level); F[i] = o.f; P[i] = o.p; B[i] = o.b; }
   T.i = keep; T.obs = obs; R.tl[key] = [F, P, B]; R.tlF = F; R.tlP = P; R.tlB = B; }
-function use(view){ T.view = view; if (view === "scen") A = {kind:"scen", n:G.levels.n};
+function use(view){ T.view = view; if (view === "scen") A = {kind:"scen", n:R.scen.n};
   else { A = {kind:"fc", n:LV.n, t0ms:Date.parse(LV.t0), step_min:LV.step_min}; var p = LV.stations[PG.id]; R.plot = p || null; }
   $("time").max = A.n - 1; R.ticks = ticks(); timeline(); }
 function peakIndex(){ var f = R.plot ? R.plot.f : null, best = 0, k = 0; if (!f) return 0; for (var i = 0; i < f.length; i++) if (f[i] != null && (f[k] == null || f[i] > f[k])) k = i; return k || best; }
@@ -278,78 +322,102 @@ function nowIndex(){ return Math.max(0, Math.min(A.n - 1, Math.round((Date.now()
 
 function setup(){
   readColors();
+  U.datum = pref("datum", ["NAVD", "MLLW"], "NAVD"); U.units = pref("units", ["ft", "m"], "ft"); scenSet();
+  R.v3 = G.areas.some(function(a){ return a.raster.v >= 3; }); R.bathy = R.v3; $("lBathyBox").hidden = !R.v3;
+  $("lZonesBox").hidden = !G.areas.some(function(a){ return a.zones && a.zones.length; });
   $("disc").textContent = G.disclaimer;
-  $("ramp").innerHTML = "<b>Water depth (ft)</b>" + DEPTH.map(function(h, i){ return '<span><i style="background:' + h + '"></i>' + (i === 0 ? "≤" : "") + DEPTH_LABEL[i] + "</span>"; }).join("");
   var fol = []; for (var fid in LV.stations){ var ff = LV.stations[fid].follows; if (ff) fol.push(fid + " follows " + ff); }
   $("areaNote").textContent = "These " + G.areas.length + " maps cover every locality of Virginia's coastal zone (Accomack County is three maps, and the Town of West Point is in King William's). Counts are for the time or level selected above." + (fol.length ? " Gauges without a forecast in this run follow the nearest gauge that has one: " + fol.join(", ") + "." : "");
   PG = {id:G.plot_gauge.id, name:G.plot_gauge.name};
   $("gkeys").innerHTML = "<b>Gauges</b>" + ["none","action","minor","moderate","major","na"].map(function(k){ return '<span><i class="dot" style="background:' + CAT[k] + '"></i>' + CAT_NAME[k] + "</span>"; }).join("") +
     '<span><i class="ring"></i>Ring: the highest category forecast in 72 hours</span>';
-  initMap(); use("fc"); T.i = peakIndex(); bind(); update(); plotChart(); cursors();
+  texts(); initMap(); use("fc"); T.i = peakIndex(); bind(); update(); plotChart(); cursors();
 }
+// every text that names a level, a depth or a length: written again when the datum or the units change
+function texts(){ var pd = G.ponded_ft, fd = G.flooded_ft, ml = U.datum === "MLLW", g = G.mllw_ref, near = SC ? " · nearest " + SC : "";
+  ["datum", "units"].forEach(function(key){ Array.prototype.forEach.call(document.querySelectorAll("#" + key + " button"), function(b){ b.setAttribute("aria-pressed", String(b.getAttribute("data-v") === U[key])); }); });
+  $("dFlood").textContent = "more than " + fLenT(fd) + " of water" + near; $("dPond").textContent = tidy(pd * uf(), 2) + " to " + fLenT(fd) + " of water" + near; $("dBldg").textContent = "more than " + fLenT(fd) + " over the ground at the building" + near;
+  $("dDmg").textContent = "structure only, where assessed values are public" + near;
+  $("cFlood").textContent = "Road flooded, over " + fLenT(fd); $("cPond").textContent = "Road ponded, " + tidy(pd * uf(), 2) + " to " + fLenT(fd); $("cBldg").textContent = "Flood Affected Structure, over " + fLenT(fd);
+  $("hr1").textContent = "The blues show how deep the water stands, in 5 m cells: each gauge's level at the selected time minus the ground, where the water can reach from tidal water. They are drawn over the land when it floods" + (R.v3 ? " and always in the rivers, creeks and bay, where they deepen as the tide rises and pale as it falls" : "") + ". Every cell follows its nearest StormSense gauge.";
+  $("hr2").textContent = "Road centerlines from VGIN are cut into 5 m pieces: a piece counts as ponded once the water over it is " + fLenT(pd) + " deep and as flooded once it is more than " + fLenT(fd) + " deep. A building footprint (VGIN's, or FEMA's outline where VGIN has none) counts once the water stands more than " + fLenT(fd) + " over the ground at the building. Counts between two levels of the flood grids (" + fLenT(G.levels.step) + " apart) are read off a straight line.";
+  var h3 = $("hr3"); h3.hidden = !ml && U.units === "ft";
+  h3.textContent = "Levels are shown in " + (U.units === "m" ? "meters" : "feet") + (ml ? " above MLLW, mean lower low water at each gauge. The flood grids are on NAVD88; a level on MLLW is the NAVD88 level plus that gauge's own offset" + (g ? " (" + (g.navd88_above_mllw_ft * uf()).toFixed(2) + " " + uName() + " at " + g.name + ")" : "") + ", so the same water has a different number at each gauge." : " above NAVD88.") + (U.units === "m" ? " Road lengths are in kilometres." : "");
+  $("scenNote").textContent = "Scenario: drag the slider or the plot to set one water level for every gauge, from 0 to " + tidy(scenDisp(R.scen.n - 1), 2) + " " + uName() + " " + dName() + (ml && g ? " at " + g.name + " (the same NAVD88 level at every gauge)" : "") + " in " + R.scen.st + " " + uName() + " steps. No forecast is involved: the depths, the roads and the buildings follow the level you set.";
+  $("ramp").innerHTML = "<b>Water depth (" + uName() + ")</b>" + DEPTH.map(function(h, i){ var v = +DEPTH_LABEL[i]; return '<span><i style="background:' + h + '"></i>' + (i === 0 ? "≤" : "") + (U.units === "m" ? (v * M_FT).toFixed(v < 1 ? 2 : 1) : DEPTH_LABEL[i]) + "</span>"; }).join("");
+  $("bScope").textContent = "Nearest " + PG.id; Array.prototype.forEach.call(document.querySelectorAll("#scope button"), function(b){ b.setAttribute("aria-pressed", String((b.getAttribute("data-v") === "gauge") === !!SC)); });
+}
+function setU(key, v){ if (U[key] === v) return; var at = T.view === "scen" ? scenLevel(T.i) : null;
+  U[key] = v; try { localStorage.setItem("stormsense-" + key, v); } catch (e) {} scenSet(); texts();
+  if (at != null){ use("scen"); T.i = scenIndex(at); } plotChart(); update(); }
+function setScope(id){ SC = id; texts(); timeline(); plotChart(); update(); }
 
 function update(){
   G.areas.forEach(function(a){ a.L = []; a.K = []; a.stations.forEach(function(id){ var v = level(id); a.L.push(v == null ? -32000 : Math.round(v * 100)); a.K.push(v == null ? -1 : Math.floor((v - G.levels.start) / G.levels.step + 1e-9)); }); });
   var o = totals(level);
-  $("vFlood").innerHTML = fmtMi(o.f) + " <small>miles</small>"; $("vPond").innerHTML = fmtMi(o.p) + " <small>miles</small>";
+  $("vFlood").innerHTML = fmtMi(mi(o.f)) + " <small>" + roadU(true) + "</small>"; $("vPond").innerHTML = fmtMi(mi(o.p)) + " <small>" + roadU(true) + "</small>";
   $("vBldg").textContent = Math.round(o.b).toLocaleString(); $("vDmg").textContent = fmtBig(o.d);
   var high = 0; for (var id in G.stations) if (G.stations[id].used && CAT_RANK[cat(id, level(id))] > 0) high++;
-  $("dryNote").textContent = high ? "" : "No gauge that a prepared locality follows is at its Action level at the selected " + (T.view === "scen" ? "level" : "time") + ", so there is little or no blue to see: the blues are drawn only where water stands over the ground. Play the 72 hours or open Scenario to see them. ";
+  $("dryNote").textContent = high ? "" : "No gauge that a prepared locality follows is at its Action level at the selected " + (T.view === "scen" ? "level" : "time") + (R.bathy ? ", so the blues stay in the rivers, creeks and marshes: over the land they appear only where water stands on the ground. Play the 72 hours to watch them deepen and pale with the tide, or open Scenario to see a flood. " : ", so there is little or no blue to see: the blues are drawn only where water stands over the ground. Play the 72 hours or open Scenario to see them. ");
   G.areas.forEach(flag); chrome(); table(); labels(); repaint(); $("time").value = T.i; cursors();
 }
 function chrome(){ var v = T.view, pg = PG, lv = level(pg.id);
   $("bObs").setAttribute("aria-pressed", String(v === "fc" && T.obs)); $("bScen").setAttribute("aria-pressed", String(v === "scen"));
   $("modeBox").hidden = v !== "fc"; $("scenBar").hidden = v !== "scen"; $("bPlay").textContent = T.playing ? "❚❚ Pause" : v === "scen" ? "▶ Play the levels" : "▶ Play 72 hours";
   $("plotTitle").textContent = v === "scen" ? "StormSense Scenario Builder" : "StormSense Prediction Plot";
-  $("plotSub").textContent = v === "scen" ? "Impacts at Each Water Level, -2 to 10 ft NAVD88" : "Anticipated Impacts in the Next 72 Hours";
+  $("plotSub").textContent = v === "scen" ? "Impacts at Each Water Level, 0 to " + tidy(scenDisp(R.scen.n - 1), 2) + " " + uName() + " " + dName() : "Anticipated Impacts in the Next 72 Hours";
+  var po = off(pg.id), ref = G.mllw_ref, none = SC && !(G.stations[SC] || {}).used ? " No prepared locality has roads or buildings nearest " + SC + "." : "";
   $("time").setAttribute("aria-label", v === "scen" ? "Water level" : "Time in the forecast");
-  if (v === "scen"){ $("when").innerHTML = "Water at " + scenLevel(T.i).toFixed(2) + " ft NAVD88 <small>" + mllw(scenLevel(T.i)) + " at Sewells Point · the same level at every gauge</small>"; $("lvlNote").textContent = "Drag the slider or the plot to change the water level."; $("runNote").textContent = ""; }
+  if (v === "scen"){ var sv = scenLevel(T.i); $("when").innerHTML = "Water at " + stepLabel(T.i) + " <small>" + (ref ? (U.datum === "MLLW" ? "at " + ref.name + " · " + alt(sv, ro()) : alt(sv, ro()) + " at " + ref.name) + " · " : "") + "the same level at every gauge</small>"; $("lvlNote").textContent = "Drag the slider or the plot to change the water level." + none; $("runNote").textContent = ""; }
   else if (T.obs){ var s = LV.stations[pg.id], ot = s && s.obs_time ? new Date(s.obs_time) : null; $("when").innerHTML = "Last observed <small>" + (ot ? fTime.format(ot) : "") + "</small>";
-    $("lvlNote").textContent = lv == null ? "" : pg.name + " last read " + lv.toFixed(2) + " ft NAVD88" + paren(mllw(lv, pg.id)) + "."; }
+    $("lvlNote").textContent = (lv == null ? "" : pg.name + " last read " + fLvU(lv, po) + paren(alt(lv, po)) + ".") + none; }
   else { var t = tAt(T.i), dh = (t - Date.now()) / 3600000; $("when").innerHTML = fTime.format(t) + " <small>" + utc(t) + " · " + (Math.abs(dh) < 0.05 ? "now" : dh > 0 ? "in " + dh.toFixed(1) + " h" : (-dh).toFixed(1) + " h ago") + "</small>";
-    $("lvlNote").textContent = lv == null ? "" : pg.name + " at the selected time: " + lv.toFixed(2) + " ft NAVD88" + paren(mllw(lv, pg.id)) + "."; }
-  if (v !== "scen"){ var p = LV.stations[pg.id]; $("runNote").textContent = "Forecast: StormSense fore72" + (p && p.updated ? ", updated " + p.updated : "") + ". Click a gauge on the map to see its forecast here. Drag the slider or the plot to move through it. Times are Eastern."; }
-  $("plotKey").innerHTML = (v === "scen" ? "" : '<span><span class="sw" style="background:var(--navy)"></span>StormSense forecast at ' + pg.name + " (ft NAVD88, left axis)</span>") +
-    '<span><span class="sw" style="background:var(--flooded)"></span>Road miles flooded</span><span><span class="sw" style="background:var(--ponded)"></span>Road miles ponded</span><span><span class="sw box" style="background:var(--building)"></span>Buildings flooded (' + (v === "scen" ? "right" : "far right") + " axis)</span>";
+    $("lvlNote").textContent = (lv == null ? "" : pg.name + " at the selected time: " + fLvU(lv, po) + paren(alt(lv, po)) + ".") + none; }
+  if (v !== "scen"){ var p = LV.stations[pg.id]; $("runNote").textContent = "Forecast: StormSense fore72" + (p && p.updated ? ", updated " + p.updated : "") + ". Click a gauge on the map to see its forecast and the roads and buildings nearest it here. Drag the slider or the plot to move through it. Times are Eastern."; }
+  $("plotKey").innerHTML = (v === "scen" ? "" : '<span><span class="sw" style="background:var(--navy)"></span>StormSense forecast at ' + pg.name + " (" + uName() + " " + dName() + ", left axis)</span>") +
+    '<span><span class="sw" style="background:var(--flooded)"></span>Road ' + roadU(true) + ' flooded</span><span><span class="sw" style="background:var(--ponded)"></span>Road ' + roadU(true) + ' ponded</span><span><span class="sw box" style="background:var(--building)"></span>Buildings flooded (' + (v === "scen" ? "right" : "far right") + " axis)</span>" +
+    "<span>" + (SC ? "Roads and buildings nearest " + SC + " only" : "Roads and buildings of the whole coastal zone") + "</span>";
 }
 function table(){ var rows = G.areas.map(function(a){ return {a:a, c:counts(a, level)}; }).sort(function(p, q){ return q.c.b - p.c.b || q.c.f - p.c.f; });
-  $("areas").innerHTML = "<tr><th>Locality</th><th>Roads flooded (mi)</th><th>Roads ponded (mi)</th><th>Buildings flooded</th><th>Est. damage to homes</th></tr>" + rows.map(function(r){
-    return '<tr><td><a href="' + r.a.name + '/">' + r.a.title + '</a><span class="nm">' + r.a.region + "</span></td><td>" + fmtMi(r.c.f) + "</td><td>" + fmtMi(r.c.p) + "</td><td>" + Math.round(r.c.b).toLocaleString() + "</td><td>" + (r.a.values ? fmtBig(r.c.d) : '<span class="pill none">no public values</span>') + "</td></tr>"; }).join(""); }
+  $("areas").innerHTML = "<tr><th>Locality</th><th>Roads flooded (" + roadU() + ")</th><th>Roads ponded (" + roadU() + ")</th><th>Buildings flooded</th><th>Est. damage to homes</th></tr>" + rows.map(function(r){
+    return '<tr><td><a href="' + r.a.name + '/">' + r.a.title + '</a><span class="nm">' + r.a.region + "</span></td><td>" + fmtMi(mi(r.c.f)) + "</td><td>" + fmtMi(mi(r.c.p)) + "</td><td>" + Math.round(r.c.b).toLocaleString() + "</td><td>" + (r.a.values ? fmtBig(r.c.d) : '<span class="pill none">no public values</span>') + "</td></tr>"; }).join(""); }
 
 /* ---------- plot ---------- */
 function nice(max){ if (max <= 0) return 1; var p = Math.pow(10, Math.floor(Math.log10(max))), m = max / p; return (m <= 1 ? 1 : m <= 2 ? 2 : m <= 5 ? 5 : 10) * p; }
 function num(v){ return v >= 10 || v === 0 || v === Math.round(v) ? Math.round(v).toLocaleString() : v.toFixed(1); }
 function ticks(){ var out = [], i;
-  if (A.kind === "scen"){ for (i = 0; i < A.n; i++){ var lv = scenLevel(i); if (lv === Math.round(lv) && Math.round(lv) % 2 === 0) out.push({i:i, label:lv + " ft"}); } return out; }
+  if (A.kind === "scen"){ var ev = U.units === "m" ? 0.5 : 2;       // 0, 2 ... 10 ft or 0, 0.5 ... 3 m: both ends are labelled
+    for (i = 0; i < A.n; i++){ var lv = scenDisp(i); if (Math.abs(lv / ev - Math.round(lv / ev)) < 1e-6) out.push({i:i, label:lv + " " + uName()}); } return out; }
   var f = new Intl.DateTimeFormat("en-US", {timeZone:TZ, hour:"numeric", minute:"numeric", hourCycle:"h23"});
   for (i = 1; i < A.n - 1; i++){ var p = f.formatToParts(tAt(i)), hr = 0, mn = 0; p.forEach(function(q){ if (q.type === "hour") hr = +q.value; if (q.type === "minute") mn = +q.value; });
     if (mn === 0 && hr % 12 === 0) out.push({i:i, label: hr === 0 ? fDay.format(tAt(i)) : "noon"}); }
   return out; }
 function plotChart(){
-  var el = $("cPlot"), n = A.n, scen = A.kind === "scen", lvl = scen || !R.plot ? null : (R.plot[T.mode] || R.plot.f);
-  var band = lvl && R.plot.p10 && R.plot.p90 ? [R.plot.p10, R.plot.p90] : null;
+  var el = $("cPlot"), n = A.n, scen = A.kind === "scen", raw = scen || !R.plot ? null : (R.plot[T.mode] || R.plot.f), PO = off(PG.id), MI = U.units === "m" ? KM_MI : 1;
+  var cvt = function(a){ return a.map(function(v){ return v == null ? null : toU(v, PO); }); }, lvl = raw ? cvt(raw) : null;      // the level line in the selected datum and units
+  var band = lvl && R.plot.p10 && R.plot.p90 ? [cvt(R.plot.p10), cvt(R.plot.p90)] : null;
   var W = Math.max(280, el.clientWidth), H = 250, m = {l:36, r:lvl ? 96 : 52, t:20, b:22}, pw = W - m.l - m.r, ph = H - m.t - m.b, i;
   var maxMi = 0, maxB = 0; for (i = 0; i < n; i++){ if (R.tlF[i] > maxMi) maxMi = R.tlF[i]; if (R.tlP[i] > maxMi) maxMi = R.tlP[i]; if (R.tlB[i] > maxB) maxB = R.tlB[i]; }
-  maxMi = nice(maxMi); maxB = nice(maxB);
+  maxMi = nice(maxMi * MI) / MI; maxB = nice(maxB);
   var lo = Infinity, hi = -Infinity;
   (lvl ? [lvl].concat(band || []) : []).forEach(function(a){ for (var q = 0; q < n; q++){ var v = a[q]; if (v != null){ if (v < lo) lo = v; if (v > hi) hi = v; } } });
-  if (!isFinite(lo)){ lo = 0; hi = 1; } var st = hi - lo > 6 ? 2 : 1; lo = Math.floor(lo / st) * st; hi = Math.ceil(hi / st) * st; if (hi === lo) hi += st;
+  if (!isFinite(lo)){ lo = 0; hi = 1; } var sp = hi - lo, st = sp > 6 ? 2 : U.units === "ft" || sp > 2.5 ? 1 : sp > 1.2 ? 0.5 : 0.25; lo = Math.floor(lo / st) * st; hi = Math.ceil(hi / st) * st; if (hi === lo) hi += st;
   var x = function(q){ return m.l + pw * q / (n - 1); }, yL = function(v){ return m.t + ph * (1 - (v - lo) / (hi - lo)); },
       yM = function(v){ return m.t + ph * (1 - v / maxMi); }, yB = function(v){ return m.t + ph * (1 - v / maxB); };
   var svg = '<svg viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="' + $("plotTitle").textContent + ": " + $("plotSub").textContent + '">', xr = W - m.r, g, v;
-  if (lvl){ for (v = lo; v <= hi + 1e-9; v += st){ g = yL(v); svg += '<line x1="' + m.l + '" x2="' + xr + '" y1="' + g + '" y2="' + g + '" stroke="' + C.line + '"/><text x="' + (m.l - 6) + '" y="' + (g + 3.5) + '" text-anchor="end">' + v + '</text>'; }
-    svg += '<text x="' + (m.l - 30) + '" y="10">ft NAVD88</text><text x="' + (xr + 6) + '" y="10">miles</text><text x="' + (W - 1) + '" y="10" text-anchor="end">buildings</text>';
-    [0, 0.5, 1].forEach(function(f){ g = m.t + ph * (1 - f); svg += '<line x1="' + xr + '" x2="' + (xr + 4) + '" y1="' + g + '" y2="' + g + '" stroke="' + C.line + '"/><text x="' + (xr + 6) + '" y="' + (g + 3.5) + '">' + num(maxMi * f) + '</text><text x="' + (W - 1) + '" y="' + (g + 3.5) + '" text-anchor="end">' + num(maxB * f) + '</text>'; });
-    var fl = R.plot.flood_levels_ft || {}; ["action","minor","moderate","major"].forEach(function(k){ if (fl[k] == null || fl[k] < lo || fl[k] > hi) return; g = yL(fl[k]);
-      svg += '<line x1="' + m.l + '" x2="' + xr + '" y1="' + g + '" y2="' + g + '" stroke="' + C.muted + '" stroke-dasharray="3 4" stroke-width="1"/><text x="' + (xr - 4) + '" y="' + (g - 3) + '" text-anchor="end">' + k[0].toUpperCase() + k.slice(1) + " " + fl[k].toFixed(1) + '</text>'; }); }
-  else { [0, 0.5, 1].forEach(function(f){ g = m.t + ph * (1 - f); svg += '<line x1="' + m.l + '" x2="' + xr + '" y1="' + g + '" y2="' + g + '" stroke="' + C.line + '"/><text x="' + (m.l - 6) + '" y="' + (g + 3.5) + '" text-anchor="end">' + num(maxMi * f) + '</text><text x="' + (W - 1) + '" y="' + (g + 3.5) + '" text-anchor="end">' + num(maxB * f) + '</text>'; });
-    svg += '<text x="' + (m.l - 30) + '" y="10">miles</text><text x="' + (W - 1) + '" y="10" text-anchor="end">buildings</text>'; }
-  var placed = [];
-  [false, true].forEach(function(noon){ R.ticks.forEach(function(t){ var xx = x(t.i); if ((t.label === "noon") !== noon) return;
+  if (lvl){ for (v = lo; v <= hi + 1e-9; v += st){ g = yL(v); svg += '<line x1="' + m.l + '" x2="' + xr + '" y1="' + g + '" y2="' + g + '" stroke="' + C.line + '"/><text x="' + (m.l - 6) + '" y="' + (g + 3.5) + '" text-anchor="end">' + tidy(v, 2) + '</text>'; }
+    svg += '<text x="' + (m.l - 30) + '" y="10">' + uName() + " " + dName() + '</text><text x="' + (xr + 6) + '" y="10">' + roadU(true) + '</text><text x="' + (W - 1) + '" y="10" text-anchor="end">buildings</text>';
+    [0, 0.5, 1].forEach(function(f){ g = m.t + ph * (1 - f); svg += '<line x1="' + xr + '" x2="' + (xr + 4) + '" y1="' + g + '" y2="' + g + '" stroke="' + C.line + '"/><text x="' + (xr + 6) + '" y="' + (g + 3.5) + '">' + num(maxMi * MI * f) + '</text><text x="' + (W - 1) + '" y="' + (g + 3.5) + '" text-anchor="end">' + num(maxB * f) + '</text>'; });
+    var fl = R.plot.flood_levels_ft || {}; ["action","minor","moderate","major"].forEach(function(k){ var fv = fl[k] == null ? null : toU(fl[k], PO); if (fv == null || fv < lo || fv > hi) return; g = yL(fv);
+      svg += '<line x1="' + m.l + '" x2="' + xr + '" y1="' + g + '" y2="' + g + '" stroke="' + C.muted + '" stroke-dasharray="3 4" stroke-width="1"/><text x="' + (xr - 4) + '" y="' + (g - 3) + '" text-anchor="end">' + k[0].toUpperCase() + k.slice(1) + " " + fv.toFixed(U.units === "m" ? 2 : 1) + '</text>'; }); }
+  else { [0, 0.5, 1].forEach(function(f){ g = m.t + ph * (1 - f); svg += '<line x1="' + m.l + '" x2="' + xr + '" y1="' + g + '" y2="' + g + '" stroke="' + C.line + '"/><text x="' + (m.l - 6) + '" y="' + (g + 3.5) + '" text-anchor="end">' + num(maxMi * MI * f) + '</text><text x="' + (W - 1) + '" y="' + (g + 3.5) + '" text-anchor="end">' + num(maxB * f) + '</text>'; });
+    svg += '<text x="' + (m.l - 30) + '" y="10">' + roadU(true) + '</text><text x="' + (W - 1) + '" y="10" text-anchor="end">buildings</text>'; }
+  var placed = [], end = function(t){ return scen && (t.i === 0 || t.i === n - 1) ? 1 : 0; };     // a scenario's two ends are always labelled
+  [false, true].forEach(function(noon){ R.ticks.slice().sort(function(a, b){ return end(b) - end(a); }).forEach(function(t){ var xx = x(t.i); if ((t.label === "noon") !== noon) return;
     if (!noon) svg += '<line x1="' + xx + '" x2="' + xx + '" y1="' + (m.t + ph) + '" y2="' + (m.t + ph + 4) + '" stroke="' + C.line + '"/>';
-    if (xx < m.l + 12 || xx > xr - 12 || placed.some(function(q){ return Math.abs(q - xx) < 46; })) return;
+    if ((!end(t) && (xx < m.l + 12 || xx > xr - 12)) || placed.some(function(q){ return Math.abs(q - xx) < (scen ? 34 : 46); })) return;
     if (noon) svg += '<line x1="' + xx + '" x2="' + xx + '" y1="' + (m.t + ph) + '" y2="' + (m.t + ph + 4) + '" stroke="' + C.line + '"/>';
-    svg += '<text x="' + xx + '" y="' + (H - 4) + '" text-anchor="middle">' + t.label + '</text>'; placed.push(xx); }); });
+    svg += '<text x="' + xx + '" y="' + (H - 4) + '" text-anchor="' + (!end(t) ? "middle" : t.i === 0 ? "start" : "end") + '">' + t.label + '</text>'; placed.push(xx); }); });
   function path(a, y, close){ var p = "", pen = false; for (var q = 0; q < n; q++){ if (a[q] == null){ pen = false; continue; } p += (pen ? "L" : "M") + x(q).toFixed(1) + "," + y(a[q]).toFixed(1); pen = true; }
     return close ? p + "L" + x(n - 1) + "," + (m.t + ph) + "L" + x(0) + "," + (m.t + ph) + "Z" : p; }
   if (band){ var up = "", dn = ""; for (i = 0; i < n; i++) if (band[0][i] != null && band[1][i] != null){ up += (up ? "L" : "M") + x(i).toFixed(1) + "," + yL(band[1][i]).toFixed(1); dn = "L" + x(i).toFixed(1) + "," + yL(band[0][i]).toFixed(1) + dn; }
@@ -357,13 +425,13 @@ function plotChart(){
   var ser = [{name:"Roads flooded", v:R.tlF, c:C.flooded, y:yM, unit:"mi", fill:true}, {name:"Roads ponded", v:R.tlP, c:C.ponded, y:yM, unit:"mi"}, {name:"Buildings flooded", v:R.tlB, c:C.building, y:yB, unit:"n"}];
   ser.forEach(function(s){ if (s.fill) svg += '<path d="' + path(s.v, s.y, true) + '" fill="' + s.c + '" fill-opacity="0.12"/>';
     svg += '<path d="' + path(s.v, s.y) + '" fill="none" stroke="' + s.c + '" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>'; });
-  if (lvl){ svg += '<path d="' + path(lvl, yL) + '" fill="none" stroke="' + C.navy + '" stroke-width="2.6" stroke-linejoin="round" stroke-linecap="round"/>'; ser.unshift({name:PG.name, v:lvl, c:C.navy, y:yL, unit:"ft"}); }
+  if (lvl){ svg += '<path d="' + path(lvl, yL) + '" fill="none" stroke="' + C.navy + '" stroke-width="2.6" stroke-linejoin="round" stroke-linecap="round"/>'; ser.unshift({name:PG.name, v:lvl, raw:raw, c:C.navy, y:yL, unit:"ft"}); }
   svg += '<g class="cur"><line y1="' + m.t + '" y2="' + (m.t + ph) + '" stroke="' + C.ink + '" stroke-width="1"/>' + ser.map(function(s){ return '<circle r="4.5" fill="' + s.c + '" stroke="' + C.panel + '" stroke-width="2"/>'; }).join("") + '</g></svg><div class="tip" hidden></div>';
   el.innerHTML = svg; el._g = {W:W, m:m, pw:pw, n:n, x:x, series:ser};
   if (!el._bound){ el._bound = true; var down = false;
     var idx = function(e){ var q = el._g, r = el.firstChild.getBoundingClientRect(), f = ((e.clientX - r.left) / r.width * q.W - q.m.l) / q.pw; return Math.max(0, Math.min(q.n - 1, Math.round(f * (q.n - 1)))); };
     var show = function(e){ var q = el._g, k = idx(e), r = el.getBoundingClientRect(), tip = el.lastChild;
-      tip.innerHTML = "<b>" + stepLabel(k) + "</b><br>" + q.series.map(function(s){ var val = s.v[k]; return '<span class="sw" style="background:' + s.c + ';vertical-align:middle;margin-right:5px"></span>' + s.name + ": " + (val == null ? "–" : s.unit === "mi" ? fmtMi(val) + " mi" : s.unit === "ft" ? val.toFixed(2) + " ft NAVD88" : Math.round(val).toLocaleString()); }).join("<br>");
+      tip.innerHTML = "<b>" + stepLabel(k) + "</b><br>" + q.series.map(function(s){ var val = s.v[k]; return '<span class="sw" style="background:' + s.c + ';vertical-align:middle;margin-right:5px"></span>' + s.name + ": " + (val == null ? "–" : s.unit === "mi" ? fmtMi(mi(val)) + " " + roadU() : s.unit === "ft" ? fLvU(s.raw[k], off(PG.id)) + paren(alt(s.raw[k], off(PG.id))) : Math.round(val).toLocaleString()); }).join("<br>");
       tip.hidden = false; var tx = e.clientX - r.left + 12; if (tx + tip.offsetWidth > r.width) tx = e.clientX - r.left - tip.offsetWidth - 12; tip.style.left = Math.max(0, tx) + "px"; };
     var set = function(e){ T.obs = false; T.i = idx(e); stop(); update(); };
     el.addEventListener("pointermove", function(e){ show(e); if (down) set(e); });
@@ -401,14 +469,19 @@ function wanted(a, coords, cs){ // the grids of area a that a map tile needs: {f
   return Promise.all(jobs).then(function(list){ return {c:c, f:1, w:ra.width, h:ra.height, ts:ts, r0:r0, c0:c0, nc:c1 - c0 + 1, nr:r1 - r0 + 1, list:list}; }); }
 var tmp = document.createElement("canvas"); tmp.width = tmp.height = 256; var tctx = tmp.getContext("2d"), tim = tctx.createImageData(256, 256), t32 = new Uint32Array(tim.data.buffer);
 function paintArea(ctx, a, S, coords){ if (!S || !a.L) return;
-  var c = S.c, cs = a.raster.cell_m * S.f, K = a.K, Lv = a.L, D = R.colDepth, NZ = a.raster.no_zone, g0 = a.raster.ground0_ft * 100, gs = a.raster.ground_step_ft * 100, any = false, one = S.one;
+  var c = S.c, ra = a.raster, cs = ra.cell_m * S.f, K = a.K, Lv = a.L, D = R.colDepth, NZ = ra.no_zone, g0 = ra.ground0_ft * 100, gs = ra.ground_step_ft * 100, any = false, one = S.one;
+  var v3 = ra.v >= 3, WI = v3 ? ra.water_index : -1, b0 = v3 ? ra.bed0_ft * 100 : 0, bs = v3 ? ra.bed_step_ft * 100 : 0, deep = R.bathy, d, z;
   if (S.one === null) return; t32.fill(0);
   for (var py = 0; py < 256; py++){ var v = (py + 0.5) / 256, e0 = c[0][0] + (c[2][0] - c[0][0]) * v, n0 = c[0][1] + (c[2][1] - c[0][1]) * v, e1 = c[1][0] + (c[3][0] - c[1][0]) * v, n1 = c[1][1] + (c[3][1] - c[1][1]) * v;
     for (var px = 0; px < 256; px++){ var u = (px + 0.5) / 256, col = Math.floor((e0 + (e1 - e0) * u - a.x0) / cs), row = Math.floor((a.ytop - (n0 + (n1 - n0) * u)) / cs);
       if (col < 0 || row < 0 || col >= S.w || row >= S.h) continue; var s = one, i;
       if (s) i = row * s.w + col; else { var tr = Math.floor(row / S.ts) - S.r0, tc = Math.floor(col / S.ts) - S.c0; if (tr < 0 || tc < 0 || tr >= S.nr || tc >= S.nc) continue; s = S.list[tr * S.nc + tc]; if (!s) continue; i = (row - (tr + S.r0) * S.ts) * s.w + (col - (tc + S.c0) * S.ts); }
-      var gi = s.gnd[i]; if (gi === 0) continue; var z = s.zone[i]; if (z === NZ || z >= K.length || s.lev[i] > K[z]) continue;
-      var d = Lv[z] - (g0 + (gi - 1) * gs); t32[py * 256 + px] = D[d <= 50 ? 0 : d <= 100 ? 1 : d >= 1000 ? 10 : Math.ceil(d / 100)]; any = true; } }
+      var gi = s.gnd[i], lev = s.lev[i]; z = s.zone[i];
+      if (v3 ? lev <= WI : gi === 0){           // tidal water, tide flats and marsh: the depth over the bed, where the gauge's level covers it
+        if (!v3 || !deep || z === NZ || z >= K.length || Lv[z] <= -32000 || (lev > K[z] && lev > 0)) continue;
+        d = gi === 255 ? 1e6 : Lv[z] - (b0 - (gi - 1) * bs); }
+      else { if (z === NZ || z >= K.length || lev > K[z]) continue; d = Lv[z] - (g0 + (gi - 1) * gs); }
+      t32[py * 256 + px] = D[d <= 50 ? 0 : d <= 100 ? 1 : d >= 1000 ? 10 : Math.ceil(d / 100)]; any = true; } }
   if (!any) return; tctx.putImageData(tim, 0, 0); ctx.save(); var p0 = L.point(coords.x * 256, coords.y * 256); ctx.beginPath();
   a.outline.forEach(function(ring){ ring.forEach(function(q, k){ var p = map.project([q[1], q[0]], coords.z); if (k) ctx.lineTo(p.x - p0.x, p.y - p0.y); else ctx.moveTo(p.x - p0.x, p.y - p0.y); }); ctx.closePath(); });
   ctx.clip(); ctx.drawImage(tmp, 0, 0); ctx.restore(); }
@@ -467,10 +540,10 @@ function hit(ll){ // the flagged building under a click, else the nearest flagge
       if (inside){ at = i; kind = "b"; } }
     if (at < 0){ var bd = Math.pow(10 * mpp / D.unit, 2), xy = D.pxy; for (k = 0; k < D.fp.length; k++){ i = D.fp[k]; if (i < 0) i = ~i; q = 4 * i; var mx = (xy[q] + xy[q+2]) / 2 - ux, my = (xy[q+1] + xy[q+3]) / 2 - uy, d2 = mx * mx + my * my; if (d2 < bd){ bd = d2; at = i; kind = "p"; } } }
     if (at < 0) return;
-    var g = (kind === "b" ? D.bg : D.pg)[at], si = (kind === "b" ? D.bst : D.pst)[at], lv = a.L[si], d = (lv - g) / 100, scen = T.view === "scen";
+    var g = (kind === "b" ? D.bg : D.pg)[at], si = (kind === "b" ? D.bst : D.pst)[at], lv = a.L[si], d = (lv - g) / 100, scen = T.view === "scen", o = off(a.stations[si]);
     out = "<b>" + (kind === "b" ? "Flood Affected Structure" : (D.names[D.rname[D.proad[at]]] || "Unnamed road")) + "</b>" +
-      '<span class="f">' + (kind === "b" ? "" : d > D.fd / 100 ? "Road flooded: " : "Road ponded: ") + d.toFixed(2) + " ft of water " + (scen ? "at this level" : T.obs ? "at the last observation" : "at the selected time") + "</span>" +
-      '<span class="f">Ground ' + (g / 100).toFixed(2) + " ft NAVD88 · " + (scen ? "water" : a.stations[si]) + " at " + (lv / 100).toFixed(2) + ' ft</span><a class="go" href="' + a.name + '/">Open the ' + a.title + " map</a>"; });
+      '<span class="f">' + (kind === "b" ? "" : d > D.fd / 100 ? "Road flooded: " : "Road ponded: ") + fLen(d) + " of water " + (scen ? "at this level" : T.obs ? "at the last observation" : "at the selected time") + "</span>" +
+      '<span class="f">Ground ' + fLvU(g / 100, o) + " · " + (scen ? "water" : a.stations[si]) + " at " + fLv(lv / 100, o) + " " + uName() + '</span><a class="go" href="' + a.name + '/">Open the ' + a.title + " map</a>"; });
   return out; }
 function detailNote(){ var el = $("detailNote"); if (!el || !map) return; var near = map.getZoom() >= DETAIL_Z, here = G.areas.filter(inView);
   el.textContent = !near ? "Zoom in to street level to see each flooded road and building." : !here.length ? "No prepared locality here yet." :
@@ -478,7 +551,7 @@ function detailNote(){ var el = $("detailNote"); if (!el || !map) return; var ne
     "Each flooded road piece and building is drawn; click one for its depth."; }
 function labels(){ var far = map.getZoom() < 10.5, id;
   for (id in marks){ var v = level(id), m = marks[id], c = cat(id, v), t = top(id), hi = T.view === "scen" || T.obs || !t ? null : cat(id, t.v);
-    m.setTooltipContent(far || v == null ? id : id + " " + v.toFixed(1) + " ft"); var el = m.getTooltip().getElement(); if (el) el.classList.toggle("far", far);
+    m.setTooltipContent(far || v == null ? id : id + " " + fLv(v, off(id), U.units === "m" ? 2 : 1) + " " + uName()); var el = m.getTooltip().getElement(); if (el) el.classList.toggle("far", far);
     m.setStyle({fillColor:CAT[c], radius:id === PG.id ? 7.5 : 6, weight:id === PG.id ? 2.5 : 1.5});
     var show = hi && CAT_RANK[hi] > 0; rings[id].setStyle({color:show ? CAT[hi] : "#000", opacity:show ? 1 : 0}); }
   declutter(); }
@@ -490,19 +563,19 @@ function declutter(){ // labels that would sit on one another: the plot's gauge,
   ids.sort(function(a, b){ return rank(b) - rank(a) || (a < b ? -1 : 1); }).forEach(function(id){ var r = box[id]; if (!r) return;
     for (var k = 0; k < kept.length; k++){ var q = kept[k]; if (r.left < q.right + 2 && r.right > q.left - 2 && r.top < q.bottom + 1 && r.bottom > q.top - 1){ els[id].style.display = "none"; return; } }
     kept.push(r); }); }
-function gaugePopup(id){ var g = G.stations[id], s = LV.stations[id] || {}, v = level(id), t = top(id), fl = s.flood_levels_ft || {}, ot = s.obs_time ? new Date(s.obs_time) : null;
-  var lv = ["action","minor","moderate","major"].filter(function(k){ return fl[k] != null; }).map(function(k){ return CAT_NAME[k] + " " + fl[k].toFixed(1); }).join(" · ");
+function gaugePopup(id){ var g = G.stations[id], s = LV.stations[id] || {}, v = level(id), t = top(id), fl = s.flood_levels_ft || {}, ot = s.obs_time ? new Date(s.obs_time) : null, o = off(id);
+  var lv = ["action","minor","moderate","major"].filter(function(k){ return fl[k] != null; }).map(function(k){ return CAT_NAME[k] + " " + fLv(fl[k], o, U.units === "m" ? 2 : 1); }).join(" · ");
   return "<b>" + id + " · " + g.name + "</b>" +
-    (s.obs_ft == null ? "" : '<span class="f">Last observed: ' + s.obs_ft.toFixed(2) + " ft NAVD88" + paren(mllw(s.obs_ft, id)) + (ot ? ", " + fShort.format(ot) : "") + " · " + CAT_NAME[cat(id, s.obs_ft)] + "</span>") +
-    (v == null || T.obs ? "" : '<span class="f">' + (T.view === "scen" ? "At this level: " : "At the selected time: ") + v.toFixed(2) + " ft · " + CAT_NAME[cat(id, v)] + "</span>") +
-    (t ? '<span class="f">Highest forecast in 72 hours: ' + t.v.toFixed(2) + " ft, " + fShort.format(new Date(Date.parse(LV.t0) + t.i * LV.step_min * 60000)) + " · " + CAT_NAME[cat(id, t.v)] + "</span>" : "") +
-    (lv ? '<span class="f">' + lv + " ft NAVD88</span>" : "") + (s.follows ? '<span class="f">No forecast of its own in this run: it follows ' + s.follows + ".</span>" : "") +
-    (g.used ? "" : '<span class="f">No prepared locality follows this gauge yet.</span>') + '<span class="f">Its forecast is in the plot now.</span>'; }
+    (s.obs_ft == null ? "" : '<span class="f">Last observed: ' + fLvU(s.obs_ft, o) + paren(alt(s.obs_ft, o)) + (ot ? ", " + fShort.format(ot) : "") + " · " + CAT_NAME[cat(id, s.obs_ft)] + "</span>") +
+    (v == null || T.obs ? "" : '<span class="f">' + (T.view === "scen" ? "At this level: " : "At the selected time: ") + fLv(v, o) + " " + uName() + " · " + CAT_NAME[cat(id, v)] + "</span>") +
+    (t ? '<span class="f">Highest forecast in 72 hours: ' + fLv(t.v, o) + " " + uName() + ", " + fShort.format(new Date(Date.parse(LV.t0) + t.i * LV.step_min * 60000)) + " · " + CAT_NAME[cat(id, t.v)] + "</span>" : "") +
+    (lv ? '<span class="f">' + lv + " " + uName() + " " + dName() + "</span>" : "") + (s.follows ? '<span class="f">No forecast of its own in this run: it follows ' + s.follows + ".</span>" : "") +
+    (g.used ? '<span class="f">Its forecast and the roads and buildings nearest it are in the plot and the counts now.</span>' : '<span class="f">No prepared locality has roads or buildings nearest this gauge. Its forecast is in the plot now.</span>'); }
 function selectGauge(id){ if (!LV.stations[id] || !G.stations[id]) return; PG = {id:id, name:G.stations[id].name};
-  if (T.view !== "scen"){ R.plot = LV.stations[id]; } plotChart(); chrome(); labels(); cursors(); }
+  if (T.view !== "scen"){ R.plot = LV.stations[id]; } setScope(id); }
 function inRing(ring, x, y){ var inside = false; for (var i = 0, j = ring.length - 1; i < ring.length; j = i++){ var a = ring[i], b = ring[j]; if ((a[1] > y) !== (b[1] > y) && x < (b[0] - a[0]) * (y - a[1]) / (b[1] - a[1]) + a[0]) inside = !inside; } return inside; }
 function areaPopup(a){ var c = counts(a, level); return "<b>" + a.title + "</b>" +
-  '<span class="f">Roads flooded: ' + fmtMi(c.f) + " mi of " + Math.round(a.roads_total_mi).toLocaleString() + '</span><span class="f">Roads ponded: ' + fmtMi(c.p) + ' mi</span><span class="f">Buildings flooded: ' + Math.round(c.b).toLocaleString() + " of " + a.buildings_total.toLocaleString() + "</span>" +
+  '<span class="f">Roads flooded: ' + fmtMi(mi(c.f)) + " " + roadU() + " of " + Math.round(mi(a.roads_total_mi)).toLocaleString() + '</span><span class="f">Roads ponded: ' + fmtMi(mi(c.p)) + " " + roadU() + '</span><span class="f">Buildings flooded: ' + Math.round(c.b).toLocaleString() + " of " + a.buildings_total.toLocaleString() + "</span>" +
   (a.values ? '<span class="f">Est. damage to homes: ' + fmtBig(c.d) + "</span>" : "") + '<a class="go" href="' + a.name + '/">Open the ' + a.title + " map</a>"; }
 function initMap(){
   var all = []; for (var sid in G.stations) all.push([G.stations[sid].lat, G.stations[sid].lon]);
@@ -520,11 +593,16 @@ function initMap(){
   Array.prototype.forEach.call(document.querySelectorAll(".base button"), function(b){ b.addEventListener("click", function(){ var k = b.getAttribute("data-b");
     for (var q in base){ if (q === k) base[q].addTo(map); else map.removeLayer(base[q]); }
     Array.prototype.forEach.call(document.querySelectorAll(".base button"), function(o){ o.setAttribute("aria-pressed", String(o === b)); });
-    shapes.forEach(function(s){ s.setStyle({color: k === "sat" ? "#ffffff" : "#0b3954"}); }); }); });
+    shapes.forEach(function(s){ s.setStyle({color: k === "sat" ? "#ffffff" : "#0b3954"}); });
+    zoneLines.forEach(function(z){ z[0].setStyle({color: k === "sat" ? "#10181f" : "#ffffff"}); z[1].setStyle({color: k === "sat" ? "#e4e8ec" : "#5d6770"}); }); }); });
   var Depth = L.GridLayer.extend({createTile: function(coords, done){ var c = document.createElement("canvas"); c.width = c.height = 256; render(c, coords).then(function(){ done(null, c); }, function(e){ done(e, c); }); return c; }});
   depthLayer = new Depth({pane:"depth", updateWhenZooming:false, keepBuffer:1}).addTo(map);
   G.areas.forEach(function(a){ var s = L.polygon(a.outline.map(function(r){ return r.map(function(q){ return [q[1], q[0]]; }); }), {color:"#ffffff", weight:1.2, opacity:0.85, dashArray:"4 4", fillOpacity:0}).addTo(map);
     s.on("click", function(e){ L.popup({maxWidth:280}).setLatLng(e.latlng).setContent(hit(e.latlng) || areaPopup(a)).openOn(map); }); shapes.push(s); });
+  map.createPane("zones").style.zIndex = 420; map.getPane("zones").style.pointerEvents = "none"; zoneLayer = L.layerGroup();
+  G.areas.forEach(function(a){ (a.zones || []).forEach(function(l){ var ll = l.map(function(q){ return [q[1], q[0]]; });
+    zoneLines.push([L.polyline(ll, {pane:"zones", interactive:false, color:"#10181f", weight:4.6, opacity:0.7, dashArray:"9 7", lineCap:"butt"}).addTo(zoneLayer),
+                    L.polyline(ll, {pane:"zones", interactive:false, color:"#e4e8ec", weight:2.2, opacity:1, dashArray:"9 7", lineCap:"butt"}).addTo(zoneLayer)]); }); });
   map.createPane("gauges").style.zIndex = 450;
   Object.keys(G.stations).forEach(function(id){ var g = G.stations[id];
     rings[id] = L.circleMarker([g.lat, g.lon], {pane:"gauges", radius:10, color:"#000", weight:3.5, opacity:0, fill:false, interactive:false}).addTo(map);
@@ -542,7 +620,11 @@ function bind(){
   $("bNow").addEventListener("click", function(){ go("fc"); T.obs = false; T.i = nowIndex(); update(); });
   $("bPeak").addEventListener("click", function(){ go("fc"); T.obs = false; T.i = peakIndex(); update(); });
   $("bObs").addEventListener("click", function(){ go("fc"); T.obs = true; update(); });
-  $("bScen").addEventListener("click", function(){ go("scen"); T.obs = false; T.i = Math.round((5.5 - G.levels.start) / G.levels.step); update(); });
+  $("bScen").addEventListener("click", function(){ go("scen"); T.obs = false; T.i = scenIndex(5.5); update(); });
+  ["datum", "units"].forEach(function(key){ Array.prototype.forEach.call(document.querySelectorAll("#" + key + " button"), function(b){ b.addEventListener("click", function(){ setU(key, b.getAttribute("data-v")); }); }); });
+  Array.prototype.forEach.call(document.querySelectorAll("#scope button"), function(b){ b.addEventListener("click", function(){ setScope(b.getAttribute("data-v") === "gauge" ? PG.id : null); }); });
+  $("lBathy").addEventListener("change", function(){ R.bathy = this.checked; update(); });
+  $("lZones").addEventListener("change", function(){ if (this.checked) zoneLayer.addTo(map); else map.removeLayer(zoneLayer); });
   $("time").addEventListener("input", function(){ T.obs = false; T.i = +this.value; stop(); update(); });
   $("bPlay").addEventListener("click", function(){ if (T.playing){ stop(); chrome(); return; } T.obs = false; var step = T.view === "scen" ? 1 : Math.max(1, Math.round(30 / A.step_min));
     if (T.i >= A.n - 1) T.i = 0; T.playing = setInterval(function(){ T.i = Math.min(A.n - 1, T.i + step); update(); if (T.i >= A.n - 1){ stop(); chrome(); } }, 260); $("bPlay").setAttribute("aria-pressed", "true"); chrome(); });

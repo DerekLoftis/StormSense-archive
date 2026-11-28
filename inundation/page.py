@@ -5,8 +5,9 @@ prep writes the parts that do not change (`write_static`): static.json (road pie
 buildings, gauges; coordinates in half metres from the area's north-west corner, packed as base64 typed
 arrays), tiles/ (a 5 m raster cut into 1024-pixel PNG tiles under a small overview, so a phone never has to
 hold the whole picture: red = index of the level at which the cell goes under, green = the gauge it is
-tethered to (255: no gauge), blue = the ground, 0 where it is under water at an ordinary high tide) and
-index.html. Each forecast run then only writes levels.json (`write_levels`): every tethered gauge's forecast
+tethered to (255: no gauge), blue = the ground; where the cell is under water at an ordinary high tide,
+blue is its bed on a second scale that reaches 14 ft below NAVD88, so the page can draw the depth of the
+tidal water too) and index.html. static.json's `zones` are the lines between the gauges' areas (`zones`). Each forecast run then only writes levels.json (`write_levels`): every tethered gauge's forecast
 and last observation, the plot gauge's forecast, and events.json (the historical floods, `history.for_page`).
 
     python -m inundation.page --prepared <dir>/page --work <dir> [--title Norfolk]
@@ -31,6 +32,7 @@ WATER_FT = 1.25   # drawn as ordinary water: under water at about mean higher hi
 TILE = 1024       # raster tile, pixels
 OVERVIEW_MAX = 2048
 GROUND0_FT, GROUND_STEP_FT = -2.5, 0.05     # the tiles' blue channel: 1..255 is the ground from -2.5 ft in 0.05 ft steps
+BED0_FT, BED_STEP_FT = 1.3, 0.06            # in tidal water (level index <= water_index): 1..255 is the bed from 1.3 ft down
 NO_ZONE = 255
 DISCLAIMER = ("StormSense(TM) Predictive Plots are computer-generated operational storm tide forecasts; "
               "the user assumes any and all risk.")
@@ -88,14 +90,17 @@ def road_class(mtfcc):
 
 def raster(dem, cidx, origin, sts_xy, cell=CELL_M, hucs=None, fwd=None, forced=None, ids=None):
     """5 m picture of the 1 m grids: (level index, gauge zone, ground code), each uint8 (rows, cols).
-    Level index and ground: the median over each block, so a cell shows wet once half of it is. Ground code 0:
-    wet at an ordinary high tide (WATER_FT). Zone: the nearest gauge, or the gauge tether_overrides.csv gives
+    Level index and ground: the median over each block, so a cell shows wet once half of it is. A cell that is
+    wet at an ordinary high tide (WATER_FT: tidal water, tide flats and marsh) has its bed in the ground code, on
+    the scale BED0_FT, BED_STEP_FT (255: 13.9 ft below NAVD88 or deeper), so the page draws how deep the water
+    stands there at any level (Derek, 2026-11-28: the blues must show also when nothing is flooded). Zone: the nearest gauge, or the gauge tether_overrides.csv gives
     the cell's HUC-12; NO_ZONE where no gauge stands for the water (never drawn flooded)."""
     from scipy.spatial import cKDTree
     h, w = (dem.shape[0] // cell) * cell, (dem.shape[1] // cell) * cell
     nh, nw = h // cell, w // cell
     idx, gnd, zone = np.empty((nh, nw), np.uint8), np.empty((nh, nw), np.uint8), np.empty((nh, nw), np.uint8)
     rows, mid = max(1, 1000 // cell), (cell * cell) // 2
+    wi = water_index()
     tree = cKDTree(sts_xy)
     cx = origin[0] + (np.arange(nw) + 0.5) * cell
     for r in range(0, nh, rows):       # in strips, to keep memory flat
@@ -104,10 +109,10 @@ def raster(dem, cidx, origin, sts_xy, cell=CELL_M, hucs=None, fwd=None, forced=N
         idx[r:r1] = np.partition(b, mid, axis=2)[:, :, mid]
         g = np.asarray(dem[r * cell:r1 * cell, :w], np.float32).reshape(-1, cell, nw, cell).transpose(0, 2, 1, 3).reshape(-1, nw, cell * cell)
         g = np.partition(np.where(np.isfinite(g), g, 9999.0), mid, axis=2)[:, :, mid]
-        gnd[r:r1] = np.clip(np.round((g - GROUND0_FT) / GROUND_STEP_FT) + 1, 1, 255).astype(np.uint8)
+        gnd[r:r1] = np.where(idx[r:r1] <= wi, np.clip(np.round((BED0_FT - g) / BED_STEP_FT) + 1, 1, 255),
+                             np.clip(np.round((g - GROUND0_FT) / GROUND_STEP_FT) + 1, 1, 255)).astype(np.uint8)
         gx, gy = np.meshgrid(cx, origin[1] - (np.arange(r, r1) + 0.5) * cell)
         zone[r:r1] = tree.query(np.column_stack([gx.ravel(), gy.ravel()]))[1].reshape(r1 - r, nw)
-    gnd[idx <= int(np.searchsorted(depth.LEVELS_FT, WATER_FT))] = 0
     if hucs and forced:
         import shapely
         from rasterio import features
@@ -132,6 +137,77 @@ def raster(dem, cidx, origin, sts_xy, cell=CELL_M, hucs=None, fwd=None, forced=N
                 pts = np.column_stack([origin[0] + (cc + 0.5) * cell, origin[1] - (rr + 0.5) * cell])
                 zone[rr, cc] = np.asarray(own)[cKDTree(np.asarray(sts_xy)[own]).query(pts)[1]]
     return idx, zone, gnd
+
+
+def zone_lines(zone, tol=1.2, short=16):
+    """The lines between the gauges' areas in a zone grid: [(n, 2) arrays of x (columns), y (rows down)] along the
+    cell edges where the two sides follow different gauges, joined into runs and thinned (Douglas-Peucker, tol in
+    cells). A ring shorter than `short` cells is a speck of the thinned overview and is left out."""
+    zone = np.asarray(zone)
+    h, w = zone.shape
+    r, c = np.nonzero(zone[:, 1:] != zone[:, :-1])              # an edge running down, between columns c and c + 1
+    a = [r * (w + 1) + c + 1, (r + 1) * (w + 1) + c + 1]
+    r, c = np.nonzero(zone[1:, :] != zone[:-1, :])              # an edge running across, between rows r and r + 1
+    a, b = np.concatenate([a[0], (r + 1) * (w + 1) + c]), np.concatenate([a[1], (r + 1) * (w + 1) + c + 1])
+    at = {}
+    for k, (p, q) in enumerate(zip(a.tolist(), b.tolist())):
+        at.setdefault(p, []).append((q, k))
+        at.setdefault(q, []).append((p, k))
+    used, out = np.zeros(len(a), bool), []
+
+    def run(p, q, k):
+        path = [p, q]
+        used[k] = True
+        while len(at[q]) == 2:                                  # a node where three or four areas meet ends the run
+            n, k = next(((n, j) for n, j in at[q] if not used[j]), (None, None))
+            if n is None:
+                break
+            used[k] = True
+            path.append(n)
+            q = n
+        return path
+    for start in (True, False):                                 # runs from the ends and the meeting points, then the rings
+        for p, links in at.items():
+            if start and len(links) == 2:
+                continue
+            for q, k in links:
+                if not used[k]:
+                    path = run(p, q, k)
+                    if path[0] == path[-1] and len(path) <= short:
+                        continue
+                    xy = np.column_stack([np.asarray(path) % (w + 1), np.asarray(path) // (w + 1)]).astype(float)
+                    out.append(simplify(xy, tol))
+    return out
+
+
+def zones(zone, cell_units, no_zone=NO_ZONE):
+    """static.json's `zones` from a zone grid whose cells are cell_units page units wide: `lines`, each a flat list
+    of x, y in page units, and `labels`, where to write each gauge's index (a cell of its area nearest the middle
+    of that area; areas under 0.5% of the frame have none)."""
+    zone = np.asarray(zone)
+    lines = [np.round(xy * cell_units).astype(int).ravel().tolist() for xy in zone_lines(zone)]
+    labels = []
+    if lines:
+        for z in np.unique(zone).tolist():
+            rr, cc = np.nonzero(zone == z)
+            if z == no_zone or len(rr) < 0.005 * zone.size:
+                continue
+            k = int(np.argmin((rr - rr.mean()) ** 2 + (cc - cc.mean()) ** 2))
+            labels.append({"s": int(z), "x": int(round((cc[k] + 0.5) * cell_units)), "y": int(round((rr[k] + 0.5) * cell_units))})
+    return {"lines": lines, "labels": labels}
+
+
+def zones_of(page_dir, raster_doc, unit):
+    """`zones` read off a prepared page's overview picture (its green channel is the gauge of each cell)."""
+    from PIL import Image
+    ov = raster_doc["overview"]
+    zone = np.asarray(Image.open(os.path.join(page_dir, ov["file"])).convert("RGB"))[:, :, 1]
+    return zones(zone, raster_doc["cell_m"] * ov["factor"] / unit, raster_doc.get("no_zone", NO_ZONE))
+
+
+def water_index():
+    """The highest level index that still counts as tidal water: under water at WATER_FT."""
+    return int(np.searchsorted(depth.LEVELS_FT, WATER_FT))
 
 
 def write_raster(out, idx, zone, gnd, cell=CELL_M):
@@ -163,7 +239,7 @@ def write_raster(out, idx, zone, gnd, cell=CELL_M):
         for c in range(cols):
             sl = (slice(r * TILE, min((r + 1) * TILE, nh)), slice(c * TILE, min((c + 1) * TILE, nw)))
             Image.fromarray(np.dstack([idx[sl], zone[sl], gnd[sl]]), "RGB").save(os.path.join(d, f"t_{r}_{c}.png"), optimize=True)
-    return {"v": 2, "cell_m": cell, "width": int(nw), "height": int(nh), "tile": TILE, "rows": rows, "cols": cols,
+    return {"v": 3, "water_index": water_index(), "bed0_ft": BED0_FT, "bed_step_ft": BED_STEP_FT, "cell_m": cell, "width": int(nw), "height": int(nh), "tile": TILE, "rows": rows, "cols": cols,
             "dir": "tiles", "overview": {"file": "tiles/z0.png", "factor": f, "width": int(over.shape[1]), "height": int(over.shape[0])},
             "ground0_ft": GROUND0_FT, "ground_step_ft": GROUND_STEP_FT, "no_zone": NO_ZONE}
 
@@ -287,7 +363,7 @@ def write_static(out, name, title, bounds, epsg, pieces, road_cols, roads_raw, f
         "stations": [{"id": s["station"], "name": s["name"], "x": int(ux([sx[i]])[0]), "y": int(uy([sy[i]])[0]),
                       "inside": bool(bounds[0] <= sx[i] <= bounds[2] and bounds[1] <= sy[i] <= bounds[3])} for i, s in enumerate(sts)],
         "pieces": p, "roads": r, "buildings": b, "values": vdoc,
-        "raster": rdoc, "plot_gauge": plot, "mllw_ref": ref,
+        "raster": rdoc, "zones": zones_of(out, rdoc, unit), "plot_gauge": plot, "mllw_ref": ref,
         "totals": {"road_miles": round(float(np.asarray(rc["length_m"])[ok_road].sum() / 1609.344), 1),
                    "road_pieces": int(ok_road.sum()), "buildings": int(ok_bldg.sum())},
         "prepared_utc": time.strftime("%Y-%m-%dT%H:%MZ", time.gmtime()), "sources": sources, "disclaimer": DISCLAIMER,
@@ -412,8 +488,10 @@ def write_levels(out, levels, summary):
         v = np.interp(grid, sec, lv[key], left=np.nan, right=np.nan)
         return [None if not np.isfinite(x) else round(float(x), 2) for x in v]
 
+    from . import tether
+    mllw = {s["station"]: s["navd88_above_mllw_ft"] for s in tether.stations()}      # NAVD88 above MLLW at each gauge, ft
     doc = {"made_utc": summary.get("made_utc"), "t0": t0.strftime("%Y-%m-%dT%H:%M:%SZ"), "step_min": step / 60, "n": n,
-           "stations": {st: {"updated": lv["updated"], "guidance": lv["guidance"], "obs_ft": lv["obs_ft"],
+           "stations": {st: {"updated": lv["updated"], "guidance": lv["guidance"], "obs_ft": lv["obs_ft"], "mllw": mllw.get(st),
                              "obs_time": lv["obs_time"].strftime("%Y-%m-%dT%H:%M:%SZ") if lv["obs_time"] else None,
                              "flood_levels_ft": lv["flood_levels_ft"], "follows": lv.get("follows"),
                              "f": on_grid(lv, "f"), "p10": on_grid(lv, "p10"), "p90": on_grid(lv, "p90")}
@@ -453,6 +531,7 @@ def main(argv=None):
             hucs = json.load(fh)["features"]
     st["raster"] = write_raster(a.prepared, *raster(dem, cidx, (st["x0"], st["ytop"]), np.column_stack([sx, sy]), hucs=hucs, fwd=fwd,
                                                     forced=tether.overrides(), ids=ids))
+    st["zones"] = zones_of(a.prepared, st["raster"], st["unit_m"])
     st["plot_gauge"], st["mllw_ref"] = plot_gauge(*centre(bounds, st["epsg"]), inside=[g["id"] for g in st["stations"] if g.get("inside")])
     with open(os.path.join(a.prepared, "static.json"), "w") as fh:
         json.dump(st, fh, separators=(",", ":"))
