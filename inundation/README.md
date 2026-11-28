@@ -49,9 +49,9 @@ Nothing heavy happens per run: the rasters are only read in step 1.
   the lidar met: the James through Richmond lies at 0 to 2 ft and the Appomattox at Petersburg at -1.5 ft, with no
   ground at -2 ft at all, and Petersburg's first preparation stopped with nothing to flood from. Where a frame has
   no tidal ground, `prep.tidal_surface` takes the water of 5 hectares or more that runs off the frame's edge at the
-  lowest level that has one (`depth.water_surface`, looked for up to 3 ft) and the even water joined to it
-  (`depth.flat_water`: cells at or below 3 ft within 0.01 ft of all their neighbours, which only water as the lidar
-  met it is; the reaches upstream lie a little higher than the one at the edge), writes them into the saved grid at
+  lowest level that has one (`depth.water_surface`, looked for up to 3 ft) and the even water in the same low
+  ground (`depth.flat_water`: cells at or below 3 ft within 0.01 ft of all their neighbours, which only water as
+  the lidar met it is; the reaches upstream lie a little higher than the one at the edge), writes them into the saved grid at
   -2 ft and the water spreads from there. A deck or a dock over that water then stands over water like any other
   (before, three docks at Rocketts Landing were flooded buildings at every high tide). `<name>_prep.json` has the
   level under `water_surface_ft`. A frame that has tidal ground is left as it is, also where a reach upstream in it
@@ -358,7 +358,23 @@ At each gauge's forecast peak (most between 4.9 and 6.1 ft NAVD88, about 14:30Z 
 | Accomack County, south of 37.75 N (no pipes or values found) | 33.7 | – | 4.5 | 891 | – | – | 40.0 / 1,099 |
 | Accomack County, north of 37.75 N (no pipes or values found) | 96.9 | – | 5.9 | 7,422 | – | – | 103.7 / 7,854 |
 | Tangier Island (no pipes or values found) | 3.7 | – | 0.0 | 510 | – | – | 3.7 / 510 |
+| Surry County (no pipes or values found) | 1.1 | – | 0.1 | 107 | – | – | 1.2 / 110 |
+| Prince George County, near tidal water (no pipes or values found) | 0.1 | – | 0.0 | 10 | – | – | 0.2 / 11 |
+| Hopewell (no pipes or values found) | 0.0 | – | 0.0 | 1 | – | – | 0.0 / 1 |
+| Petersburg (no pipes or values found) | 0.1 | – | 0.0 | 0 | – | – | 0.1 / 0 |
+| Colonial Heights (no pipes or values found) | 0.0 | – | 0.0 | 0 | – | – | 0.0 / 0 |
+| Charles City County (no pipes or values found) | 1.1 | – | 0.1 | 5 | – | – | 1.2 / 8 |
+| Chesterfield County, near tidal water (no pipes or values found) | 0.0 | – | 0.0 | 6 | – | – | 0.0 / 8 |
+| Henrico County, near tidal water (no pipes or values found) | 0.0 | – | 0.0 | 8 | – | – | 0.0 / 11 |
+| Richmond (City) (no pipes or values found) | 0.0 | – | 0.0 | 0 | – | – | 0.0 / 0 |
+| New Kent County (no pipes or values found) | 1.0 | – | 0.1 | 80 | – | – | 1.1 / 95 |
+| Hanover County, near tidal water (no pipes or values found) | 0.0 | – | 0.0 | 0 | – | – | 0.0 / 0 |
 
+- The rows from Surry County down (the upper James, 28 Nov) are small because little there lies low: the James and
+  the Appomattox run between bluffs above Hopewell, and the forecast peak was 4.9 ft NAVD88 at Jordan Point, 5.8 at
+  Richmond Locks and 6.3 at Pocahontas. Charles City County has no VGIN footprints at all (6,381 FEMA outlines).
+  Petersburg's 0.1 mile is Interstate 95 where it passes over the low ground by Pocahontas Island: an overpass VGIN
+  does not code as a bridge, over ground the elevation data has at 3.3 to 4 ft (open point below).
 - The rows from Gloucester down were prepared on 27 and 28 Nov with the gauges by water body, the high tide limit
   for water under a deck and FEMA's outlines where VGIN has no footprint; the Hampton Roads rows above them are as
   prepared before those three changes. FEMA's outlines took Mathews from 957 to 1,542 buildings, Gloucester from 719
@@ -407,6 +423,8 @@ watersheds it covers (a code ending in `*` covers every HUC-12 that starts with 
 | `0208010202*` | Dragon Swamp | WCKV |
 | `0208010203*` | Piankatank and Milford Haven | WCKV, WMPT |
 | `0208020604*` to `06*` | Chickahominy | USJT (its own gauge at Mamanahunt, GS01, has no trusted readings yet) |
+| `0208020601*` | the James from the falls at Richmond to Hopewell | RICV, JPHV |
+| `0208020602*` | the James from Hopewell to Flowerdew Hundred | JPHV, USJT |
 | `02080207*` | Appomattox | ARPV, JPHV |
 | `020802071002` | the lower Appomattox, Ashton Creek to City Point | JPHV (Pocahontas, at the falls, stands about a foot above the James) |
 | `02070010*` | tidal Potomac from Occoquan Bay to Little Falls, the Anacostia, Four Mile Run | WADC, GTND, AXTV, ALEV, BPAD, LSPV, IHDM |
@@ -443,8 +461,14 @@ keeps only what the water could reach:
   ground, and cuts the frame to them and to the whole of each low patch they lie near, so that the river they flood
   from is in the frame.
 
-Henrico: 316 of 23,014 road segments and 2,897 of 179,682 buildings, in a frame of 0.49 billion cells in place of
-1.78. `<name>_prep.json` has the counts under `low_frame`, and the page says what it holds. The tables of such a
+| County | road segments kept | buildings kept | frame, billion cells |
+|---|---|---|---|
+| Henrico | 314 of 23,014 | 2,963 of 179,682 | 0.49 (1.78 whole) |
+| Chesterfield | 1,935 of 25,594 | 16,167 of 210,830 | 0.74 (2.22 whole) |
+| Prince George | 457 of 2,627 | 5,070 of 30,325 | 0.67 |
+| Hanover | 61 of 7,740 | 975 of 89,063 | 0.26 |
+
+`<name>_prep.json` has the counts under `low_frame`, and the page says what it holds. The tables of such a
 locality are not the whole locality.
 
 The localities' boundary layer holds Prince George County in two rows, a 2 ha sliver first: `vgin.locality` puts
@@ -466,6 +490,14 @@ the page says which watersheds are missing. A gauge there (or a Currituck Sound 
 
 - Building rule: half the footprint under 0.5 ft (now) or 0.5 ft at the low side (`wet_low_ft`), Derek's call.
 - Low spots with no pipe to tidal water stay dry; rain is not in it.
+- An overpass over low ground is a flooded road unless VGIN codes it as a bridge or water lies under it: the
+  elevation data has the ground under the deck. Interstate 95 by Pocahontas Island in Petersburg is one (0.12 mile
+  at 3.3 to 4 ft). A rule from the road's own profile (a drop of 10 ft from one piece to the next is a deck's end)
+  is the next step.
+- Above the head of tide (Richmond, Petersburg, Fredericksburg, Little Falls) a river in flood from rain is not in
+  these maps: the gauges at the falls (RICV, ARPV, FEDV) give the tide's level below them. Pocahontas (ARPV) stood
+  about a foot higher than the James at Jordan Point through the week before 26 Nov 2026; whether that is the
+  river's slope at the falls or its datum (NWPS: NAVD88 = stage - 8.03 ft) is not settled.
 - Other buildings than homes get no damage estimate; contents are not estimated; first floor heights are assumed.
 - The water picture on the page is drawn at 5 m (roads and buildings use the 1 m DEM); the tiles would carry 1 m.
 - Historical floods use the tide gauges only (no high water marks, no rain), on today's ground. Chesapeake Bay

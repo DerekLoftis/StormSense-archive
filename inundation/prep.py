@@ -607,8 +607,9 @@ def tidal_surface(dem, dem_path, log=lambda *_: None):
     returns the level the water was found at (None where the frame has tidal ground, as nearly all do).
 
     depth.water_surface finds the river as the lidar met it where it runs off the frame's edge, and the rest of it
-    is the even water joined to that (depth.flat_water: the reaches upstream lie a little higher, the James at
-    Richmond from 0.25 ft at the city line to 1.8 ft below the falls). Its cells are written into the saved grid at
+    is the even water in the same low ground, at or below depth.SURFACE_TOP_FT (depth.flat_water: the reaches
+    upstream lie a little higher, the James at Richmond from 0.25 ft at the city line to 1.8 ft below the falls,
+    with 26 m of uneven water between two of them). Its cells are written into the saved grid at
     the lowest level, so the water spreads from the river, a deck or a dock over it stands over water, and a second
     run finds the sea."""
     from scipy import ndimage
@@ -626,15 +627,7 @@ def tidal_surface(dem, dem_path, log=lambda *_: None):
     for r0 in range(0, h, 1024):                                 # in strips, each read with two rows either side
         a0, r1 = max(r0 - 2, 0), min(r0 + 1024, h)
         flat[r0:r1] = depth.flat_water(np.asarray(dem[a0:min(r1 + 2, h)]))[r0 - a0:r0 - a0 + r1 - r0]
-    some = flat
-    if step > 1:                                                 # the coarse cells with even water in them
-        ch, cw = coarse.shape
-        some = np.zeros((ch, cw), bool)
-        for i in range(step):
-            for j in range(step):
-                part = flat[i::step, j::step]
-                some[:part.shape[0], :part.shape[1]] |= part
-    lab, _ = ndimage.label(some | water, structure=np.ones((3, 3)))
+    lab, _ = ndimage.label(coarse <= depth.SURFACE_TOP_FT, structure=np.ones((3, 3)))     # the low ground it lies in
     river = np.isin(lab, np.unique(lab[water]))
     if step > 1:
         river = ndimage.binary_dilation(river, structure=np.ones((3, 3)))
@@ -650,7 +643,7 @@ def tidal_surface(dem, dem_path, log=lambda *_: None):
         n += int(m.sum())
     grid.flush()
     log(f"no tidal ground at or below {lowest:g} ft: the elevation data has the river's surface, not its bed. Tidal "
-        f"water is the water that leaves the frame at or below {level:+.2f} ft and the even water joined to it, {n / 1e4:,.0f} ha")
+        f"water is the {n / 1e4:,.0f} ha that leave the frame at or below {level:+.2f} ft or are even water in the same low ground")
     return level
 
 
