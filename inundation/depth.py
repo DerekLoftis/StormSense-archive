@@ -17,6 +17,8 @@ Two sources:
   * a stack of depth grids, one per level (Derek's HUC-12 grids, once hosted): `from_depth_stack` turns
     the depths sampled at a point into the same two numbers.
 """
+import os
+
 import numpy as np
 
 LEVELS_FT = np.round(np.arange(-2.0, 10.0 + 1e-9, 0.25), 2)
@@ -51,6 +53,26 @@ def coned_tiles(bounds):
     return out
 
 
+def _read_strip(r, path, window, tries=4, wait=10):
+    """Band 1 of a window of an open tile. A read cut short on its way from the bucket is read again from the tile
+    opened anew, after a pause that grows with each try; the last failure is raised."""
+    import time
+    import rasterio
+    from rasterio.errors import RasterioIOError
+    for k in range(tries):
+        try:
+            if k == 0:
+                return r.read(1, window=window)
+            with rasterio.open(path) as again:
+                return again.read(1, window=window)
+        except RasterioIOError:
+            if k == tries - 1:
+                raise
+            print(f"{os.path.basename(str(path))}: a strip could not be read, trying again ({k + 1} of {tries - 1})",
+                  flush=True)
+            time.sleep(wait * (k + 1))
+
+
 def read_dem(paths, bounds, into=None):
     """Mosaic the tiles over bounds (whole metres). Returns ground in ft NAVD88 (NaN where no data) and
     (x of the west edge, y of the north edge); cells are 1 m. `into` is the path of a .npy file to build the grid
@@ -75,7 +97,7 @@ def read_dem(paths, bounds, into=None):
                 continue
             for q0 in range(r0, r1, 4096):                           # in strips: a whole tile is several GB
                 q1 = min(q0 + 4096, r1)
-                a = r.read(1, window=Window(c0 - left, q0, c1 - c0, q1 - q0))
+                a = _read_strip(r, p, Window(c0 - left, q0, c1 - c0, q1 - q0))
                 bad = (a == r.nodata) | (a < -1000) if r.nodata is not None else (a < -1000)
                 a = a * np.float32(M_TO_FT)
                 a[bad] = np.nan

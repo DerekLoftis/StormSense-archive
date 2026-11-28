@@ -738,3 +738,31 @@ def test_the_pages_carry_what_derek_asked_of_the_maps():
     from inundation import tether
     sts = tether.stations()
     assert {"navd88_above_mllw_ft", "noaa"} <= set(sts[0]) and any(s["noaa"] for s in sts) and not all(s["noaa"] for s in sts)
+
+
+def test_an_elevation_strip_cut_short_is_read_again(tmp_path):
+    """A read from the bucket that ends early (King William, 28 Nov 2026) is tried again from the tile opened anew."""
+    rasterio = pytest.importorskip("rasterio")
+    from rasterio.errors import RasterioIOError
+    from rasterio.transform import from_origin
+    from rasterio.windows import Window
+    from inundation import depth
+    p = str(tmp_path / "t.tif")
+    a = np.arange(48, dtype=np.float32).reshape(6, 8)
+    with rasterio.open(p, "w", driver="GTiff", height=6, width=8, count=1, dtype="float32", crs="EPSG:26918",
+                       transform=from_origin(400000, 4100006, 1, 1)) as w:
+        w.write(a, 1)
+
+    class Short:
+        calls = 0
+
+        def read(self, band, window=None):
+            Short.calls += 1
+            raise RasterioIOError("Read failed.")
+
+    got = depth._read_strip(Short(), p, Window(2, 1, 3, 4), wait=0)
+    assert Short.calls == 1 and (got == a[1:5, 2:5]).all()
+    with pytest.raises(RasterioIOError):
+        depth._read_strip(Short(), str(tmp_path / "missing.tif"), Window(0, 0, 1, 1), tries=2, wait=0)
+    out, corner = depth.read_dem([p], (400000, 4100000, 400008, 4100006))
+    assert out.shape == (6, 8) and corner == (400000, 4100006) and np.allclose(out, a * depth.M_TO_FT)
