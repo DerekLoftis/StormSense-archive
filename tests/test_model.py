@@ -310,3 +310,42 @@ def test_archived_runs_lose_the_line_they_drew_across_an_outage():
     with_gap = real.copy()
     with_gap[50:60] = np.nan
     assert np.array_equal(np.isnan(without_bridges(with_gap)), np.isnan(with_gap))
+
+
+def test_petss_reaches_the_last_step_of_the_72_hour_grid():
+    """P-ETSS's 6-minute forecast used to stop at 71.9 h while the run's grid ends at 72.0 h, so the
+    last value lost P-ETSS (and the StormSense blend its P-ETSS share) and jumped toward the tide."""
+    from stormsense import petss
+    cycle = T0
+    hrs = np.arange(-24, 103)
+    tt = np.array([cycle + timedelta(hours=int(h)) for h in hrs])
+    tide_ = 1.3 + np.cos(2 * np.pi * hrs / 12.42)
+    s = np.full(len(hrs), 1.5)  # a steady 1.5 ft surge
+    st = {"time": tt, "TIDE": tide_, "SURGE": s, "TWL": tide_ + s, "TWL90p": tide_ + s - 0.3,
+          "TWL10p": tide_ + s + 0.3, "SURGE90p": s - 0.3, "SURGE10p": s + 0.3}
+    t0 = cycle + timedelta(hours=3, minutes=12)
+    f = petss.forecast(st, t0, cycle, hours=station.HOURS)
+    grid = station.grid_for(t0)
+    assert f["time"][-1] == grid[-1]
+    surge_ = station.on_grid((f["time"], f["residual"]), grid)
+    last = surge_[grid >= t0]
+    assert not np.isnan(last[-1]) and abs(last[-1] - last[-2]) < 0.01
+
+
+def test_no_step_where_a_member_or_the_picked_guidance_ends_early():
+    t0 = T0 + timedelta(hours=24)
+    grid = np.array([T0 + timedelta(minutes=6 * i) for i in range(961)])
+    lead = surge.lead_hours(grid, t0)
+    tide_ = 1.3 + np.cos(2 * np.pi * lead / 12.42)
+    observed = np.where(lead <= 0, tide_ + 0.5, np.nan)
+    short = np.where((lead > 0) & (lead <= 18), tide_ + 1.5, np.nan)  # a member that stops at 18 h, 1 ft above the other
+    cols = {"observed": observed, "petss": tide_ + 0.5, "nwm_short": short}
+    f = surge.forecast(grid, t0, cols, tide_)[0]["stormsense"] - tide_
+    fut = lead > 0
+    assert np.nanmax(np.abs(np.diff(f[fut]))) < 0.1    # was a 0.5 ft step at 18 h
+    # the primary forecast: picked guidance ends at 50 h inside the 36-72 band, P-ETSS takes over
+    cols = {"observed": observed, "astro_tide": tide_, "nws": np.where((lead >= 0) & (lead <= 50), tide_ + 1.5, np.nan),
+            "petss": tide_ + 0.5}
+    prim, used, _ = station.primary(grid, t0, cols, {}, {"36-72": "nws"})
+    r = prim["residual"][lead >= 0]
+    assert used["36-72"] == "nws" and np.nanmax(np.abs(np.diff(r))) < 0.1

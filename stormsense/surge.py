@@ -17,7 +17,9 @@ after October's storms) would otherwise relax to the wrong level once the hand-o
 station.primary hands over the published guidance the same way.
 
 The blend is the weighted mean of the anchored surges, with weights 1/RMSE^2 per lead band
-(0-12, 12-36, 36-72 h) from the skill scoring's recent summary, eased across the band edges.
+(0-12, 12-36, 36-72 h) from the skill scoring's recent summary, eased across the band edges. A
+member that ends before the forecast does fades out over its last EASE_H hours, so the blend does
+not step where it leaves.
 The forecast is tide + blend.
 
 Since tide(t0) cancels in r0 - surge_m(t0), the blend depends on our tide only through the
@@ -101,6 +103,9 @@ def forecast(grid, t0, cols, tide, skill=None, tau=TAU_H):
         if not ok.any():
             continue
         w = band_weights(lead, (skill or {}).get(key, {}))
+        end = lead[ok][-1]
+        if end < lead[-1] - 0.05:  # a member that stops early (NWM short, CBOFS) fades out over EASE_H
+            w = w * np.clip((end - lead) / EASE_H, 1e-6, 1.0)
         num[ok] += w[ok] * a[ok]
         den[ok] += w[ok]
         anchored.append(np.where(ok, a, np.nan))
