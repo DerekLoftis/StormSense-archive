@@ -20,9 +20,9 @@
    "agency": "StormSense gauge record (nwis)",
    "max_ft": 5.94,
    "max_time_z": "2026-11-27T00:48Z",
-   "readings": 560,
+   "readings": 721,
    "first_z": "2026-11-25T03:18Z",
-   "last_z": "2026-11-27T11:12Z"
+   "last_z": "2026-11-28T03:18Z"
   },
   "ARPV": {
    "name": "Appomattox River at Pocahontas",
@@ -32,9 +32,9 @@
    "agency": "StormSense gauge record (nwps)",
    "max_ft": 8.13,
    "max_time_z": "2026-11-26T21:30Z",
-   "readings": 568,
+   "readings": 697,
    "first_z": "2026-11-25T03:18Z",
-   "last_z": "2026-11-27T12:00Z"
+   "last_z": "2026-11-28T02:00Z"
   },
   "AXTV": {
    "name": "Potomac River at Alexandria",
@@ -44,9 +44,9 @@
    "agency": "StormSense gauge record (nwis)",
    "max_ft": 6.35,
    "max_time_z": "2026-11-27T00:42Z",
-   "readings": 570,
+   "readings": 721,
    "first_z": "2026-11-25T03:18Z",
-   "last_z": "2026-11-27T12:12Z"
+   "last_z": "2026-11-28T03:18Z"
   },
   "BBIV": {
    "name": "Long Creek Canal at Canal Road",
@@ -56,9 +56,9 @@
    "agency": "StormSense gauge record (nwps)",
    "max_ft": 3.32,
    "max_time_z": "2026-11-26T12:42Z",
-   "readings": 503,
+   "readings": 656,
    "first_z": "2026-11-25T03:18Z",
-   "last_z": "2026-11-27T12:00Z"
+   "last_z": "2026-11-28T03:18Z"
   },
   "BISH": {
    "name": "Chesapeake Bay at Bishops Head (IN MLLW)",
@@ -68,9 +68,9 @@
    "agency": "StormSense gauge record (coops)",
    "max_ft": 4.04,
    "max_time_z": "2026-11-26T20:48Z",
-   "readings": 570,
+   "readings": 721,
    "first_z": "2026-11-25T03:18Z",
-   "last_z": "2026-11-27T12:12Z"
+   "last_z": "2026-11-28T03:18Z"
   },
   "BPAD": {
    "name": "Anacostia River at Buzzard Point in Washington DC",
@@ -80,9 +80,9 @@
    "agency": "StormSense gauge record (nwis)",
    "max_ft": 6.07,
    "max_time_z": "2026-11-27T01:00Z",
-   "readings": 563,
+   "readings": 721,
    "first_z": "2026-11-25T03:18Z",
-   "last_z": "2026-11-27T11:30Z"
+   "last_z": "2026-11-28T03:18Z"
   },
   "BRDH": {
    "name": "Back River at Dandy Haven Marina (VIMS gauge)",
@@ -104,9 +104,9 @@
    "agency": "StormSense gauge record (coops)",
    "max_ft": 3.05,
    "max_time_z": "2026-11-27T01:42Z",
-   "readings": 467,
+   "readings": 618,
    "first_z": "2026-11-25T03:18Z",
-   "last_z": "2026-11-27T12:12Z"
+   "last_z": "2026-11-28T03:18Z"
   },
   "CCHV": {
    "name": "Atlantic Coast near Anheuser Busch Coastal Res. Center",
@@ -116,9 +116,9 @@
    "agency": "StormSense gauge record (nwps)",
    "max_ft": 6.55,
    "max_time_z": "2026-11-26T12:06Z",
-   "readings": 329,
+   "readings": 349,
    "first_z": "2026-11-25T03:18Z",
-   "last_z": "2026-11-26T12:06Z"
+   "last_z": "2026-11-27T16:48Z"
   },
   "CHIV": {
    "name": "Chincoteague Channel near Chincoteague Bay Inlet",
@@ -128,9 +128,9 @@
    "agency": "StormSense gauge record (nwps)",
    "max_ft": 5.21,
    "max_time_z": "2026-11-26T14:36Z",
-   "readings": 568,
+   "readings": 721,
    "first_z": "2026-11-25T03:18Z",
-   "last_z": "2026-11-27T12:00Z"
+   "last_z": "2026-11-28T03:18Z"
   },
   "CNRC": {
    "name": "Accokeek Creek at Crow's Nest Research Center (GreenStream sensor)",
@@ -140,9 +140,9 @@
    "agency": "StormSense gauge record (archive)",
    "max_ft": 4.71,
    "max_time_z": "2026-11-26T22:00Z",
-   "readings": 508,
+   "readings": 688,
    "first_z": "2026-11-25T03:18Z",
-   "last_z": "2026-11-27T06:00Z"
+   "last_z": "2026-11-28T00:00Z"
   },
   "CRSM": {
    "name": "Chesapeake Bay above Little Annemessex River at Crisfield MD",
@@ -152,9 +152,9 @@
    "agency": "StormSense gauge record (nwis)",
    "max_ft": 4.07,
    "max_time_z": "2026-11-26T20:36Z",
-   "readings": 568,
+   "readings": 721,
    "first_z": "2026-11-25T03:18Z",
-   "last_z": "2026-11-27T12:00Z"
+   "last_z": "2026-11-28T03:18Z"
   },
   "DAHL": {
    "name": "Upper Machodoc Creek near Dahlgren (IN MLLW)",
@@ -164,9 +164,9 @@
    "agency": "StormSense gauge record (coops)",
    "max_ft": 5.48,
    "max_time_z": "2026-11-26T20:06Z",
-   "readings": 570,
+   "readings": 721,
    "first_z": "2026-11-25T03:18Z",
-   "last_z": "2026-11-27T12:12Z"
+   "last_z": "2026-11-28T03:18Z"
   },
   "DPCV": {
    "name": "Deep Creek at Deep Creek Lock Park",
@@ -176,9 +176,9 @@
    "agency": "StormSense gauge record (nwps)",
    "max_ft": 6.43,
    "max_time_z": "2026-11-26T17:00Z",
-   "readings": 563,
+   "readings": 721,
    "first_z": "2026-11-25T03:18Z",
-   "last_z": "2026-11-27T11:30Z"
+   "last_z": "2026-11-28T03:18Z"
   },
   "ELGV": {
    "name": "Eastern Branch Elizabeth River at Grandy Village",
@@ -188,9 +188,9 @@
    "agency": "StormSense gauge record (nwps)",
    "max_ft": 6.12,
    "max_time_z": "2026-11-26T16:24Z",
-   "readings": 568,
+   "readings": 721,
    "first_z": "2026-11-25T03:18Z",
-   "last_z": "2026-11-27T12:00Z"
+   "last_z": "2026-11-28T03:18Z"
   },
   "EZMV": {
    "name": "Elizabeth River at the Midtown Tunnel",
@@ -200,9 +200,9 @@
    "agency": "StormSense gauge record (nwis)",
    "max_ft": 6.11,
    "max_time_z": "2026-11-26T16:06Z",
-   "readings": 569,
+   "readings": 721,
    "first_z": "2026-11-25T03:18Z",
-   "last_z": "2026-11-27T12:06Z"
+   "last_z": "2026-11-28T03:18Z"
   },
   "FEDV": {
    "name": "Rappahannock River at Fredericksburg",
@@ -210,11 +210,11 @@
    "lon": -77.4562,
    "step_min": 6,
    "agency": "StormSense gauge record (nwps)",
-   "max_ft": 8.39,
-   "max_time_z": "2026-11-27T12:00Z",
-   "readings": 568,
+   "max_ft": 8.62,
+   "max_time_z": "2026-11-27T13:42Z",
+   "readings": 721,
    "first_z": "2026-11-25T03:18Z",
-   "last_z": "2026-11-27T12:00Z"
+   "last_z": "2026-11-28T03:18Z"
   },
   "GTND": {
    "name": "Potomac River at Georgetown / Wisconsin Ave",
@@ -224,9 +224,9 @@
    "agency": "StormSense gauge record (nwis)",
    "max_ft": 6.45,
    "max_time_z": "2026-11-27T01:00Z",
-   "readings": 567,
+   "readings": 721,
    "first_z": "2026-11-25T03:18Z",
-   "last_z": "2026-11-27T11:54Z"
+   "last_z": "2026-11-28T03:18Z"
   },
   "HPPV": {
    "name": "Elizabeth River at Hunts Pointe Park",
@@ -236,9 +236,9 @@
    "agency": "StormSense gauge record (nwps)",
    "max_ft": 5.27,
    "max_time_z": "2026-11-26T15:06Z",
-   "readings": 568,
+   "readings": 721,
    "first_z": "2026-11-25T03:18Z",
-   "last_z": "2026-11-27T12:00Z"
+   "last_z": "2026-11-28T03:18Z"
   },
   "IHDM": {
    "name": "Potomac River at Indian Head",
@@ -248,9 +248,9 @@
    "agency": "StormSense gauge record (nwis)",
    "max_ft": 5.36,
    "max_time_z": "2026-11-26T23:30Z",
-   "readings": 565,
+   "readings": 721,
    "first_z": "2026-11-25T03:18Z",
-   "last_z": "2026-11-27T11:42Z"
+   "last_z": "2026-11-28T03:18Z"
   },
   "JLMV": {
    "name": "James River at Leeward Marina",
@@ -260,9 +260,9 @@
    "agency": "StormSense gauge record (nwps)",
    "max_ft": 6.23,
    "max_time_z": "2026-11-26T16:18Z",
-   "readings": 568,
+   "readings": 721,
    "first_z": "2026-11-25T03:18Z",
-   "last_z": "2026-11-27T12:00Z"
+   "last_z": "2026-11-28T03:18Z"
   },
   "JPHV": {
    "name": "James River near Jordan Point below Hopewell",
@@ -272,9 +272,9 @@
    "agency": "StormSense gauge record (nwps)",
    "max_ft": 6.77,
    "max_time_z": "2026-11-26T20:24Z",
-   "readings": 568,
+   "readings": 721,
    "first_z": "2026-11-25T03:18Z",
-   "last_z": "2026-11-27T12:00Z"
+   "last_z": "2026-11-28T03:18Z"
   },
   "KIPT": {
    "name": "Chesapeake Bay near Kiptopeke (IN MLLW)",
@@ -284,9 +284,9 @@
    "agency": "StormSense gauge record (coops)",
    "max_ft": 4.93,
    "max_time_z": "2026-11-26T15:42Z",
-   "readings": 570,
+   "readings": 721,
    "first_z": "2026-11-25T03:18Z",
-   "last_z": "2026-11-27T12:12Z"
+   "last_z": "2026-11-28T03:18Z"
   },
   "KMNV": {
    "name": "Knitting Mill Creek at North Colley",
@@ -296,9 +296,9 @@
    "agency": "StormSense gauge record (nwps)",
    "max_ft": 6.15,
    "max_time_z": "2026-11-26T15:42Z",
-   "readings": 568,
+   "readings": 721,
    "first_z": "2026-11-25T03:18Z",
-   "last_z": "2026-11-27T12:00Z"
+   "last_z": "2026-11-28T03:18Z"
   },
   "LCEV": {
    "name": "Little Creek at East Beach Marina",
@@ -308,9 +308,9 @@
    "agency": "StormSense gauge record (nwps)",
    "max_ft": 5.38,
    "max_time_z": "2026-11-26T15:24Z",
-   "readings": 568,
+   "readings": 721,
    "first_z": "2026-11-25T03:18Z",
-   "last_z": "2026-11-27T12:00Z"
+   "last_z": "2026-11-28T03:18Z"
   },
   "LENM": {
    "name": "McIntosh Run near Leonardtown",
@@ -320,9 +320,9 @@
    "agency": "StormSense gauge record (nwis)",
    "max_ft": 8.01,
    "max_time_z": "2026-11-27T06:30Z",
-   "readings": 477,
+   "readings": 586,
    "first_z": "2026-11-25T04:18Z",
-   "last_z": "2026-11-27T11:42Z"
+   "last_z": "2026-11-28T03:18Z"
   },
   "LEWI": {
    "name": "Potomac River at Lewisetta (IN MLLW)",
@@ -332,9 +332,9 @@
    "agency": "StormSense gauge record (coops)",
    "max_ft": 4.68,
    "max_time_z": "2026-11-26T18:18Z",
-   "readings": 570,
+   "readings": 721,
    "first_z": "2026-11-25T03:18Z",
-   "last_z": "2026-11-27T12:12Z"
+   "last_z": "2026-11-28T03:18Z"
   },
   "LSPV": {
    "name": "Potomac River at Leesylvania State Park",
@@ -344,9 +344,9 @@
    "agency": "StormSense gauge record (nwps)",
    "max_ft": 5.7,
    "max_time_z": "2026-11-26T23:06Z",
-   "readings": 510,
+   "readings": 620,
    "first_z": "2026-11-25T03:18Z",
-   "last_z": "2026-11-27T11:48Z"
+   "last_z": "2026-11-28T03:18Z"
   },
   "MNPT": {
    "name": "Elizabeth River near Money Point (IN MLLW)",
@@ -356,9 +356,9 @@
    "agency": "StormSense gauge record (coops)",
    "max_ft": 6.12,
    "max_time_z": "2026-11-26T16:30Z",
-   "readings": 570,
+   "readings": 721,
    "first_z": "2026-11-25T03:18Z",
-   "last_z": "2026-11-27T12:12Z"
+   "last_z": "2026-11-28T03:18Z"
   },
   "NRSV": {
    "name": "Nansemond River at Sleepy Hole Park",
@@ -368,9 +368,9 @@
    "agency": "StormSense gauge record (nwps)",
    "max_ft": 6.14,
    "max_time_z": "2026-11-26T16:00Z",
-   "readings": 568,
+   "readings": 721,
    "first_z": "2026-11-25T03:18Z",
-   "last_z": "2026-11-27T12:00Z"
+   "last_z": "2026-11-28T03:18Z"
   },
   "ONAV": {
    "name": "South Branch Onancock Creek at Onancock",
@@ -380,9 +380,9 @@
    "agency": "StormSense gauge record (nwps)",
    "max_ft": 4.26,
    "max_time_z": "2026-11-26T18:36Z",
-   "readings": 568,
+   "readings": 721,
    "first_z": "2026-11-25T03:18Z",
-   "last_z": "2026-11-27T12:00Z"
+   "last_z": "2026-11-28T03:18Z"
   },
   "PCCV": {
    "name": "Elizabeth River at Scuffeltown Creek",
@@ -392,9 +392,9 @@
    "agency": "StormSense gauge record (nwps)",
    "max_ft": 5.89,
    "max_time_z": "2026-11-26T16:18Z",
-   "readings": 568,
+   "readings": 721,
    "first_z": "2026-11-25T03:18Z",
-   "last_z": "2026-11-27T12:00Z"
+   "last_z": "2026-11-28T03:18Z"
   },
   "PRTV": {
    "name": "Chesapeake Bay at Port Isobel/Tangier Island",
@@ -404,9 +404,9 @@
    "agency": "StormSense gauge record (nwps)",
    "max_ft": 3.98,
    "max_time_z": "2026-11-26T19:00Z",
-   "readings": 568,
+   "readings": 721,
    "first_z": "2026-11-25T03:18Z",
-   "last_z": "2026-11-27T12:00Z"
+   "last_z": "2026-11-28T03:18Z"
   },
   "RAPV": {
    "name": "Rappahannock River at Tappahannock",
@@ -416,9 +416,9 @@
    "agency": "StormSense gauge record (nwps)",
    "max_ft": 4.67,
    "max_time_z": "2026-11-26T19:06Z",
-   "readings": 568,
+   "readings": 721,
    "first_z": "2026-11-25T03:18Z",
-   "last_z": "2026-11-27T12:00Z"
+   "last_z": "2026-11-28T03:18Z"
   },
   "RDIV": {
    "name": "Atlantic Coast near Rudee Inlet",
@@ -428,9 +428,9 @@
    "agency": "StormSense gauge record (nwps)",
    "max_ft": 5.86,
    "max_time_z": "2026-11-26T15:06Z",
-   "readings": 481,
+   "readings": 635,
    "first_z": "2026-11-25T03:18Z",
-   "last_z": "2026-11-27T11:54Z"
+   "last_z": "2026-11-28T03:18Z"
   },
   "RICV": {
    "name": "James River (VA) at Richmond Locks",
@@ -440,9 +440,9 @@
    "agency": "StormSense gauge record (nwis)",
    "max_ft": 7.65,
    "max_time_z": "2026-11-26T21:36Z",
-   "readings": 567,
+   "readings": 721,
    "first_z": "2026-11-25T03:18Z",
-   "last_z": "2026-11-27T11:54Z"
+   "last_z": "2026-11-28T03:18Z"
   },
   "SAXV": {
    "name": "Chesapeake Bay near Starling Creek at Saxis",
@@ -452,9 +452,9 @@
    "agency": "StormSense gauge record (nwps)",
    "max_ft": 4.44,
    "max_time_z": "2026-11-26T20:00Z",
-   "readings": 568,
+   "readings": 721,
    "first_z": "2026-11-25T03:18Z",
-   "last_z": "2026-11-27T12:00Z"
+   "last_z": "2026-11-28T03:18Z"
   },
   "SGSM": {
    "name": "St. George Creek at Straits Point",
@@ -464,9 +464,9 @@
    "agency": "StormSense gauge record (nwps)",
    "max_ft": 4.77,
    "max_time_z": "2026-11-26T18:36Z",
-   "readings": 562,
+   "readings": 721,
    "first_z": "2026-11-25T03:18Z",
-   "last_z": "2026-11-27T11:24Z"
+   "last_z": "2026-11-28T03:18Z"
   },
   "SLIM": {
    "name": "Patuxent River at Solomons Island",
@@ -476,9 +476,9 @@
    "agency": "StormSense gauge record (coops)",
    "max_ft": 3.83,
    "max_time_z": "2026-11-26T19:48Z",
-   "readings": 570,
+   "readings": 721,
    "first_z": "2026-11-25T03:18Z",
-   "last_z": "2026-11-27T12:12Z"
+   "last_z": "2026-11-28T03:18Z"
   },
   "SLRV": {
    "name": "Salters Creek at 25th Street",
@@ -488,9 +488,9 @@
    "agency": "StormSense gauge record (nwps)",
    "max_ft": 5.9,
    "max_time_z": "2026-11-26T15:12Z",
-   "readings": 568,
+   "readings": 721,
    "first_z": "2026-11-25T03:18Z",
-   "last_z": "2026-11-27T12:00Z"
+   "last_z": "2026-11-28T03:18Z"
   },
   "SMSV": {
    "name": "Pagan River at Smithfield Station",
@@ -500,9 +500,9 @@
    "agency": "StormSense gauge record (nwps)",
    "max_ft": 6.35,
    "max_time_z": "2026-11-26T16:30Z",
-   "readings": 568,
+   "readings": 721,
    "first_z": "2026-11-25T03:18Z",
-   "last_z": "2026-11-27T12:00Z"
+   "last_z": "2026-11-28T03:18Z"
   },
   "SWPT": {
    "name": "James River (VA) at Sewell's Point (IN MLLW)",
@@ -512,9 +512,9 @@
    "agency": "StormSense gauge record (coops)",
    "max_ft": 5.99,
    "max_time_z": "2026-11-26T15:18Z",
-   "readings": 570,
+   "readings": 721,
    "first_z": "2026-11-25T03:18Z",
-   "last_z": "2026-11-27T12:12Z"
+   "last_z": "2026-11-28T03:18Z"
   },
   "USAR": {
    "name": "Little Annemessex at Crisfield, MD",
@@ -524,9 +524,9 @@
    "agency": "StormSense gauge record (nwis)",
    "max_ft": 4.07,
    "max_time_z": "2026-11-26T20:36Z",
-   "readings": 568,
+   "readings": 721,
    "first_z": "2026-11-25T03:18Z",
-   "last_z": "2026-11-27T12:00Z"
+   "last_z": "2026-11-28T03:18Z"
   },
   "USBB": {
    "name": "Dawley Corners, Beggars Bridge Creek, Virginia Beach",
@@ -534,11 +534,11 @@
    "lon": -75.984,
    "step_min": 6,
    "agency": "StormSense gauge record (nwis)",
-   "max_ft": 0.53,
-   "max_time_z": "2026-11-27T12:06Z",
-   "readings": 569,
+   "max_ft": 1.49,
+   "max_time_z": "2026-11-28T03:18Z",
+   "readings": 721,
    "first_z": "2026-11-25T03:18Z",
-   "last_z": "2026-11-27T12:06Z"
+   "last_z": "2026-11-28T03:18Z"
   },
   "USBC": {
    "name": "Elizabeth River at Bailey Creek near Chesapeake VA (IN MLLW)",
@@ -548,9 +548,9 @@
    "agency": "StormSense gauge record (nwis)",
    "max_ft": 6.2,
    "max_time_z": "2026-11-26T16:36Z",
-   "readings": 569,
+   "readings": 721,
    "first_z": "2026-11-25T03:18Z",
-   "last_z": "2026-11-27T12:06Z"
+   "last_z": "2026-11-28T03:18Z"
   },
   "USBK": {
    "name": "Brick Kiln Creek near Poquoson (IN MLLW)",
@@ -560,9 +560,9 @@
    "agency": "StormSense gauge record (nwis)",
    "max_ft": 6.17,
    "max_time_z": "2026-11-26T15:24Z",
-   "readings": 498,
+   "readings": 611,
    "first_z": "2026-11-25T03:18Z",
-   "last_z": "2026-11-27T05:00Z"
+   "last_z": "2026-11-28T02:36Z"
   },
   "USFM": {
    "name": "James River (VA) at Fort Monroe (IN MLLW)",
@@ -572,9 +572,9 @@
    "agency": "StormSense gauge record (nwis)",
    "max_ft": 6.01,
    "max_time_z": "2026-11-26T15:36Z",
-   "readings": 569,
+   "readings": 721,
    "first_z": "2026-11-25T03:18Z",
-   "last_z": "2026-11-27T12:06Z"
+   "last_z": "2026-11-28T03:18Z"
   },
   "USHR": {
    "name": "Hampton River near Hampton (IN MLLW)",
@@ -584,9 +584,9 @@
    "agency": "StormSense gauge record (nwis)",
    "max_ft": 6.29,
    "max_time_z": "2026-11-26T15:48Z",
-   "readings": 569,
+   "readings": 721,
    "first_z": "2026-11-25T03:18Z",
-   "last_z": "2026-11-27T12:06Z"
+   "last_z": "2026-11-28T03:18Z"
   },
   "USJT": {
    "name": "James River (VA) at Jamestown/Scotland Ferry (IN MLLW)",
@@ -596,9 +596,9 @@
    "agency": "StormSense gauge record (nwis)",
    "max_ft": 6.47,
    "max_time_z": "2026-11-26T18:18Z",
-   "readings": 568,
+   "readings": 721,
    "first_z": "2026-11-25T03:18Z",
-   "last_z": "2026-11-27T12:00Z"
+   "last_z": "2026-11-28T03:18Z"
   },
   "USLB": {
    "name": "London Bridge Creek at Route 58 in VA Beach",
@@ -608,9 +608,9 @@
    "agency": "StormSense gauge record (nwis)",
    "max_ft": 5.69,
    "max_time_z": "2026-11-26T16:12Z",
-   "readings": 569,
+   "readings": 721,
    "first_z": "2026-11-25T03:18Z",
-   "last_z": "2026-11-27T12:06Z"
+   "last_z": "2026-11-28T03:18Z"
   },
   "USLI": {
    "name": "Lynnhaven River near Lynnhaven Inlet (IN MLLW)",
@@ -620,9 +620,9 @@
    "agency": "StormSense gauge record (nwis)",
    "max_ft": 5.8,
    "max_time_z": "2026-11-26T15:30Z",
-   "readings": 569,
+   "readings": 721,
    "first_z": "2026-11-25T03:18Z",
-   "last_z": "2026-11-27T12:06Z"
+   "last_z": "2026-11-28T03:18Z"
   },
   "USLN": {
    "name": "Little Neck Creek at Pinewood Rd in Virginia Beach (MLLW)",
@@ -632,9 +632,9 @@
    "agency": "StormSense gauge record (nwis)",
    "max_ft": 5.14,
    "max_time_z": "2026-11-26T16:36Z",
-   "readings": 569,
+   "readings": 721,
    "first_z": "2026-11-25T03:18Z",
-   "last_z": "2026-11-27T12:06Z"
+   "last_z": "2026-11-28T03:18Z"
   },
   "USLN-X": {
    "name": "Little Neck Creek at Pinewood Rd webcam (FloodVISION-AI ML water level)",
@@ -644,9 +644,9 @@
    "agency": "StormSense gauge record (archive)",
    "max_ft": 4.26,
    "max_time_z": "2026-11-26T17:06Z",
-   "readings": 507,
+   "readings": 686,
    "first_z": "2026-11-25T03:18Z",
-   "last_z": "2026-11-27T05:54Z"
+   "last_z": "2026-11-27T23:48Z"
   },
   "USLR": {
    "name": "Lake Rudee near Bells Rd in Virginia Beach (MLLW)",
@@ -656,9 +656,9 @@
    "agency": "StormSense gauge record (nwis)",
    "max_ft": 7.14,
    "max_time_z": "2026-11-26T15:06Z",
-   "readings": 569,
+   "readings": 721,
    "first_z": "2026-11-25T03:18Z",
-   "last_z": "2026-11-27T12:06Z"
+   "last_z": "2026-11-28T03:18Z"
   },
   "USNC": {
    "name": "New Market Creek near Hampton (IN MLLW)",
@@ -668,9 +668,9 @@
    "agency": "StormSense gauge record (nwis)",
    "max_ft": 5.99,
    "max_time_z": "2026-11-26T15:30Z",
-   "readings": 569,
+   "readings": 721,
    "first_z": "2026-11-25T03:18Z",
-   "last_z": "2026-11-27T12:06Z"
+   "last_z": "2026-11-28T03:18Z"
   },
   "USPA": {
    "name": "Elizabeth River at Route 165 in Virginia Beach",
@@ -680,9 +680,9 @@
    "agency": "StormSense gauge record (nwis)",
    "max_ft": 6.36,
    "max_time_z": "2026-11-26T16:42Z",
-   "readings": 569,
+   "readings": 721,
    "first_z": "2026-11-25T03:18Z",
-   "last_z": "2026-11-27T12:06Z"
+   "last_z": "2026-11-28T03:18Z"
   },
   "USPT": {
    "name": "Elizabeth River near Pinehurst in Portsmouth (IN MLLW)",
@@ -692,9 +692,9 @@
    "agency": "StormSense gauge record (nwis)",
    "max_ft": 6.07,
    "max_time_z": "2026-11-26T15:48Z",
-   "readings": 569,
+   "readings": 721,
    "first_z": "2026-11-25T03:18Z",
-   "last_z": "2026-11-27T12:06Z"
+   "last_z": "2026-11-28T03:18Z"
   },
   "USSF": {
    "name": "Nansemond River at Suffolk (IN MLLW)",
@@ -704,9 +704,9 @@
    "agency": "StormSense gauge record (nwis)",
    "max_ft": 3.9,
    "max_time_z": "2026-11-25T17:00Z",
-   "readings": 209,
+   "readings": 419,
    "first_z": "2026-11-25T03:18Z",
-   "last_z": "2026-11-27T05:12Z"
+   "last_z": "2026-11-28T03:18Z"
   },
   "USTC": {
    "name": "Thalia Creek at Route 58 in Thalia",
@@ -716,9 +716,9 @@
    "agency": "StormSense gauge record (nwis)",
    "max_ft": 5.95,
    "max_time_z": "2026-11-26T15:48Z",
-   "readings": 569,
+   "readings": 721,
    "first_z": "2026-11-25T03:18Z",
-   "last_z": "2026-11-27T12:06Z"
+   "last_z": "2026-11-28T03:18Z"
   },
   "WACH": {
    "name": "Atlantic Coast at Wachapreague (IN MLLW)",
@@ -728,9 +728,9 @@
    "agency": "StormSense gauge record (coops)",
    "max_ft": 8.44,
    "max_time_z": "2026-11-26T14:18Z",
-   "readings": 570,
+   "readings": 721,
    "first_z": "2026-11-25T03:18Z",
-   "last_z": "2026-11-27T12:12Z"
+   "last_z": "2026-11-28T03:18Z"
   },
   "WADC": {
    "name": "Washington Channel at SW Waterfront (IN MLLW)",
@@ -740,9 +740,9 @@
    "agency": "StormSense gauge record (coops)",
    "max_ft": 6.2,
    "max_time_z": "2026-11-27T01:00Z",
-   "readings": 570,
+   "readings": 721,
    "first_z": "2026-11-25T03:18Z",
-   "last_z": "2026-11-27T12:12Z"
+   "last_z": "2026-11-28T03:18Z"
   },
   "WCKV": {
    "name": "Piankatank River above Wharf Creek near Hudgins VA",
@@ -752,9 +752,9 @@
    "agency": "StormSense gauge record (nwps)",
    "max_ft": 4.15,
    "max_time_z": "2026-11-26T15:18Z",
-   "readings": 568,
+   "readings": 721,
    "first_z": "2026-11-25T03:18Z",
-   "last_z": "2026-11-27T12:00Z"
+   "last_z": "2026-11-28T03:18Z"
   },
   "WMPT": {
    "name": "Chesapeake Bay at Windmill Point (IN MLLW)",
@@ -764,9 +764,9 @@
    "agency": "StormSense gauge record (coops)",
    "max_ft": 4.33,
    "max_time_z": "2026-11-26T17:24Z",
-   "readings": 570,
+   "readings": 721,
    "first_z": "2026-11-25T03:18Z",
-   "last_z": "2026-11-27T12:12Z"
+   "last_z": "2026-11-28T03:18Z"
   },
   "WRDV": {
    "name": "Warwick River at Denbigh Blvd",
@@ -776,9 +776,9 @@
    "agency": "StormSense gauge record (nwps)",
    "max_ft": 6.46,
    "max_time_z": "2026-11-26T15:36Z",
-   "readings": 568,
+   "readings": 721,
    "first_z": "2026-11-25T03:18Z",
-   "last_z": "2026-11-27T12:00Z"
+   "last_z": "2026-11-28T03:18Z"
   },
   "WRSV": {
    "name": "Warwick River at Shellabarger Dr",
@@ -788,9 +788,9 @@
    "agency": "StormSense gauge record (nwps)",
    "max_ft": 7.2,
    "max_time_z": "2026-11-26T16:06Z",
-   "readings": 568,
+   "readings": 721,
    "first_z": "2026-11-25T03:18Z",
-   "last_z": "2026-11-27T12:00Z"
+   "last_z": "2026-11-28T03:18Z"
   },
   "WRVV": {
    "name": "Ware River near Schley",
@@ -800,9 +800,9 @@
    "agency": "StormSense gauge record (nwps)",
    "max_ft": 5.71,
    "max_time_z": "2026-11-26T14:36Z",
-   "readings": 568,
+   "readings": 721,
    "first_z": "2026-11-25T03:18Z",
-   "last_z": "2026-11-27T12:00Z"
+   "last_z": "2026-11-28T03:18Z"
   },
   "WSPV": {
    "name": "York River near West Point",
@@ -812,9 +812,9 @@
    "agency": "StormSense gauge record (nwps)",
    "max_ft": 6.5,
    "max_time_z": "2026-11-26T17:06Z",
-   "readings": 568,
+   "readings": 721,
    "first_z": "2026-11-25T03:18Z",
-   "last_z": "2026-11-27T12:00Z"
+   "last_z": "2026-11-28T03:18Z"
   },
   "YRCG": {
    "name": "Chesapeake Bay near Yorktown (IN MLLW)",
@@ -824,21 +824,24 @@
    "agency": "StormSense gauge record (coops)",
    "max_ft": 5.79,
    "max_time_z": "2026-11-26T14:24Z",
-   "readings": 570,
+   "readings": 721,
    "first_z": "2026-11-25T03:18Z",
-   "last_z": "2026-11-27T12:12Z"
+   "last_z": "2026-11-28T03:18Z"
   }
  },
- "made_utc": "2026-11-27T17:03Z",
+ "made_utc": "2026-11-28T07:32Z",
  "record": "StormSense's own gauge observations as archived with each forecast run (ensemble_<cycle>.tar.gz), NAVD88; the straight lines those tables draw across a gauge's outage are left out",
  "bridged_readings_left_out": {
+  "ARPV": 24,
   "BBIV": 65,
   "BRDH": 40,
   "CBBT": 103,
-  "LENM": 88,
-  "LSPV": 56,
+  "CCHV": 221,
+  "LENM": 135,
+  "LSPV": 70,
   "RDIV": 86,
-  "USSF": 249
+  "USBK": 103,
+  "USSF": 255
  },
  "forecasts": {
   "file": "forecasts.csv.gz",
@@ -857,10 +860,13 @@
    "2026-11-26T18Z",
    "2026-11-27T00Z",
    "2026-11-27T06Z",
-   "2026-11-27T12Z"
+   "2026-11-27T12Z",
+   "2026-11-27T18Z",
+   "2026-11-28T00Z",
+   "2026-11-28T06Z"
   ],
   "what": "the published StormSense fore72 (primary) of each run, with its 10% and 90% lines, for every gauge"
  },
- "complete": false,
- "observed_through_z": "2026-11-27T12:12Z"
+ "complete": true,
+ "observed_through_z": "2026-11-28T03:18Z"
 }

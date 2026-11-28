@@ -261,7 +261,8 @@ python -m inundation.status --prepared prepared --name norfolk --site <StormSens
 
 `areas.csv` lists the localities (FIPS, the short name used in file names and URLs, the title, the region, and a
 `box` for a part of a locality, see "Counties that are mostly water"): Hampton Roads, the Middle Peninsula, the
-Northern Neck and the Eastern Shore so far. Add a row to add a locality.
+Northern Neck, the Eastern Shore, the upper James, the Fredericksburg area and Northern Virginia, which is all 45
+localities of Derek's coastal list since 28 Nov 2026. Add a row to add a locality.
 
     python -m inundation.site --prepared <folder of <name>/ folders> --latest <Latest site> --out site/inundation
 
@@ -304,7 +305,7 @@ The pages' Historical Floods menu lists them newest first (`history.events`).
 
 | Storm | Highest water at Sewells Point | Gauges with a record |
 |---|---|---|
-| 2026 Thanksgiving Day Nor'easter | 5.99 ft NAVD88 (7.60 ft MLLW), 2026-11-26 15:18Z | 68 (so far, through 2026-11-27T12:12Z, with 15 forecast runs) |
+| 2026 Thanksgiving Day Nor'easter | 5.99 ft NAVD88 (7.60 ft MLLW), 2026-11-26 15:18Z | 68 (with 18 forecast runs; the Rappahannock at Fredericksburg crested at 8.62 ft on 27 Nov 13:42Z) |
 | 2016 Hurricane Matthew | 4.25 ft NAVD88 (5.86 ft MLLW), 2016-10-09 06:54Z | 28 (16 USGS, 2 on an estimated NAVD88) |
 | 2012 Hurricane Sandy | 5.20 ft NAVD88 (6.81 ft MLLW), 2012-10-29 13:18Z | 14 (3 USGS, 2 on an estimated NAVD88) |
 | 2011 Hurricane Irene | 5.94 ft NAVD88 (7.55 ft MLLW), 2011-08-27 23:54Z | 17 (3 USGS, 5 on an estimated NAVD88) |
