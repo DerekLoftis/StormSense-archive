@@ -585,6 +585,7 @@ def test_a_layer_its_city_took_down_comes_from_the_saved_copy(monkeypatch):
         return []
     monkeypatch.setattr(vgin, "query", query)
     monkeypatch.setattr(vgin, "count", lambda url, where: 0)
+    monkeypatch.setattr(vgin, "oid_field", lambda url: "OBJECTID")
     out = drainage.fetch(src)
     assert len(out["structures"]) == out["saved"][0]["features"] > 4000
     assert all(f["properties"]["_closed"] == 1 for f in out["structures"])      # manholes are never openings
@@ -936,3 +937,114 @@ def test_a_river_without_its_bed_is_tidal_water_and_a_pit_is_not(tmp_path):
     assert (low[:1999:97, 3000:3101] == depth.LEVELS_FT[0]).all()
     whole = depth.flat_water(big[1000:3100, 2990:3110])
     assert np.array_equal(depth.flat_water(big[1998:2030, 2990:3110])[2:-2], whole[1000:1028])     # strips agree with the whole
+
+
+def test_a_layer_is_paged_by_its_own_object_id_inside_a_box(monkeypatch):
+    from inundation import vgin
+    asked = []
+
+    def get(url, params, tries=4):
+        asked.append((url, params))
+        if url.endswith("/0"):
+            return {"fields": [{"name": "FID", "type": "esriFieldTypeOID"}, {"name": "PIN", "type": "esriFieldTypeString"}]}
+        if params.get("returnCountOnly"):
+            return {"count": 3}
+        last = int(params["where"].rsplit(">", 1)[1])
+        return {"features": [{"type": "Feature", "properties": {"FID": i, "PIN": str(i)}, "geometry": None}
+                             for i in (1, 2, 3) if i > last][:2]}
+    monkeypatch.setattr(vgin, "_get", get)
+    box = (-77.5, 38.25, -77.25, 38.5)
+    feats = vgin.layer_features({"url": "https://example.invalid/Parcels/FeatureServer/0", "fields": "PIN"}, bbox=box)
+    assert [f["properties"]["FID"] for f in feats] == [1, 2, 3]
+    queries = [p for u, p in asked if u.endswith("/query")]
+    assert all(p["geometry"] == "-77.500000,38.250000,-77.250000,38.500000" and p["inSR"] == 4326 for p in queries)
+    assert queries[0]["orderByFields"] == "FID" and queries[0]["outFields"] == "FID,PIN" and "FID > -1" in queries[0]["where"]
+    # a server that counts more than it hands out is asked for the rest by id: what lies outside the box explains the
+    # count (Henrico counts parcels just outside it), what lies inside is added, and an id it cannot give is an error
+    monkeypatch.setattr(vgin, "count", lambda layer, where, bbox=None: 5)
+    square = lambda x, y: {"type": "Polygon", "coordinates": [[[x, y], [x + 0.01, y], [x + 0.01, y + 0.01], [x, y]]]}  # noqa: E731
+    rest = {4: square(-77.4, 38.6), 5: square(-77.4, 38.3)}             # 4 lies north of the box, 5 inside it
+
+    def get2(url, params, tries=4):
+        if params.get("returnIdsOnly") == "true":
+            return {"objectIds": [1, 2, 3, 4, 5]}
+        if " IN (" in params.get("where", ""):
+            last = int(params["where"].rsplit(">", 1)[1])
+            return {"features": [{"type": "Feature", "properties": {"FID": i, "PIN": str(i)}, "geometry": g}
+                                 for i, g in rest.items() if i > last]}
+        return get(url, params)
+    monkeypatch.setattr(vgin, "_get", get2)
+    feats = vgin.layer_features({"url": "https://example.invalid/Parcels/FeatureServer/0", "fields": "PIN"}, bbox=box)
+    assert [f["properties"]["FID"] for f in feats] == [1, 2, 3, 5]
+    del rest[4]
+    try:
+        vgin.layer_features({"url": "https://example.invalid/Parcels/FeatureServer/0", "fields": "PIN"}, bbox=box)
+    except RuntimeError as e:
+        assert "of 5" in str(e)
+    else:
+        raise AssertionError("a short read must fail")
+
+
+def test_structures_named_on_the_pipes_themselves_open_and_close_their_ends():
+    from inundation import drainage
+    # Prince William: no structure layer says what a point is; each segment names the structure at its inflow end
+    # (its first point) and at its outflow end. An inlet, a manhole, a pipe that ends with no structure, an end section.
+    def pipe(x0, x1, a, b):
+        return {"type": "Feature", "properties": {"InflowStructureType": a, "OutflowStructureType": b},
+                "geometry": {"type": "LineString", "coordinates": [[x0, 0.0], [x1, 0.0]]}}
+    src = {"end_type_fields": ["InflowStructureType", "OutflowStructureType"], "end_none_types": ["ns"],
+           "closed_types": ["mh", "tee", "jb", "co"]}
+    layers = {"pipes": [pipe(0, 10, "SDI", "CMH"), pipe(10, 20, "CMH", "NS"), pipe(20, 30, "NS", "CES"), pipe(40, 50, "MH", "NS")]}
+    net = drainage.network(layers, lambda x, y: (x, y), src)
+    state = {round(float(x)): bool(o) for x, o in zip(net["x"], net["open"])}
+    assert state == {0: True, 10: False, 20: False, 30: True, 40: False, 50: True}     # 50: a pipe that just stops is an outlet
+    assert len(set(net["net"][np.isin(np.round(net["x"]), [0, 10, 20, 30])])) == 1 and net["counts"]["openings"] == 3
+    assert drainage.sources()["51153"]["end_type_fields"] == src["end_type_fields"]
+
+
+def test_values_kept_in_tables_of_their_own_are_joined_by_the_parcel_number(monkeypatch):
+    from inundation import value, vgin
+    src = {"parcels": {"url": "p", "key": "PIN"}, "assessment": {"type": "parcels", "columns": {"key": "PIN"}},
+           "more": [{"url": "https://example.invalid/rest/services/values/FeatureServer/2", "key": "PARID",
+                     "columns": {"improvement_value": "APRBLDG", "land_value": "APRLAND"}},
+                    {"type": "odata", "url": "https://example.invalid/api/RealEstate/Dwelling", "key": "code",
+                     "columns": {"class": "style", "year_built": "year"}}],
+           "residential_uses": ["single"], "two_story_classes": ["^2"], "one_story_classes": ["^1"]}
+    asked = {}
+
+    def layer_features(lyr, log=None, bbox=None, geometry=True, fields=None):
+        asked.update(fields=fields, geometry=geometry)
+        return [{"properties": r} for r in ({"PARID": "0102 14  0231", "APRBLDG": 300000, "APRLAND": 200000},
+                                            {"PARID": "0102 14  0266 ", "APRBLDG": 0, "APRLAND": 90000})]
+    monkeypatch.setattr(vgin, "layer_features", layer_features)
+    monkeypatch.setattr(value, "_odata", lambda url, fields, where=None, order=None: [
+        {"code": "0102 14  0231", "style": "1 Story", "year": 1950}, {"code": "0102 14  0231", "style": "2 Story", "year": None}])
+    tables = value.fetch_more(src)
+    assert asked == {"fields": "PARID,APRBLDG,APRLAND", "geometry": False}         # the owners' names are never asked for
+    assert tables[1]["0102 14  0231"] == {"class": "2 Story", "year_built": 1950}  # the last row's values that are not empty
+    records = value.add_more([{"key": "0102 14  0231", "use": "Single-family, Detached"}, {"key": "0102 14  0266"}], tables)
+    rolled = value.roll(records, src)
+    home = rolled["0102 14  0231"]
+    assert home["impr"] == 300000 and home["total"] == 500000 and home["year"] == 1950 and home["curve"] == "two_story"
+    assert home["residential"] and rolled["0102 14  0266"]["total"] == 90000 and not rolled["0102 14  0266"]["residential"]
+
+
+def test_every_drain_and_value_source_is_a_locality_on_the_map():
+    import csv
+    from inundation import drainage, value
+    here = os.path.dirname(os.path.abspath(drainage.__file__))
+    with open(os.path.join(here, "areas.csv")) as f:
+        fips = {r["fips"] for r in csv.DictReader(f)}
+    for k, v in drainage.sources().items():
+        assert k in fips and v.get("pipes") and v.get("source"), k
+        for kind in ("pipes", "ditches", "structures"):
+            assert all(lyr["url"].startswith("https://") and "*" not in lyr.get("fields", "*") for lyr in v.get(kind, [])), k
+    for k, v in value.sources().items():
+        if k.startswith("_"):
+            continue
+        assert k in fips and v["tax_year"], k
+        if v["assessment"]["type"] == "parcels":              # the values, or the number they are joined by, ride on the parcels
+            assert v["assessment"]["columns"]["key"] == v["parcels"]["key"], k
+        for m in v.get("more", []):
+            assert m["key"] and m["columns"] and not {"owner", "name"} & {c.lower() for c in m["columns"].values()}, k
+

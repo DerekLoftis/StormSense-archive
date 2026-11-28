@@ -74,7 +74,9 @@ are not openings, nor are structures with a flap valve or tide gate. Cities diff
 source file says how to read each: a layer can be `"closed"` as a whole (manholes), `"snap_m"` widens the distance
 at which pipe ends and structures are joined (Newport News draws its pipes to the edge of the box, 0.85 m short of
 the structure point), and `"pipe_ends_open"` takes every pipe end as an inlet or outlet where a city publishes
-the lines only (Chesapeake, Hampton). The log prints `pipe_ends_on_structures`, the share of pipe ends that met a
+the lines only (Chesapeake, Hampton, Stafford). A layer's `"where"` splits pipes from open channels kept in one
+layer (Arlington, Henrico, Hopewell), and `"end_type_fields"` reads the structures off the pipes themselves where no
+structure layer names them (Prince William). The log prints `pipe_ends_on_structures`, the share of pipe ends that met a
 structure: check it for every new city before trusting the networks.
 
 `barriers.py` reads floodwalls and levees from the USACE National Levee Database (the bare-earth DEM has a gap where
@@ -131,6 +133,50 @@ them in early 2026, year built for some, the site ZIP code, and no use codes. A 
 `use_from` reads the property class from the city's own parcel layer). These rules are read from the code counts,
 not from the localities' code tables, and the first flood map year is only set for Norfolk (elsewhere every assumed
 floor is 3 ft).
+
+## What the upriver and Northern Virginia localities publish
+
+Derek asked (28 Nov 2026) for storm drains and parcel values in the 20 localities added that day. Each locality's
+own ArcGIS Online organization and map server was searched (and Arlington's open data service); copies of a
+locality's data on other accounts were not used. Storm drains were found in 10 and assessed values in 11:
+
+| Locality | Storm drains | Parcel values |
+|---|---|---|
+| Alexandria | the city's StormDrainage layers: 15,980 gravity mains, 57 open channels, 17,114 structures (inlets, catch basins, pipe ends and culvert ends open; manholes, nodes and control devices closed); 1,153 networks, 11 cut at the Four Mile Run (Alexandria, Arlington) and Cameron Run levee systems. Old Town's combined sewers are not storm drains and are left out | the parcel layer has the land use but no values: not used |
+| Arlington County | Stormwater_Mains and Stormwater_Junctions: 28,008 pipes, 1,434 streams and open channels (told apart by `PipeType`), 37,869 junctions (manholes, junctions without a structure, stormwater management and detention facilities closed: the last two are an assumption); 651 networks | REA property polygons joined to the county's Real Estate tables (datahub-v2.arlingtonva.us): assessments dated 1 Jan 2026, property class, ZIP, dwelling type and year built; 35,596 of 38,705 parcels have a building value, 33,940 are homes (classes 511 to 515). A condominium building's units are assessed under their own numbers, so those buildings carry no value |
+| Fairfax County | DPWES stormwater network (fairfaxcounty.gov): in the mapped part 109,659 pipes and culverts, 13,191 open channels, 127,060 structures (manholes, junction boxes, clean outs and the like closed); 11,827 networks, 5 cut at a levee system | the county's open data Parcels joined to three Tax Administration tables (values for tax year 2026, dwelling style, year built and floor area, land use): in the mapped part 228,349 of 241,019 parcels have a building value, 185,386 are homes. The tables are read whole (369,000 rows each, 1,000 a request: about 15 minutes). No ZIP code, so no Zillow value |
+| Prince William County | Public Works stormwater inventory: in the mapped part 34,711 pipe segments and 6,467 open segments (riprap, grass and concrete ditches, natural streams, by `SegmentType`); 5,383 networks. The point layer does not say what a structure is; the segments name the structure at each end (`end_type_fields`), and they are drawn from the inflow end to the outflow end (the two ends agree at 96% of 5,461 junctions checked). Manholes, tees, junction boxes and cleanouts are closed | the CAMA parcel layer has use codes and floor area but no values: not used |
+| Stafford County | Stormwater_MOBILE: in the mapped part 9,926 pipes and 44 outfalls; 867 networks. The structure points do not say which are inlets, so every pipe end is an opening (`pipe_ends_open`, as for Hampton) | none found (a structures layer has the use only) |
+| King George County | Storm layers: 1,348 gravity mains and culverts, 1,600 inlets, discharges and manholes (manholes and "Closed Lid Manhole" inlets closed); 262 networks | the parcel layer: improvement and total value, stories, year built, ZIP; 10,582 of 14,651 parcels have a building value. No use code: a home is a building of at most 500 m2 on a parcel with one or more stories on record |
+| Spotsylvania County | none found | Parcel View: building and land assessment, year built, floor area, ZIP, zoning; in the mapped part 8,386 of 9,443 parcels have a building value; homes by zoning |
+| Fredericksburg | none found | the 2024 reassessment layer: building and total value on 8,126 of 8,990 parcels, nothing else, so the values are shown but no building is counted as a home and no damage is estimated |
+| Caroline County | none found | none found |
+| Hanover County | none found | the parcel layer: land and improvement value, ZIP, zoning; in the mapped part 2,746 of 3,355 parcels have a building value; homes by zoning, no year built |
+| Henrico County | Storm_Water layers (portal.henrico.gov): in the mapped part 26,903 pipes and culverts, 15,814 channels, 16,524 inlets, end treatments, manholes and junctions (the last two closed); 6,705 networks. A fifth of the pipe ends stop 0.5 to 1 m short of their structure, so `snap_m` is 1 (as for Newport News) | Tax Parcels and CAMA Data, tax year 2026: land and improvement value, use, house style, stories, year built, floor area, ZIP; in the mapped part 23,820 of 27,478 parcels have a building value, 22,617 are homes |
+| Richmond (City) | none found | the city's Parcels (values dated 1 July 2026, land use, property class) with year built and living area from the Assessor's improvement points; 70,143 of 76,971 parcels have a building value, 56,437 are homes. No ZIP code, so no Zillow value |
+| Chesterfield County | the county's Stormwater layers: in the mapped part 16,202 mains (roof drains left out), 6,952 ditches, 21,948 inlets, outlets, structures and valves (the last two closed); 3,223 networks | Cadastral parcels, assessment year 2024: improvement value, total, use code, stories, year built, floor area, ZIP; in the mapped part 30,028 of 35,700 parcels have a building value, 28,237 are homes (use codes SD, TH, TN, DU, read from the counts) |
+| Colonial Heights | none found | the city's parcel layer: building and total value, land use code, building type, year built, ZIP; 6,939 of 7,619 parcels have a building value, 6,251 are homes (land use 111 and 312) |
+| Petersburg | the city's 2025 stormwater field inventory: 7,657 pipes, 6,261 open channels, 10,433 structures (manholes and unverified structures closed, 28 pipe ends with a flap gate); 693 networks. The inventory was still being surveyed in November 2026 | the parcel layer has the use and year built but no values: not used |
+| Hopewell | StormInfrastructure: 4,456 pipes, 31 ditches, 5,017 structures (manholes and unknown closed); 769 networks | none found (zoning only) |
+| Prince George County | none found | none found |
+| Charles City County | none found | Parcels with Sales, Valuation and Reports, 2022 reassessment: improvement and total value, use class, year built, ZIP; 3,488 of 6,103 parcels have a building value; a home is a building of at most 500 m2 on a single family or agricultural parcel |
+| Surry County | none found | none found |
+| New Kent County | none found | none found |
+
+"In the mapped part": a county prepared with `--low` or `--box` reads its layers inside the frame only (plus 2 km
+for the drains, so that pipes which leave the frame keep their networks whole), not the whole county. The share of
+pipe ends that meet a structure is 0.95 to 1.00 everywhere but Henrico (0.92 after the 1 m join). None of these
+localities has a first flood map year set, so every assumed floor is 3 ft above the ground, and the home rules are
+read from the counts of each layer's codes, not from the localities' code tables. Parcel services also hold the
+owners' names: only the columns named in `value_sources.json` are ever asked for.
+
+Three things the sources needed. `vgin.layer_features` finds a layer's own object id field (King George's is
+`FID`, Alexandria's `OBJECTID_1`), reads inside a box, and checks the read against the layer's count; where a
+server counts more inside a box than it hands out (Henrico counts features just outside it), the rest are asked
+for by id and those that do touch the box are added, so every id is accounted for. `"more"` in `value_sources.json`
+joins tables to the parcel polygons by the parcel number (Fairfax keeps values, dwellings and land use in three
+tables; Arlington's are served the OData way, `"type": "odata"`, 50,000 rows a request). And a roll with land and
+improvement values but no total gets their sum (`land_value`).
 
 ## Building footprints
 

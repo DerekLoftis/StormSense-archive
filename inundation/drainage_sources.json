@@ -203,5 +203,381 @@
         "closed": true
       }
     ]
+  },
+  "51510": {
+    "name": "Alexandria",
+    "source": "City of Alexandria GIS (ArcGIS Online, StormDrainage* layers)",
+    "note": "Old Town's combined sewers (the city's SanitarySewerCombined layers, AlexRenew's outfalls) are not storm drains and are left out",
+    "pipes": [
+      {
+        "url": "https://services2.arcgis.com/ChYV69FhfjwkvRmy/arcgis/rest/services/StormDrainageGravityMain/FeatureServer/0",
+        "fields": "FACILITYID,SUBTYPE,DIAMETER"
+      }
+    ],
+    "ditches": [
+      {
+        "url": "https://services2.arcgis.com/ChYV69FhfjwkvRmy/arcgis/rest/services/StormDrainageOpenChannel/FeatureServer/0",
+        "fields": "FACILITYID,SUBTYPE"
+      }
+    ],
+    "structures": [
+      {
+        "url": "https://services2.arcgis.com/ChYV69FhfjwkvRmy/arcgis/rest/services/StormDrainageInlet/FeatureServer/0",
+        "fields": "FACILITYID,SUBTYPE,SURVEY_RIM_ELEV",
+        "name": "inlet"
+      },
+      {
+        "url": "https://services2.arcgis.com/ChYV69FhfjwkvRmy/arcgis/rest/services/StormDrainageCatchBasin/FeatureServer/0",
+        "fields": "FACILITYID",
+        "name": "catch basin"
+      },
+      {
+        "url": "https://services2.arcgis.com/ChYV69FhfjwkvRmy/arcgis/rest/services/StormDrainagePipeIO/FeatureServer/0",
+        "fields": "FACILITYID,PIPEIOTYPE",
+        "name": "pipe end"
+      },
+      {
+        "url": "https://services2.arcgis.com/ChYV69FhfjwkvRmy/arcgis/rest/services/StormDrainageCulvertPoint/FeatureServer/0",
+        "fields": "FACILITYID",
+        "name": "culvert end"
+      },
+      {
+        "url": "https://services2.arcgis.com/ChYV69FhfjwkvRmy/arcgis/rest/services/StormDrainageManhole/FeatureServer/0",
+        "fields": "FACILITYID",
+        "name": "manhole",
+        "closed": true
+      },
+      {
+        "url": "https://services2.arcgis.com/ChYV69FhfjwkvRmy/arcgis/rest/services/StormDrainageNode/FeatureServer/0",
+        "fields": "FACILITYID,SUBTYPE",
+        "name": "node",
+        "closed": true
+      },
+      {
+        "url": "https://services2.arcgis.com/ChYV69FhfjwkvRmy/arcgis/rest/services/StormDrainageControlDevice/FeatureServer/0",
+        "fields": "FACILITYID,SUBTYPE",
+        "name": "control device",
+        "closed": true
+      }
+    ]
+  },
+  "51013": {
+    "name": "Arlington County",
+    "source": "Arlington County GIS (ArcGIS Online, Stormwater_Mains and Stormwater_Junctions)",
+    "pipes": [
+      {
+        "url": "https://services1.arcgis.com/JrtUzVcH8S2wnzVH/arcgis/rest/services/Stormwater_Mains/FeatureServer/1",
+        "fields": "PipeType,Status",
+        "where": "PipeType IS NULL OR PipeType NOT IN ('Stream Channel','Open Drainage','Open Channel','Ditch','Underdrain')"
+      }
+    ],
+    "ditches": [
+      {
+        "url": "https://services1.arcgis.com/JrtUzVcH8S2wnzVH/arcgis/rest/services/Stormwater_Mains/FeatureServer/1",
+        "fields": "PipeType,Status",
+        "where": "PipeType IN ('Stream Channel','Open Drainage','Open Channel','Ditch')"
+      }
+    ],
+    "structures": [
+      {
+        "url": "https://services1.arcgis.com/JrtUzVcH8S2wnzVH/arcgis/rest/services/Stormwater_Junctions/FeatureServer/116",
+        "fields": "NodeType,Status"
+      }
+    ],
+    "structure_type_field": "NodeType",
+    "closed_types": [
+      "manhole",
+      "junction no structure",
+      "stormwater management facility",
+      "detention facility",
+      "other",
+      "unknown"
+    ],
+    "closed_note": "stormwater management and detention facilities are taken as closed (vaults, filters and planters, not street openings): an assumption"
+  },
+  "51059": {
+    "name": "Fairfax County",
+    "source": "Fairfax County DPWES stormwater network (fairfaxcounty.gov gispub1, DPWES/StormNetServReq)",
+    "pipes": [
+      {
+        "url": "https://www.fairfaxcounty.gov/gispub1/rest/services/DPWES/StormNetServReq/MapServer/14",
+        "fields": "STORMNET_ID,TYPE",
+        "where": "TYPE IN ('Pipe','Culvert')"
+      }
+    ],
+    "ditches": [
+      {
+        "url": "https://www.fairfaxcounty.gov/gispub1/rest/services/DPWES/StormNetServReq/MapServer/17",
+        "fields": "OBJECTID"
+      }
+    ],
+    "structures": [
+      {
+        "url": "https://www.fairfaxcounty.gov/gispub1/rest/services/DPWES/StormNetServReq/MapServer/13",
+        "fields": "STORMNET_ID,TYPE"
+      }
+    ],
+    "structure_type_field": "TYPE",
+    "closed_types": [
+      "manhole",
+      "junction box",
+      "clean out",
+      "bilco door",
+      "special structure",
+      "no draw",
+      "other",
+      "underground"
+    ]
+  },
+  "51153": {
+    "name": "Prince William County",
+    "source": "Prince William County Public Works stormwater inventory (gisweb.pwcva.gov, PublicWorks/Stormwater_Inventory)",
+    "note": "the county's point layer does not say what each structure is; the segments do, at their two ends, and are drawn from the inflow end to the outflow end (the two agree at 96% of the junctions checked)",
+    "pipes": [
+      {
+        "url": "https://gisweb.pwcva.gov/arcgis/rest/services/PublicWorks/Stormwater_Inventory/MapServer/3",
+        "fields": "SegmentType,InflowStructureType,OutflowStructureType",
+        "where": "SegmentType IS NULL OR NOT (SegmentType LIKE '%RR' OR SegmentType LIKE '%GD' OR SegmentType LIKE '%CD' OR SegmentType LIKE '%NS' OR SegmentType LIKE '%TD')"
+      }
+    ],
+    "ditches": [
+      {
+        "url": "https://gisweb.pwcva.gov/arcgis/rest/services/PublicWorks/Stormwater_Inventory/MapServer/3",
+        "fields": "SegmentType",
+        "where": "SegmentType LIKE '%RR' OR SegmentType LIKE '%GD' OR SegmentType LIKE '%CD' OR SegmentType LIKE '%NS' OR SegmentType LIKE '%TD'"
+      }
+    ],
+    "end_type_fields": [
+      "InflowStructureType",
+      "OutflowStructureType"
+    ],
+    "end_none_types": [
+      "ns"
+    ],
+    "closed_types": [
+      "mh",
+      "tee",
+      "jb",
+      "co",
+      "unk"
+    ],
+    "closed_note": "manholes (MH), tees, junction boxes (JB) and cleanouts (CO) are closed; NS (no structure) leaves a pipe end as a free end"
+  },
+  "51041": {
+    "name": "Chesterfield County",
+    "source": "Chesterfield County GIS (ArcGIS Online, Stormwater)",
+    "pipes": [
+      {
+        "url": "https://services3.arcgis.com/TsynfzBSE6sXfoLq/arcgis/rest/services/Stormwater/FeatureServer/9",
+        "fields": "StructureID,MainType",
+        "where": "MainType IS NULL OR MainType <> 'Roof Drain'"
+      }
+    ],
+    "ditches": [
+      {
+        "url": "https://services3.arcgis.com/TsynfzBSE6sXfoLq/arcgis/rest/services/Stormwater/FeatureServer/8",
+        "fields": "StructureID,DitchType"
+      }
+    ],
+    "structures": [
+      {
+        "url": "https://services3.arcgis.com/TsynfzBSE6sXfoLq/arcgis/rest/services/Stormwater/FeatureServer/2",
+        "fields": "StructureID,InletType",
+        "name": "inlet"
+      },
+      {
+        "url": "https://services3.arcgis.com/TsynfzBSE6sXfoLq/arcgis/rest/services/Stormwater/FeatureServer/3",
+        "fields": "StructureID,OutletType",
+        "name": "outlet"
+      },
+      {
+        "url": "https://services3.arcgis.com/TsynfzBSE6sXfoLq/arcgis/rest/services/Stormwater/FeatureServer/5",
+        "fields": "StructureID,StructureType",
+        "name": "structure",
+        "closed": true
+      },
+      {
+        "url": "https://services3.arcgis.com/TsynfzBSE6sXfoLq/arcgis/rest/services/Stormwater/FeatureServer/6",
+        "fields": "StructureID,ValveType",
+        "name": "valve",
+        "closed": true
+      }
+    ]
+  },
+  "51087": {
+    "name": "Henrico County",
+    "source": "Henrico County GIS (portal.henrico.gov, Layers/Storm_Water_*)",
+    "pipes": [
+      {
+        "url": "https://portal.henrico.gov/mapping/rest/services/Layers/Storm_Water_Mains/MapServer/0",
+        "fields": "Facility_ID,Type_txt",
+        "where": "Type_txt IN ('Pipe','Culvert','Arch')"
+      }
+    ],
+    "ditches": [
+      {
+        "url": "https://portal.henrico.gov/mapping/rest/services/Layers/Storm_Water_Mains/MapServer/0",
+        "fields": "Facility_ID,Type_txt",
+        "where": "Type_txt = 'Channel'"
+      }
+    ],
+    "structures": [
+      {
+        "url": "https://portal.henrico.gov/mapping/rest/services/Layers/Storm_Water_Inlets/MapServer/0",
+        "fields": "Facility_ID,Type_txt",
+        "name": "inlet"
+      },
+      {
+        "url": "https://portal.henrico.gov/mapping/rest/services/Layers/Storm_Water_End_Treatments/MapServer/0",
+        "fields": "Facility_ID,Type_txt",
+        "name": "end treatment"
+      },
+      {
+        "url": "https://portal.henrico.gov/mapping/rest/services/Layers/Storm_Water_Manholes/MapServer/0",
+        "fields": "Facility_ID,Type_txt",
+        "name": "manhole",
+        "closed": true
+      },
+      {
+        "url": "https://portal.henrico.gov/mapping/rest/services/Layers/Storm_Water_Junctions/MapServer/0",
+        "fields": "Facility_ID,Type_txt",
+        "name": "junction",
+        "closed": true
+      }
+    ],
+    "snap_m": 1.0,
+    "snap_note": "a fifth of the pipe ends stop 0.5 to 1 m short of their structure point (64% lie within 0.5 m, 85% within 1 m), so ends and structures within 1 m are joined, as for Newport News; culverts have no structures at their ends and stay free ends"
+  },
+  "51179": {
+    "name": "Stafford County",
+    "source": "Stafford County GIS (ArcGIS Online, Stormwater_MOBILE)",
+    "pipes": [
+      {
+        "url": "https://services1.arcgis.com/qKiA6JuCrE2l72iL/arcgis/rest/services/Stormwater_MOBILE/FeatureServer/3",
+        "fields": "UNITID,Diameter"
+      }
+    ],
+    "structures": [
+      {
+        "url": "https://services1.arcgis.com/qKiA6JuCrE2l72iL/arcgis/rest/services/Stormwater_MOBILE/FeatureServer/1",
+        "fields": "UNITID",
+        "name": "outfall"
+      }
+    ],
+    "pipe_ends_open": true,
+    "pipe_ends_note": "the county's structure points do not say which are inlets and which are manholes, so every pipe end is taken as an opening (as for Hampton)"
+  },
+  "51099": {
+    "name": "King George County",
+    "source": "King George County GIS (ArcGIS Online, Storm* layers)",
+    "pipes": [
+      {
+        "url": "https://services2.arcgis.com/S8zMJrpz61FbvL5t/arcgis/rest/services/StormGravityMains/FeatureServer/0",
+        "fields": "FACILITYID,DIAMETER",
+        "name": "gravity main"
+      },
+      {
+        "url": "https://services2.arcgis.com/S8zMJrpz61FbvL5t/arcgis/rest/services/StormCulverts/FeatureServer/0",
+        "fields": "FACILITYID,DIAMETER",
+        "name": "culvert"
+      }
+    ],
+    "structures": [
+      {
+        "url": "https://services2.arcgis.com/S8zMJrpz61FbvL5t/arcgis/rest/services/StormInlet/FeatureServer/0",
+        "fields": "FACILITYID,INLETTYPE",
+        "name": "inlet"
+      },
+      {
+        "url": "https://services2.arcgis.com/S8zMJrpz61FbvL5t/arcgis/rest/services/StormDischarge/FeatureServer/0",
+        "fields": "FACILITYID,DISCHRGTYP",
+        "name": "discharge"
+      },
+      {
+        "url": "https://services2.arcgis.com/S8zMJrpz61FbvL5t/arcgis/rest/services/StormManholes/FeatureServer/0",
+        "fields": "FACILITYID",
+        "name": "manhole",
+        "closed": true
+      }
+    ],
+    "structure_type_field": "INLETTYPE",
+    "closed_types": [
+      "closed lid"
+    ]
+  },
+  "51670": {
+    "name": "Hopewell",
+    "source": "City of Hopewell GIS (ArcGIS Online, StormInfrastructure)",
+    "pipes": [
+      {
+        "url": "https://services6.arcgis.com/qoizQNHtOUcG4soU/arcgis/rest/services/StormInfrastructure/FeatureServer/2",
+        "fields": "Type,Size",
+        "where": "Type IS NULL OR Type IN ('Pipe','Box','HE','PA','Pipe Arch')"
+      }
+    ],
+    "ditches": [
+      {
+        "url": "https://services6.arcgis.com/qoizQNHtOUcG4soU/arcgis/rest/services/StormInfrastructure/FeatureServer/2",
+        "fields": "Type",
+        "where": "Type = 'Ditch'"
+      }
+    ],
+    "structures": [
+      {
+        "url": "https://services6.arcgis.com/qoizQNHtOUcG4soU/arcgis/rest/services/StormInfrastructure/FeatureServer/1",
+        "fields": "Type"
+      }
+    ],
+    "structure_type_field": "Type",
+    "closed_types": [
+      "manhole",
+      "unknown"
+    ]
+  },
+  "51730": {
+    "name": "Petersburg",
+    "source": "City of Petersburg stormwater field inventory, 2025 (ArcGIS Online, Petersburg_Stormwater_tgField_Data_2025)",
+    "note": "a field inventory that was still being surveyed in November 2026: parts of the city may not be in it yet",
+    "pipes": [
+      {
+        "url": "https://services6.arcgis.com/7nIw60gynaQXpDji/arcgis/rest/services/Petersburg_Stormwater_tgField_Data_2025/FeatureServer/9",
+        "fields": "AssetID,DiameterHeight"
+      }
+    ],
+    "ditches": [
+      {
+        "url": "https://services6.arcgis.com/7nIw60gynaQXpDji/arcgis/rest/services/Petersburg_Stormwater_tgField_Data_2025/FeatureServer/11",
+        "fields": "AssetID,ChannelType"
+      }
+    ],
+    "structures": [
+      {
+        "url": "https://services6.arcgis.com/7nIw60gynaQXpDji/arcgis/rest/services/Petersburg_Stormwater_tgField_Data_2025/FeatureServer/5",
+        "fields": "AssetID,InletType",
+        "name": "inlet"
+      },
+      {
+        "url": "https://services6.arcgis.com/7nIw60gynaQXpDji/arcgis/rest/services/Petersburg_Stormwater_tgField_Data_2025/FeatureServer/3",
+        "fields": "AssetID,PipeIOType,Flapgate",
+        "name": "pipe end"
+      },
+      {
+        "url": "https://services6.arcgis.com/7nIw60gynaQXpDji/arcgis/rest/services/Petersburg_Stormwater_tgField_Data_2025/FeatureServer/4",
+        "fields": "AssetID",
+        "name": "manhole",
+        "closed": true
+      },
+      {
+        "url": "https://services6.arcgis.com/7nIw60gynaQXpDji/arcgis/rest/services/Petersburg_Stormwater_tgField_Data_2025/FeatureServer/1",
+        "fields": "AssetID",
+        "name": "unverified structure",
+        "closed": true
+      }
+    ],
+    "valve_field": "Flapgate",
+    "valve_words": [
+      "y",
+      "1"
+    ]
   }
 }

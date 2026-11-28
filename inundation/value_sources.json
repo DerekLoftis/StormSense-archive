@@ -198,5 +198,475 @@
       "^MF-1$",
       "^PUD1$"
     ]
+  },
+  "51760": {
+    "name": "Richmond",
+    "tax_year": "2026",
+    "tax_year_note": "City of Richmond Assessor, values dated 1 July 2026 in the city's parcel layer",
+    "firm_year": null,
+    "firm_note": "the year of the locality's first flood insurance rate map was not looked up, so every home uses the 3 ft floor height",
+    "parcels": {
+      "url": "https://services1.arcgis.com/k3vhq11XkBNeeOfM/arcgis/rest/services/Parcels/FeatureServer/0",
+      "key": "PIN",
+      "fields": "PIN,DwellingValue,TotalValue,PropertyClass,LandUse"
+    },
+    "assessment": {
+      "type": "parcels",
+      "name": "City of Richmond Parcels (ArcGIS Online)",
+      "columns": {
+        "key": "PIN",
+        "use": "LandUse",
+        "class": "PropertyClass",
+        "improvement_value": "DwellingValue",
+        "total_value": "TotalValue"
+      }
+    },
+    "more": [
+      {
+        "url": "https://services1.arcgis.com/k3vhq11XkBNeeOfM/arcgis/rest/services/AssessorProVaGPINlImpDataPublish/FeatureServer/0",
+        "key": "parcel_id",
+        "columns": {
+          "year_built": "year_built",
+          "living_area": "total_living_area"
+        },
+        "note": "the Assessor's improvement points: year built and living area by parcel number"
+      }
+    ],
+    "residential_uses": [
+      "single family",
+      "duplex"
+    ],
+    "split_level_classes": [
+      "SplitLevel"
+    ],
+    "two_story_classes": [
+      "Two Story",
+      "Two Family"
+    ],
+    "one_story_classes": [
+      "One Story"
+    ],
+    "zip_note": "the city's layers give no ZIP code for the property, so homes have no Zillow value"
+  },
+  "51087": {
+    "name": "Henrico County",
+    "tax_year": "2026",
+    "tax_year_note": "Henrico County Real Estate Assessment, tax year 2026",
+    "firm_year": null,
+    "firm_note": "the year of the locality's first flood insurance rate map was not looked up, so every home uses the 3 ft floor height",
+    "parcels": {
+      "url": "https://portal.henrico.gov/mapping/rest/services/Layers/Tax_Parcels_and_CAMA_Data_External/FeatureServer/0",
+      "key": "GPIN",
+      "fields": "GPIN,ZIP_CODE,USE_DESCRIPTION,LAND_VALUE_CURRENT,IMPROVEMENTS_VALUE_CURRENT,HOUSE_STYLE_DESCRIPTION,YEAR_BUILT,SQFT_FINISHED"
+    },
+    "assessment": {
+      "type": "parcels",
+      "name": "Henrico County Tax Parcels and CAMA Data (portal.henrico.gov)",
+      "columns": {
+        "key": "GPIN",
+        "use": "USE_DESCRIPTION",
+        "class": "HOUSE_STYLE_DESCRIPTION",
+        "year_built": "YEAR_BUILT",
+        "living_area": "SQFT_FINISHED",
+        "improvement_value": "IMPROVEMENTS_VALUE_CURRENT",
+        "land_value": "LAND_VALUE_CURRENT",
+        "zip": "ZIP_CODE"
+      }
+    },
+    "residential_patterns": [
+      "^Res - ",
+      "^Townhouse$"
+    ],
+    "split_level_classes": [
+      "Tri/Quad",
+      "Split Foyer"
+    ],
+    "two_story_classes": [
+      "Colonial",
+      "Transitional",
+      "Other 2",
+      "Townhouse"
+    ],
+    "one_story_classes": [
+      "Ranch",
+      "Bungalow",
+      "Cape Cod",
+      "Other 1",
+      "Manufactured"
+    ]
+  },
+  "51041": {
+    "name": "Chesterfield County",
+    "tax_year": "2024",
+    "tax_year_note": "Chesterfield County Real Estate Assessor, assessment year 2024 as published in the county's parcel layer",
+    "firm_year": null,
+    "firm_note": "the year of the locality's first flood insurance rate map was not looked up, so every home uses the 3 ft floor height",
+    "parcels": {
+      "url": "https://services3.arcgis.com/TsynfzBSE6sXfoLq/arcgis/rest/services/Cadastral/FeatureServer/3",
+      "key": "GPIN",
+      "fields": "GPIN,ImprovementValue,TotalAssessment,UseCode,Stories,Year_Built,Zip,FinishedArea"
+    },
+    "assessment": {
+      "type": "parcels",
+      "name": "Chesterfield County Cadastral parcels (ArcGIS Online)",
+      "columns": {
+        "key": "GPIN",
+        "use": "UseCode",
+        "class": "Stories",
+        "year_built": "Year_Built",
+        "living_area": "FinishedArea",
+        "improvement_value": "ImprovementValue",
+        "total_value": "TotalAssessment",
+        "zip": "Zip"
+      }
+    },
+    "residential_note": "a home is a parcel with use code SD (113,955 parcels), TH, TN or DU; the code table itself was not found, so single dwelling, townhouse and duplex are read from the counts",
+    "residential_patterns": [
+      "^SD$",
+      "^TH$",
+      "^TN$",
+      "^DU$"
+    ],
+    "two_story_classes": [
+      "^[2-9]"
+    ],
+    "one_story_classes": [
+      "^1"
+    ]
+  },
+  "51085": {
+    "name": "Hanover County",
+    "tax_year": "2026",
+    "tax_year_note": "Hanover County Commissioner of the Revenue, land and improvement values in the county's parcel layer (year not stated; read November 2026)",
+    "firm_year": null,
+    "firm_note": "the year of the locality's first flood insurance rate map was not looked up, so every home uses the 3 ft floor height",
+    "parcels": {
+      "url": "https://services2.arcgis.com/sKZWgJlU6SekCzQV/arcgis/rest/services/Hanover_Parcels/FeatureServer/0",
+      "key": "GPIN",
+      "fields": "GPIN,ZIP,LAND_VALUE,IMPROVEMENTS_VALUE,ZONING_LIST"
+    },
+    "assessment": {
+      "type": "parcels",
+      "name": "Hanover County Parcels (ArcGIS Online)",
+      "columns": {
+        "key": "GPIN",
+        "use": "ZONING_LIST",
+        "improvement_value": "IMPROVEMENTS_VALUE",
+        "land_value": "LAND_VALUE",
+        "zip": "ZIP"
+      }
+    },
+    "home_max_footprint_m2": 500,
+    "residential_note": "no use codes or year built in the parcel layer: a home is a building of at most 500 m2 on a parcel zoned agricultural (A-1), agricultural residential (AR), rural residential or conservation (RR, RC), single family or multifamily residential (R-1 to R-5, RS, RM), manufactured home (PMH) or planned unit development (PUD)",
+    "residential_patterns": [
+      "^A-1",
+      "^AR-",
+      "^RR-",
+      "^RC",
+      "^R-\\d",
+      "^RS",
+      "^RM",
+      "^PMH",
+      "^PUD"
+    ]
+  },
+  "51177": {
+    "name": "Spotsylvania County",
+    "tax_year": "2026",
+    "tax_year_note": "Spotsylvania County real estate assessment as published in the county's parcel layer (year not stated; read November 2026)",
+    "firm_year": null,
+    "firm_note": "the year of the locality's first flood insurance rate map was not looked up, so every home uses the 3 ft floor height",
+    "parcels": {
+      "url": "https://services1.arcgis.com/Fs0uoy8dWAYsVfXh/arcgis/rest/services/Parcel_View_Web/FeatureServer/0",
+      "key": "GPIN",
+      "fields": "GPIN,ZIPCODE,YEARBUILT,SQFEET,BLDGASSESSMENT,LANDASSESSMENT,ZONING"
+    },
+    "assessment": {
+      "type": "parcels",
+      "name": "Spotsylvania County Parcel View (ArcGIS Online)",
+      "columns": {
+        "key": "GPIN",
+        "use": "ZONING",
+        "year_built": "YEARBUILT",
+        "living_area": "SQFEET",
+        "improvement_value": "BLDGASSESSMENT",
+        "land_value": "LANDASSESSMENT",
+        "zip": "ZIPCODE"
+      }
+    },
+    "home_max_footprint_m2": 500,
+    "residential_note": "the layer's land use column is empty: a home is a building of at most 500 m2 on a parcel zoned residential (R-1 to R-12, R-R, R-A, RU), agricultural (A-2, A-3), planned residential (PDH, PRR) or resort residential",
+    "residential_patterns": [
+      "^R-",
+      "^RU$",
+      "^A-[23]$",
+      "^PDH",
+      "^PRR"
+    ]
+  },
+  "51630": {
+    "name": "Fredericksburg",
+    "tax_year": "2024",
+    "tax_year_note": "City of Fredericksburg real estate assessment, 2024 reassessment",
+    "firm_year": null,
+    "firm_note": "the year of the locality's first flood insurance rate map was not looked up, so every home uses the 3 ft floor height",
+    "parcels": {
+      "url": "https://services2.arcgis.com/Cp5mSUK6iwpkVD8N/arcgis/rest/services/City_of_Fredericksburg_Real_Estate_Property_Assessment_2024_Web_Map/FeatureServer/5",
+      "key": "GPIN",
+      "fields": "GPIN,CurrentAssmtBldg,CurrentAssmtTotal"
+    },
+    "assessment": {
+      "type": "parcels",
+      "name": "City of Fredericksburg Real Estate Property Assessment 2024 (ArcGIS Online)",
+      "columns": {
+        "key": "GPIN",
+        "improvement_value": "CurrentAssmtBldg",
+        "total_value": "CurrentAssmtTotal"
+      }
+    },
+    "residential_note": "the layer has no use, zoning or year built, so no building is counted as a home and no damage is estimated; the assessed values are shown"
+  },
+  "51570": {
+    "name": "Colonial Heights",
+    "tax_year": "2026",
+    "tax_year_note": "City of Colonial Heights Assessor, values in the city's parcel layer (year not stated; read November 2026)",
+    "firm_year": null,
+    "firm_note": "the year of the locality's first flood insurance rate map was not looked up, so every home uses the 3 ft floor height",
+    "parcels": {
+      "url": "https://services.arcgis.com/xg1QZ4hgUiwl9v6R/arcgis/rest/services/CITYGIS_DBO_Parcels_Layer/FeatureServer/0",
+      "key": "ParcelID",
+      "fields": "ParcelID,ZipCode,LandUseCode,YearBuilt,BldgType1,TotalBldgValue,TotalAssessedValue"
+    },
+    "assessment": {
+      "type": "parcels",
+      "name": "City of Colonial Heights Parcels (ArcGIS Online)",
+      "columns": {
+        "key": "ParcelID",
+        "use": "LandUseCode",
+        "class": "BldgType1",
+        "year_built": "YearBuilt",
+        "improvement_value": "TotalBldgValue",
+        "total_value": "TotalAssessedValue",
+        "zip": "ZipCode"
+      }
+    },
+    "residential_note": "a home is a parcel with land use code 111 (6,133 parcels whose buildings are 1 STORY, 2 STORY, CAPE, SPLIT LEVEL) or 312 (duplexes); the code table itself was not found",
+    "residential_patterns": [
+      "^111$",
+      "^312$"
+    ],
+    "split_level_classes": [
+      "SPLIT"
+    ],
+    "two_story_classes": [
+      "^2",
+      "TWNHS",
+      "2STY"
+    ],
+    "one_story_classes": [
+      "^1 ",
+      "CAPE",
+      "1 STY"
+    ]
+  },
+  "51099": {
+    "name": "King George County",
+    "tax_year": "2026",
+    "tax_year_note": "King George County Commissioner of the Revenue, values in the county's parcel layer (year not stated; read November 2026)",
+    "firm_year": null,
+    "firm_note": "the year of the locality's first flood insurance rate map was not looked up, so every home uses the 3 ft floor height",
+    "parcels": {
+      "url": "https://services2.arcgis.com/S8zMJrpz61FbvL5t/arcgis/rest/services/Parcels/FeatureServer/0",
+      "key": "PIN",
+      "fields": "PIN,ZIP5,IMPRV,TOTPR,STORNUM,YRBLT"
+    },
+    "assessment": {
+      "type": "parcels",
+      "name": "King George County Parcels (ArcGIS Online)",
+      "columns": {
+        "key": "PIN",
+        "use": "STORNUM",
+        "class": "STORNUM",
+        "year_built": "YRBLT",
+        "improvement_value": "IMPRV",
+        "total_value": "TOTPR",
+        "zip": "ZIP5"
+      }
+    },
+    "home_max_footprint_m2": 500,
+    "residential_note": "the layer has no use code: a home is a building of at most 500 m2 on a parcel whose record counts one or more stories",
+    "residential_patterns": [
+      "^[1-9]"
+    ],
+    "two_story_classes": [
+      "^[2-9]"
+    ],
+    "one_story_classes": [
+      "^1"
+    ]
+  },
+  "51036": {
+    "name": "Charles City County",
+    "tax_year": "2022",
+    "tax_year_note": "Charles City County Commissioner of the Revenue, 2022 reassessment",
+    "firm_year": null,
+    "firm_note": "the year of the locality's first flood insurance rate map was not looked up, so every home uses the 3 ft floor height",
+    "parcels": {
+      "url": "https://services5.arcgis.com/7ELQsoO4nWXrJNri/arcgis/rest/services/Parcels_with_Sales_Valuation_and_Reports/FeatureServer/0",
+      "key": "MAP_PIN",
+      "fields": "MAP_PIN,Prop_Zip,Use_Class,Year_Built,Total_Imp,Total_Value"
+    },
+    "assessment": {
+      "type": "parcels",
+      "name": "Charles City County Parcels with Sales, Valuation and Reports (ArcGIS Online)",
+      "columns": {
+        "key": "MAP_PIN",
+        "use": "Use_Class",
+        "year_built": "Year_Built",
+        "improvement_value": "Total_Imp",
+        "total_value": "Total_Value",
+        "zip": "Prop_Zip"
+      }
+    },
+    "home_max_footprint_m2": 500,
+    "residential_note": "a home is a building of at most 500 m2 on a single family or agricultural parcel; farm buildings under 500 m2 are counted as homes too",
+    "residential_uses": [
+      "sngl fam",
+      "agricultural",
+      "agr."
+    ]
+  },
+  "51059": {
+    "name": "Fairfax County",
+    "tax_year": "2026",
+    "tax_year_note": "Fairfax County Department of Tax Administration, tax year 2026",
+    "firm_year": null,
+    "firm_note": "the year of the locality's first flood insurance rate map was not looked up, so every home uses the 3 ft floor height",
+    "parcels": {
+      "url": "https://services1.arcgis.com/ioennV6PpG5Xodq0/arcgis/rest/services/Parcels/FeatureServer/0",
+      "key": "PIN",
+      "fields": "PIN"
+    },
+    "assessment": {
+      "type": "parcels",
+      "name": "Fairfax County open data: Parcels and the Tax Administration's real estate tables (ArcGIS Online)",
+      "columns": {
+        "key": "PIN"
+      }
+    },
+    "more": [
+      {
+        "url": "https://services1.arcgis.com/ioennV6PpG5Xodq0/arcgis/rest/services/OpenData_A6/FeatureServer/2",
+        "key": "PARID",
+        "where": "TAXYR = 2026",
+        "columns": {
+          "improvement_value": "APRBLDG",
+          "total_value": "APRTOT"
+        },
+        "note": "assessed values"
+      },
+      {
+        "url": "https://services1.arcgis.com/ioennV6PpG5Xodq0/arcgis/rest/services/OpenData_A7/FeatureServer/2",
+        "key": "PARID",
+        "columns": {
+          "class": "STYLE_DESC",
+          "year_built": "YRBLT",
+          "living_area": "SFLA"
+        },
+        "note": "dwelling data"
+      },
+      {
+        "url": "https://services1.arcgis.com/ioennV6PpG5Xodq0/arcgis/rest/services/OpenData_A6/FeatureServer/1",
+        "key": "PARID",
+        "columns": {
+          "use": "LUC_DESC"
+        },
+        "note": "land use"
+      }
+    ],
+    "residential_uses": [
+      "single-family",
+      "townhouse",
+      "duplex"
+    ],
+    "split_level_classes": [
+      "Split",
+      "Bi-Level"
+    ],
+    "two_story_classes": [
+      "^[2-4]"
+    ],
+    "one_story_classes": [
+      "^1"
+    ],
+    "zip_note": "the county's tables give no ZIP code for the property, so homes have no Zillow value"
+  },
+  "51013": {
+    "name": "Arlington County",
+    "tax_year": "2026",
+    "tax_year_note": "Arlington County Department of Real Estate Assessments, assessments dated 1 January 2026",
+    "firm_year": null,
+    "firm_note": "the year of the locality's first flood insurance rate map was not looked up, so every home uses the 3 ft floor height",
+    "parcels": {
+      "url": "https://services1.arcgis.com/JrtUzVcH8S2wnzVH/arcgis/rest/services/REA_Property_Polygons/FeatureServer/0",
+      "key": "RPCMSTR",
+      "fields": "RPCMSTR"
+    },
+    "assessment": {
+      "type": "parcels",
+      "name": "Arlington County open data: REA property polygons and the Real Estate tables (datahub-v2.arlingtonva.us)",
+      "columns": {
+        "key": "RPCMSTR"
+      }
+    },
+    "more": [
+      {
+        "type": "odata",
+        "url": "https://datahub-v2.arlingtonva.us/api/RealEstate/Assessment",
+        "key": "realEstatePropertyCode",
+        "order": "assessmentKey",
+        "where": "assessmentDate ge 2026-01-01 and assessmentDate lt 2027-01-01",
+        "columns": {
+          "improvement_value": "improvementValueAmt",
+          "total_value": "totalValueAmt"
+        }
+      },
+      {
+        "type": "odata",
+        "url": "https://datahub-v2.arlingtonva.us/api/RealEstate/Property",
+        "key": "realEstatePropertyCode",
+        "order": "propertyKey",
+        "columns": {
+          "use": "propertyClassTypeDsc",
+          "zip": "propertyZipCode",
+          "year_built": "propertyYearBuilt"
+        }
+      },
+      {
+        "type": "odata",
+        "url": "https://datahub-v2.arlingtonva.us/api/RealEstate/ImprovementDwelling",
+        "key": "realEstatePropertyCode",
+        "order": "dwellingKey",
+        "columns": {
+          "class": "dwellingTypeDsc",
+          "year_built": "dwellingYearBuiltDate"
+        }
+      }
+    ],
+    "residential_note": "a home is a parcel of class 511 to 515 (single family detached, townhouse, side by side, duplex); a condominium building's units are assessed one by one under their own numbers, so those buildings carry no value here",
+    "residential_patterns": [
+      "^51[1-5]-"
+    ],
+    "split_level_classes": [
+      "^6\\d -"
+    ],
+    "two_story_classes": [
+      "^3\\d -",
+      "^41 -",
+      "^[789]\\d -"
+    ],
+    "one_story_classes": [
+      "^[12]\\d -"
+    ]
   }
 }

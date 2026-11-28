@@ -14,7 +14,12 @@ is cut where it enters a leveed area (barriers.py). Stormwater pump stations els
 (most lift water out of an underpass and leave the pipes open to the tide; TITAN floods through them too).
 
 Each city's layers and field names are in drainage_sources.json. The layers are read from the city's own ArcGIS
-services (vgin.query pages them), in WGS84.
+services (vgin.layer_features pages them), in WGS84. What a source can say: a layer's "where" (pipes and open
+channels kept in one layer are told apart by it), "closed" for a layer that is never an opening (manholes),
+"structure_type_field" with "closed_types" where one layer holds inlets and manholes together, "valve_field" with
+"valve_words", "snap_m", "pipe_ends_open" where there are no structures at all, and "end_type_fields" where the
+structures are named on the pipes themselves (Prince William: each segment's inflow and outflow structure, the
+segment drawn from the one to the other; "end_none_types" are the codes that say there is no structure).
 """
 import json
 import os
@@ -30,20 +35,18 @@ def sources(path=None):
         return json.load(f)
 
 
-def fetch(src, log=None):
+def fetch(src, log=None, bbox=None):
     """Download a city's drainage layers. Returns {"pipes": [...], "ditches": [...], "structures": [...]}
     as GeoJSON features (absent layers give empty lists). A layer that cannot be read and has a "saved" copy in
-    drainage_sources.json is taken from the copy and listed under "saved"."""
+    drainage_sources.json is taken from the copy and listed under "saved". `bbox` (west, south, east, north in
+    degrees) reads only what touches that box: the part of a large county that is mapped."""
     from . import vgin
     out = {}
     for kind in ("pipes", "ditches", "structures"):
         out[kind] = []
         for lyr in src.get(kind, []):
             try:
-                feats = vgin.query(lyr["url"], lyr.get("where", "1=1"), lyr.get("fields", "*"), log)
-                n = vgin.count(lyr["url"], lyr.get("where", "1=1"))
-                if len(feats) != n:
-                    raise RuntimeError(f"{kind}: got {len(feats)} of {n} from {lyr['url']}")
+                feats = vgin.layer_features(lyr, log, bbox)
             except Exception as e:
                 if not lyr.get("saved"):
                     raise
@@ -125,9 +128,18 @@ def network(layers, transform, src=None, snap=SNAP_M, protected=None):
             opening = False
         add(c[0], c[1], opening); n_struct += 1
     n_pipe = 0
+    ends = src.get("end_type_fields")                        # a county that names the structures on the pipes themselves
+    none_words = [w.lower() for w in src.get("end_none_types", [])]
+
+    def end(value):
+        if not ends or not str(value or "").strip() or _is(value, none_words):
+            return None
+        return not _is(value, closed_types)
     for f, part in _lines(layers.get("pipes", [])):
         # a pipe end with no structure on it is a free end; whether it is an opening is settled after snapping
-        a, b = add(part[0][0], part[0][1], None), add(part[-1][0], part[-1][1], None)
+        p = f["properties"]
+        a = add(part[0][0], part[0][1], end(p.get(ends[0])) if ends else None)       # drawn from the inflow end
+        b = add(part[-1][0], part[-1][1], end(p.get(ends[1])) if ends else None)     # to the outflow end
         edges.append((a, b)); n_pipe += 1
     n_ditch = 0
     for f, part in _lines(layers.get("ditches", [])):
@@ -166,8 +178,8 @@ def network(layers, transform, src=None, snap=SNAP_M, protected=None):
         _, net = np.unique(np.column_stack([net, zone]), axis=0, return_inverse=True)
         net = np.asarray(net).ravel()
     size = np.bincount(net)
-    ends = np.asarray(edges[:n_pipe], int).ravel() if n_pipe else np.zeros(0, int)       # how many pipe ends met a structure
-    met = float((state[junction[ends]] >= 0).mean()) if len(ends) and n_struct else None
+    pe = np.asarray(edges[:n_pipe], int).ravel() if n_pipe else np.zeros(0, int)         # how many pipe ends met a structure
+    met = float((state[junction[pe]] >= 0).mean()) if len(pe) and n_struct else None
     return {"x": jx, "y": jy, "net": net, "open": opening, "zone": zone,
             "counts": {"structures": n_struct, "pipes": n_pipe, "ditches": n_ditch, "junctions": int(nj), "openings": int(opening.sum()),
                        "networks": int((size > 1).sum()), "cut_at_barriers": cut,

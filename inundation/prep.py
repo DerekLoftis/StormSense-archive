@@ -65,6 +65,8 @@ def bounds_of(feature, transform, buffer=BUFFER_M):
 
 
 LAND_MARGIN_M = 1500
+DRAIN_PAD_DEG = 0.02       # about 2 km around a county's mapped part: pipes that leave the frame keep their networks whole
+PARCEL_PAD_DEG = 0.002
 
 
 def land_bounds(bounds, xs, ys, margin=LAND_MARGIN_M):
@@ -619,6 +621,11 @@ def main(argv=None):
         wall = barriers.cells(lines, dem.shape, origin)
         log(f"flood barriers: {len(lines)} systems, {len(wall[0]):,} wall cells, {len(protected)} leveed areas")
     w, s = inv(bounds[0], bounds[1]); e, n = inv(bounds[2], bounds[3])
+
+    def part(pad):
+        """The frame as a box in degrees with a margin, for reading a county's own layers where only a part of the
+        county is mapped (--low, --box); None for a whole locality, whose layers are read whole."""
+        return (w - pad, s - pad, e + pad, n + pad) if a.low or box else None
     hucs = cached(f"{a.work}/huc12.geojson", lambda: {"type": "FeatureCollection", "features": tether.huc12((w, s, e, n))})["features"]
     forced = tether.overrides()
     surface_ft = tidal_surface(dem, dem_path, log)
@@ -627,7 +634,7 @@ def main(argv=None):
     sea = sea_cells(dem, origin, hucs, forced, fwd, log)
     net = None
     if dsrc:
-        layers = cached(f"{a.work}/drainage.json", lambda: drainage.fetch(dsrc, log))
+        layers = cached(f"{a.work}/drainage.json", lambda: drainage.fetch(dsrc, log, part(DRAIN_PAD_DEG)))
         net = drainage.network(layers, fwd, dsrc, protected=protected)
         log("stormwater:", net["counts"] if net else "no features")
     surface = None
@@ -651,11 +658,13 @@ def main(argv=None):
     vsrc = None if a.no_values else value.sources().get(a.fips)
     vcols, n_cert = {}, 0
     if vsrc:
-        parcels = cached(f"{a.work}/parcels.geojson", lambda: {"type": "FeatureCollection", "features": value.fetch_parcels(vsrc)})["features"]
+        parcels = cached(f"{a.work}/parcels.geojson", lambda: {"type": "FeatureCollection", "features": value.fetch_parcels(vsrc, log, part(PARCEL_PAD_DEG))})["features"]
         if vsrc["assessment"]["type"] == "parcels":           # the parcel layer carries the values itself
             records = value.records_from_parcels(parcels, vsrc)
             if vsrc.get("use_from"):                          # the use codes are in another layer
                 value.add_use(records, cached(f"{a.work}/use_codes.json", lambda: value.fetch_use(vsrc)))
+            if vsrc.get("more"):                              # values, uses or years kept in tables of their own
+                value.add_more(records, cached(f"{a.work}/value_tables.json", lambda: value.fetch_more(vsrc, log)))
         else:
             records = cached(f"{a.work}/assessment.json", lambda: value.fetch_assessment(vsrc))
         zhvi = cached(f"{a.work}/zhvi.json", lambda: {k: list(v) for k, v in value.fetch_zhvi().items()})
