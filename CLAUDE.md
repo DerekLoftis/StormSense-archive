@@ -168,7 +168,10 @@ project's shared folder (skill code, baselines, notes, station sheet, disclosure
   (`ffe.py`); Derek's Newport News survey is still to come. `check_titan.py` scores the extent against TITAN's depth tiles (0.72 overlap downtown at 5.5 ft).
 - Bridges have no deck in the bare-earth DEM: pieces with `bridge` > 0 and buildings `over_water` are never flagged.
   `bridge` 4 (2026-11-28, `prep.decks`): a deck over low ground found from the road's own profile (a fall of 12 ft
-  within 15 m is an abutment; Interstate 95 at Petersburg was a flooded road at 4 ft without it).
+  within 15 m after 20 m of level road is an abutment; Interstate 95 at Petersburg was a flooded road at 4 ft without
+  it; 150 m at most on a road that is not a highway or a ramp). A road that stops within 150 m of an abutment at the
+  locality's boundary is half of a bridge to the next locality (Four Mile Run; there 10 ft within 20 m is enough).
+  Steep dead ends and ravine roads must stay roads: check a change with a saved table (README "Bridges").
   The Mobjack Norfolk SLR services are RGB extent pictures (no depth). Needs `inundation/requirements.txt`.
 - Hampton Roads (since 2026-11-26): one `prep` per locality FIPS. `drainage_sources.json` has Norfolk, Newport
   News (`snap_m` 1: pipes stop 0.85 m short of the structures), Virginia Beach, Chesapeake and Hampton (lines only:

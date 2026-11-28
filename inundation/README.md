@@ -173,16 +173,29 @@ of pieces (11 in Mathews, 8 in Lancaster, none in Norfolk). VGIN's own bridge co
 bridge layer (VDOT structures) would be better.
 
 4 (2026-11-28) is a deck over low ground that the road's own profile gives away (`prep.decks`): an overpass or a
-viaduct with no water under it and no bridge code. Along a road the ground cannot fall 12 ft within 15 m; where it
-does, the road has left the ground at an abutment, and the pieces beyond are under the deck as far as the piece
-where the ground is back within 5 ft of the abutment's height, if there is one within 600 m along the same street
-(`prep.chain` follows a street across VGIN's cuts). A road that comes down a bank and stays low is not under a
-deck, and neither is a low street with one high piece in it (another road's deck left in the elevation data).
-Interstate 95 by Pocahontas Island in Petersburg was the case: 47 ft at the abutment, 3.3 to 4 ft under the deck,
-a flooded interstate at 4 ft without the rule. On the saved tables of localities prepared before it, the rule would
-take out 112 pieces that can go under by 10 ft in Portsmouth (ramps and decks of Interstate 264 and the Martin
-Luther King Freeway, the Williams Avenue overpass), 29 in Gloucester (Hickory Fork Road's bridge), 8 in Hampton,
-7 in Newport News and none in Poquoson: they get it when they are next prepared.
+viaduct with no water under it and no bridge code. A road that has run level (within 5 ft for 20 m) cannot then fall
+12 ft within 15 m; where the ground under it does, the road has left the ground at an abutment, and the pieces
+beyond are under the deck as far as the piece where the ground is back within 5 ft of the abutment's height, or
+where the road is over water, if there is one within 600 m along the same street (150 m where the road is not a
+highway or a ramp; `prep.chain` follows a street across VGIN's cuts and from two carriageways into one). A road
+that comes down a bank and stays low is not under a deck, and neither is a low street with one high piece in it
+(another road's deck left in the elevation data), a road that comes down to a landing or crosses a ravine on a
+grade (Beaverdam Road and Marina Drive in Surry fall 3 ft in every 5 m for 100 m and more), or a street that runs
+low for 575 m between two bluffs (River Walk in Middlesex). Interstate 95 by Pocahontas Island in Petersburg was
+the case: 47 ft at the abutment, 3.3 to 4 ft under the deck, a flooded interstate at 4 ft without the rule.
+
+Each locality has only its half of a bridge to the next one: its roads stop in the middle, with no far abutment.
+Where a road stops within 150 m of an abutment, with no other road there and within 100 m of the locality's
+boundary (`prep.at_border`), the pieces between are under the deck, and there a fall of 10 ft within 20 m is an
+abutment. Mount Vernon Avenue and South Arlington Ridge Road over Four Mile Run, between Alexandria and Arlington
+(ground at 1 to 3 ft under them), and Interstate 395 towards Washington were flooded roads at every high tide
+without it. A dead end inside the locality is a dead end.
+
+On the saved tables of localities prepared before the rule, it would take out 96 pieces that can go under by
+10 ft in Portsmouth (ramps and decks of Interstate 264 and the Martin Luther King Freeway), 30 in Gloucester
+(Hickory Fork Road, 130 m at 3 to 4 ft between banks of 40%), 12 in Northampton (Ellens Lane, between two dunes:
+likely not a deck), 8 in Hampton, 6 in Newport News and none in Poquoson: they get it when they are next
+prepared. It finds the Woodrow Wilson Bridge's approaches over Jones Point in Alexandria (382 pieces).
 
 ## Files
 

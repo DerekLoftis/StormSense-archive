@@ -708,7 +708,12 @@ def test_a_deck_over_low_ground_is_found_from_the_roads_own_profile():
              road("RIVER RD", [0, 800], 200.0), road("SIDE ST", [400, 400.0001], 0.0), road("FRANKLIN ST", [0, 800], 300.0),
              road("MOUNT VERNON AVE", [0, 150], 400.0), road("MOUNT VERNON AVE", [150, 200], 400.0),
              road("MOUNT VERNON AVE", [150, 200], 400.0),                              # the last line is there twice
-             road("FERRY RD", [0, 200], 500.0), road("WHARF ST", [200, 260], 500.0)]
+             road("FERRY RD", [0, 200], 500.0), road("WHARF ST", [200, 260], 500.0),
+             road("MARINA DR", [0, 200], 600.0), road("BEAVERDAM RD", [0, 800], 700.0), road("I 295 SB", [0, 500], 800.0),
+             road("GLEBE RD", [0, 155], 900.0), road("GLEBE RD", [155, 200], 900.0), road("GLEBE RD", [155, 200], 900.0)]
+    feats[-2]["geometry"]["coordinates"][1][1], feats[-1]["geometry"]["coordinates"][1][1] = 906.0, 894.0   # two carriageways
+    feats += [road("RIVER WALK", [0, 800], 1000.0), road("US 360", [0, 800], 1100.0)]
+    feats[-2]["properties"]["MTFCC"], feats[-1]["properties"]["MTFCC"] = "S1400", "S1200PRI"
     feats[4]["geometry"]["coordinates"] = [[400, 0], [400, 60]]
     p = segments.split(feats, lambda x, y: (np.asarray(x, float), np.asarray(y, float)))
     x, y, name = p["xm"], p["ym"], np.array([str(v) for v in p["ST_FULL"]])
@@ -727,21 +732,38 @@ def test_a_deck_over_low_ground_is_found_from_the_roads_own_profile():
     ferry = name == "FERRY RD"                                                         # the same fall, but the street
     ground[ferry] = np.interp(x[ferry], [0, 160, 175, 200], [13, 13, 2, 2])            # goes on as another one
     ground[name == "WHARF ST"] = 2.0
+    fork = name == "GLEBE RD"                                                          # a half bridge again, in two
+    ground[fork] = np.interp(x[fork], [0, 160, 175, 200], [13, 13, 2, 2])              # carriageways from just before it
+    for long in ("RIVER WALK", "US 360"):                                              # 400 m of low ground between two
+        ground[(name == long) & (x > 200) & (x < 600)] = 5.0                           # bluffs: a viaduct if a highway
+    marina = name == "MARINA DR"                                                       # the same fall again, to a dead end
+    ground[marina] = np.interp(x[marina], [0, 160, 175, 200], [13, 13, 2, 2])          # inside the locality
+    ravine = name == "BEAVERDAM RD"                                                    # down a ravine at 18% and up again:
+    ground[ravine] = 7 + 0.18 * 3.2808 * np.clip(np.abs(x[ravine] - 400) - 60, 0, 130)   # steep all the way, never level
+    i295 = name == "I 295 SB"                                                          # off the bluff, over a terrace,
+    ground[i295] = np.where(x[i295] < 100, 59.0, np.where(x[i295] < 300, 7.0, -2.0))   # and out over the river
     river = name == "RIVER RD"
     ground[river & (x > 300)] = 3.5                                                    # down a bank, and low from there on
-    nb, loose = prep.chain(p)
+    nb, loose, via = prep.chain(p)
     at = np.flatnonzero(i95 & (np.abs(x - 397.5) < 0.1))[0]
     assert set(name[nb[at]]) == {"I 95 NB"} and abs(x[nb[at]] - 397.5).max() <= 5.01    # across the two lines' ends
     assert not loose[at].any() and loose[half & (x > 195)].any() and not loose[ferry & (x > 195)].any()
-    deck = prep.decks(p, ground)
+    assert not prep.decks(p, ground)[half].any()                      # a road's end is a dead end unless told otherwise
+    deck = prep.decks(p, ground, border=half | fork | marina & (x < 100) | river)
     assert deck[i95 & (x > 300) & (x < 420)].all()                    # the low ground, across the two lines
     assert deck[i95 & (x >= 420) & (x < 560)].all()                   # and the slope below 40 ft
     assert not deck[i95 & ((x < 300) | (x > 572))].any()
     assert not deck[valley].any() and not deck[river].any() and not deck[name == "SIDE ST"].any() and not deck[low].any()
     assert deck[half & (x > 176)].all() and not deck[half & (x < 160)].any()           # as far as the roads go
     assert not deck[ferry].any() and not deck[name == "WHARF ST"].any()
-    code = prep.bridges(p, ground)
-    assert (code[deck] == 4).all() and (code[~deck] == 0).all()
+    assert not deck[marina].any() and not deck[ravine].any()
+    assert not deck[name == "RIVER WALK"].any() and deck[(name == "US 360") & (x > 200) & (x < 600)].all()
+    assert deck[fork & (x > 176)].all() and deck[fork & (x > 176)].sum() == 10 and not deck[fork & (x < 160)].any()
+    assert deck[i295 & (x > 100) & (x < 300)].all() and not deck[i295 & ((x < 100) | (x > 300))].any()   # as far as the water
+    code = prep.bridges(p, ground, deck=deck)
+    assert (code[deck & ~i295] == 4).all() and (code[~deck & ~i295] == 0).all()
+    assert set(code[i295 & (x > 300)]) == {1} and set(code[i295 & (x < 95)]) == {0}
+    assert set(code[i295 & (x > 100) & (x < 300)]) == {3, 4}          # the last 60 m are the spans over the bank
 
 
 def test_fema_outlines_fill_in_where_vgin_has_no_footprint(monkeypatch):

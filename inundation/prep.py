@@ -191,22 +191,47 @@ def over_water_ft(stations, high_tide=tether.high_tide_ft):
     return out
 
 
-DECK_DROP_FT = 10.0   # the ground along a road falls this much within DECK_EDGE_M only where a deck leaves it
-DECK_EDGE_M = 20.0    # (a grade of 15%: no road near tidal water does that)
-DECK_MAX_M = 600.0    # the deck's far end is looked for this far along the road
+DECK_DROP_FT = 12.0   # the ground along a road falls this much within DECK_EDGE_M only where a deck leaves it
+DECK_EDGE_M = 15.0    # (a grade of 24%: no road does that), after 20 m within DECK_LEVEL_FT of the abutment's height
+DECK_MAX_M = 600.0    # the deck's far end is looked for this far along a highway or a ramp (MTFCC S11.., S12.., S1630)
+DECK_LOCAL_M = 150.0  # and this far along any other road: a long low run between two bluffs is a street, not a viaduct
 DECK_LEVEL_FT = 5.0   # a deck's two ends, and the road behind an abutment, lie within this of each other
-DECK_OPEN_M = 150.0   # a deck that leaves the locality's roads before its far end does so within this
+DECK_APPROACH_M = 20.0
+DECK_OPEN_M = 150.0   # a deck that leaves the locality's roads before its far end does so within this,
+DECK_BORDER_M = 100.0  # and this close to the locality's boundary (elsewhere the road's end is a dead end);
+DECK_BORDER_DROP_FT = 10.0   # there the fall of a low bridge's abutment is enough: this much
+DECK_BORDER_EDGE_M = 20.0    # within this
 
 
-def chain(pieces, tol=1.0):
+def twins(pieces, tol=0.01):
+    """For each piece the first piece that lies exactly on it: itself, unless VGIN holds its line twice. (Two
+    carriageways that part at a point are not the same line, however close their first pieces are.)"""
+    x0, y0, x1, y1 = (np.asarray(pieces[k], float) for k in ("x0", "y0", "x1", "y1"))
+    if not len(x0):
+        return np.arange(0)
+    key = np.round(np.column_stack([x0 + x1, y0 + y1, np.abs(x1 - x0), np.abs(y1 - y0)]) / tol).astype(np.int64)
+    _, first, group = np.unique(key, axis=0, return_index=True, return_inverse=True)
+    return first[np.ravel(group)]
+
+
+DECK_STRAIGHT = -0.7  # two ends of a street go on in each other when their directions out of the ends are this opposed
+
+
+def chain(pieces, tol=1.0, same=None):
     """(the two neighbours of each piece along its road, -1 where it has none; True where a line ends there and no
-    other line starts). The neighbours are the pieces before and after it in its own line, and across a line's end
-    the end of the one other line of the same street that starts there (VGIN cuts a street at every crossing and
-    attribute change, and draws the parts in either direction). A loose end is where the roads of a locality stop:
-    a dead end, or the middle of a bridge to the next locality. A line VGIN holds twice counts as one."""
+    other line starts; for a neighbour across a line's end that does not have the piece as its own neighbour, the
+    side of the neighbour the piece lies on, by (piece, neighbour)). The neighbours are the pieces before and after
+    it in its own line, and across a line's end the end of another line of the same street that starts there (VGIN
+    cuts a street at every crossing and attribute change, and draws the parts in either direction): the one there
+    is, or of several the one that goes straight on (within 45 degrees; where a street parts into two carriageways
+    each of them goes on in the single one, which goes on in one of them). A loose end is where the roads of a
+    locality stop: a dead end, or the middle of a bridge to the next locality. A line VGIN holds twice counts as one
+    (`same`, see twins): the second copy is not a road that starts there, and nothing is joined to it."""
     from scipy.spatial import cKDTree
     road, part, seq = (np.asarray(pieces[k]) for k in ("road", "part", "seq"))
     n = len(road)
+    same = twins(pieces) if same is None else same
+    copy = same != np.arange(n)
     nb = np.full((n, 2), -1, np.int64)
     i = np.flatnonzero((road[1:] == road[:-1]) & (part[1:] == part[:-1]) & (seq[1:] == seq[:-1] + 1))
     nb[i, 1], nb[i + 1, 0] = i + 1, i
@@ -214,46 +239,93 @@ def chain(pieces, tol=1.0):
     first, last = np.flatnonzero(nb[:, 0] < 0), np.flatnonzero(nb[:, 1] < 0)
     who = np.concatenate([first, last])
     side = np.concatenate([np.zeros(len(first), int), np.ones(len(last), int)])
-    xy = np.concatenate([np.column_stack([np.asarray(pieces["x0"])[first], np.asarray(pieces["y0"])[first]]),
-                         np.column_stack([np.asarray(pieces["x1"])[last], np.asarray(pieces["y1"])[last]])])
+    x0, y0, x1, y1 = (np.asarray(pieces[k], float) for k in ("x0", "y0", "x1", "y1"))
+    xy = np.concatenate([np.column_stack([x0[first], y0[first]]), np.column_stack([x1[last], y1[last]])])
+    out = np.concatenate([np.column_stack([x0[first] - x1[first], y0[first] - y1[first]]),      # the way out of each end
+                          np.column_stack([x1[last] - x0[last], y1[last] - y0[last]])])
+    out = out / np.maximum(np.hypot(out[:, 0], out[:, 1]), 1e-9)[:, None]
     loose = np.zeros((n, 2), bool)
     loose[who, side] = True
+    via = {}
     if len(who) > 1:
         met = {}
-        xm, ym = np.asarray(pieces["xm"]), np.asarray(pieces["ym"])
         for a, b in cKDTree(xy).query_pairs(tol):
-            if who[a] == who[b] or np.hypot(xm[who[a]] - xm[who[b]], ym[who[a]] - ym[who[b]]) < tol:
-                continue                                           # the same line twice (VGIN has some doubled)
+            if same[who[a]] == same[who[b]]:
+                continue                                           # one piece's two ends, or the same line twice
             loose[who[a], side[a]] = loose[who[b], side[b]] = False
-            if street[who[a]] and street[who[a]] == street[who[b]]:
+            if street[who[a]] and street[who[a]] == street[who[b]] and not copy[who[a]] and not copy[who[b]]:
                 met.setdefault(a, []).append(b); met.setdefault(b, []).append(a)
         for a, others in met.items():
             if len(others) == 1 and len(met[others[0]]) == 1:      # two ends of one street, and no third
                 nb[who[a], side[a]] = who[others[0]]
-    return nb, loose
+                continue
+            b = min(others, key=lambda o: float(out[a] @ out[o]))
+            if float(out[a] @ out[b]) <= DECK_STRAIGHT:
+                nb[who[a], side[a]] = who[b]
+        for a in met:                                              # joined one way only: where the walk comes in
+            b = nb[who[a], side[a]]
+            if b >= 0 and who[a] not in nb[b]:
+                ends = [o for o in met[a] if who[o] == b]
+                via[(int(who[a]), int(b))] = int(side[ends[0]])
+    return nb, loose, via
 
 
-def decks(pieces, ground, drop=DECK_DROP_FT, edge_m=DECK_EDGE_M, max_m=DECK_MAX_M, level=DECK_LEVEL_FT, open_m=DECK_OPEN_M):
+def at_border(pieces, loc, fwd, within=DECK_BORDER_M):
+    """True for the pieces within 100 m of the locality's boundary: there a road that stops goes on in the next
+    locality's roads. Only the pieces at the ends of their lines are looked at."""
+    import shapely
+    from shapely.geometry import shape
+    road, part, seq = (np.asarray(pieces[k]) for k in ("road", "part", "seq"))
+    out = np.zeros(len(road), bool)
+    if not len(road):
+        return out
+    same = (road[1:] == road[:-1]) & (part[1:] == part[:-1]) & (seq[1:] == seq[:-1] + 1)
+    ends = np.flatnonzero(np.r_[True, ~same] | np.r_[~same, True])
+    edge = shapely.transform(shapely.force_2d(shape(loc["geometry"])).boundary,
+                             lambda c: np.column_stack(fwd(c[:, 0], c[:, 1])))
+    shapely.prepare(edge)
+    out[ends] = shapely.dwithin(edge, shapely.points(np.asarray(pieces["xm"], float)[ends],
+                                                     np.asarray(pieces["ym"], float)[ends]), within)
+    return out
+
+
+def decks(pieces, ground, drop=DECK_DROP_FT, edge_m=DECK_EDGE_M, max_m=DECK_MAX_M, level=DECK_LEVEL_FT, open_m=DECK_OPEN_M,
+          border=None, water_ft=OVER_WATER_FT):
     """True for the pieces under a deck the elevation data does not show: an overpass or a viaduct over low ground.
 
-    Along a road the ground does not fall 10 ft within 20 m. Where it does, the road has left the ground at an
-    abutment, and the pieces beyond it are under the deck as far as the piece where the ground is back within 5 ft
-    of the abutment's height, if there is one within 600 m along the same street (Interstate 95 by Pocahontas
-    Island in Petersburg: 47 ft at the abutment, 3.3 to 4 ft under the deck for 120 m, then the slope up to 44 ft),
-    or as far as the locality's roads go, if they stop within 150 m with no other road there (the bridges over
-    Four Mile Run between Arlington and Alexandria and over the Potomac to Washington: each locality has its half).
-    A road that comes down a bank and goes on low is not under a deck: nothing brings it back up. Neither is a
-    street under another road's deck that the elevation data still has (one high piece in a low street): the road
-    behind an abutment stays within 5 ft of it for 10 m, or for the one piece there is."""
+    A road that has run level (within 5 ft for 20 m) does not then fall 12 ft within 15 m. Where the ground under it
+    does, the road has left the ground at an abutment, and the pieces beyond it are under the deck as far as the
+    piece where the ground is back within 5 ft of the abutment's height (Interstate 95 by Pocahontas Island in
+    Petersburg: 47 ft at the abutment, 3.3 to 4 ft under the deck for 120 m, then the slope up to 44 ft) or where the
+    road is over water (ground below water_ft: Interstate 295 over the terrace north of the Appomattox), if there
+    is one within 600 m along the same street (150 m where the road is not a highway or a ramp: River Walk in
+    Middlesex runs 575 m at 5 ft between two bluffs). A road that comes down a bank and goes on low is not under a deck:
+    nothing brings it back up. A road to a landing or across a ravine comes down on a grade (Beaverdam Road and
+    Marina Drive in Surry fall 3 ft in every 5 m for 100 m and more). Neither is a street under another road's deck
+    that the elevation data still has (one high piece in a low street).
+
+    Each locality has its half of a bridge to the next one (over Four Mile Run between Arlington and Alexandria, over
+    the Potomac to Washington): the roads stop in the middle with no other road there. Where that is within 150 m of
+    the abutment and at the locality's boundary (`border`, see at_border; without it no road's end counts), the pieces
+    between are under the deck, and there an abutment is a fall of 10 ft within 20 m (South Arlington Ridge Road:
+    13 ft, then 11, 7, 4 and 2 ft over the run)."""
     ground = np.asarray(ground, float)
-    nb, loose = chain(pieces)
+    same = twins(pieces)
+    nb, loose, via = chain(pieces, same=same)
     step = np.asarray(pieces["length_m"], float)
+    water = ~np.isfinite(ground) | (ground < water_ft)
+    kind = pieces.get("MTFCC")
+    span = np.full(len(ground), float(max_m))
+    if kind is not None:
+        span[[k is not None and not str(k).startswith(("S11", "S12", "S1630")) for k in kind]] = min(max_m, DECK_LOCAL_M)
     out = np.zeros(len(ground), bool)
+    least = min(drop, DECK_BORDER_DROP_FT) if border is not None else drop
+    reach = max(edge_m, DECK_BORDER_EDGE_M) if border is not None else edge_m
     fall = np.zeros(len(ground), bool)              # pieces with much lower ground within four pieces in array order
     for k in (1, 2, 3, 4):
         d = ground[:-k] - ground[k:]
-        fall[:-k] |= d >= drop
-        fall[k:] |= -d >= drop
+        fall[:-k] |= d >= least
+        fall[k:] |= -d >= least
     ends = (nb < 0).any(axis=1)
     for k in (1, 2, 3, 4):                          # and those near a line's end, whose neighbours are elsewhere
         ends[:-k] |= ends[k:]
@@ -261,41 +333,52 @@ def decks(pieces, ground, drop=DECK_DROP_FT, edge_m=DECK_EDGE_M, max_m=DECK_MAX_
 
     def onward(at, came):
         """The piece after `at` coming from `came`, and the side of `at` it lies on."""
-        side = 0 if nb[at][1] == came else 1
+        if nb[at][0] == came:
+            side = 1
+        elif nb[at][1] == came:
+            side = 0
+        else:                                       # in from a carriageway that `at` does not go on in
+            side = 1 - via.get((came, at), 1)
         return int(nb[at][side]), side
 
     for i in np.flatnonzero((fall | ends) & np.isfinite(ground)):
         for first in nb[i]:
-            came, at, far, found = i, int(first), 0.0, False
-            while at >= 0 and at != came and far + step[at] <= edge_m + 1e-6:      # the abutment: 10 ft lower within 20 m
+            came, at, far, begin, steep = i, int(first), 0.0, None, False
+            while at >= 0 and at != came and far + step[at] <= reach + 1e-6:       # the abutment
                 far += step[at]
-                if ground[at] <= ground[i] - drop:
-                    found = True
-                    break
+                if begin is None and ground[at] <= ground[i] - least:
+                    begin = (came, at, far)
+                if far <= edge_m + 1e-6 and ground[at] <= ground[i] - drop:
+                    steep = True
                 came, at = at, onward(at, came)[0]
-            if not found:
+            if begin is None:
                 continue
-            back, b0, b1 = 0, i, onward(i, int(first))[0]                          # the road behind the abutment:
-            while b1 >= 0 and b1 != b0 and back < 2 and ground[b1] >= ground[i] - level:
-                back, b0, b1 = back + 1, b1, onward(b1, b0)[0]
-            if back == 0 or (back < 2 and b1 >= 0 and b1 != b0):                   # level for 10 m, or as far as it goes
+            back, b0, b1, flat = 0.0, i, onward(i, int(first))[0], True            # the road behind the abutment:
+            while b1 >= 0 and b1 != b0 and back < DECK_APPROACH_M - 1e-6:
+                if not abs(ground[b1] - ground[i]) <= level:
+                    flat = False
+                    break
+                back, b0, b1 = back + step[b1], b1, onward(b1, b0)[0]
+            if not flat or back < DECK_APPROACH_M / 2 - 1e-6:                      # level for 20 m (10 m where it is short)
                 continue
+            came, at, far = begin
             under = [at]                            # the pieces on the slope before it stay on the ground
-            while far <= max_m:                     # along the low ground to where it comes back up
+            while far <= span[i]:                   # along the low ground to where it comes back up
                 nxt, side = onward(at, came)
                 if nxt < 0:
-                    if loose[at, side] and far <= open_m:      # the locality's roads stop under the deck
-                        out[under] = True
+                    if loose[at, side] and far <= open_m and border is not None and border[at]:
+                        out[under] = True           # the locality's roads stop under the deck
                     break
                 if nxt == at or nxt == i:
                     break
                 came, at = at, nxt
                 far += step[at]
-                if ground[at] >= ground[i] - level:
-                    out[under] = True
+                if ground[at] >= ground[i] - level or water[at]:
+                    if steep:
+                        out[under] = True
                     break
                 under.append(at)
-    return out
+    return out[same] & ~water                       # the second copy of a line is under the deck its first is under
 
 
 def bridges(pieces, ground, limit=OVER_WATER_FT, deck=None):
@@ -329,10 +412,10 @@ def via_pipes(connect, surface):
     return (np.isfinite(connect) & (~np.isfinite(surface) | (connect < surface))).astype(int)
 
 
-def road_table(pieces, dem, cidx, origin, surface=None):
+def road_table(pieces, dem, cidx, origin, surface=None, border=None):
     g, c = depth.sample(dem, cidx, origin, pieces["sx"], pieces["sy"])
     ground, connect = middle(g), middle(c)
-    deck = decks(pieces, ground) & np.isfinite(connect)       # only where it matters: in reach of the water
+    deck = decks(pieces, ground, border=border) & np.isfinite(connect)       # only where it matters: in reach of the water
     extra = {}
     if surface is not None:
         cs = middle(depth.sample(dem, surface, origin, pieces["sx"], pieces["sy"])[1])
@@ -562,7 +645,7 @@ def main(argv=None):
         if not os.path.exists(cidx_path):
             np.save(cidx_path, cidx)
 
-    rt = road_table(pieces, dem, cidx, origin, surface)
+    rt = road_table(pieces, dem, cidx, origin, surface, border=at_border(pieces, loc, fwd))
     bt, bgeoms = building_table(bldgs, fwd, dem, cidx, origin, surface=surface)
     log("ground and connect levels read")
     vsrc = None if a.no_values else value.sources().get(a.fips)
