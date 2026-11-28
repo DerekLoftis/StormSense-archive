@@ -687,8 +687,50 @@ def test_water_under_a_deck_is_judged_by_the_gauges_own_high_tide(tmp_path):
     pieces = {"SEG_TYPE": [None] * n, "xm": np.arange(n) * 100.0, "ym": np.zeros(n), "ST_FULL": ["MAIN ST"] * n,
               "road": np.arange(n)}
     ground = np.array([0.8, 0.8, 0.3, 0.8, 1.4, np.nan])
-    assert list(prep.bridges(pieces, ground)) == [1, 1, 1, 1, 0, 1]
-    assert list(prep.bridges(pieces, ground, np.full(n, 0.52))) == [0, 0, 1, 0, 0, 1]
+    none = np.zeros(n, bool)
+    assert list(prep.bridges(pieces, ground, deck=none)) == [1, 1, 1, 1, 0, 1]
+    assert list(prep.bridges(pieces, ground, np.full(n, 0.52), deck=none)) == [0, 0, 1, 0, 0, 1]
+
+
+def test_a_deck_over_low_ground_is_found_from_the_roads_own_profile():
+    """Interstate 95 by Pocahontas Island in Petersburg: VGIN does not code the overpass as a bridge, no water lies
+    under it, and the elevation data has the low ground under the deck (3.3 to 4 ft between embankments at 45 ft)."""
+    pytest.importorskip("scipy")
+    from inundation import prep, segments
+
+    def road(name, xs, y=0.0):
+        return {"type": "Feature", "properties": {"ST_FULL": name, "SEG_TYPE": 99},
+                "geometry": {"type": "LineString", "coordinates": [[x, y] for x in xs]}}
+
+    # one street in two lines that meet at x = 400, the second drawn the other way; a second street that only dips;
+    # a third that comes down a bank and stays low; a side street that meets the first at the same point
+    feats = [road("I 95 NB", [0, 400]), road("I 95 NB", [800, 400]), road("VALLEY RD", [0, 800], 100.0),
+             road("RIVER RD", [0, 800], 200.0), road("SIDE ST", [400, 400.0001], 0.0), road("FRANKLIN ST", [0, 800], 300.0)]
+    feats[4]["geometry"]["coordinates"] = [[400, 0], [400, 60]]
+    p = segments.split(feats, lambda x, y: (np.asarray(x, float), np.asarray(y, float)))
+    x, y, name = p["xm"], p["ym"], np.array([str(v) for v in p["ST_FULL"]])
+    ground = np.full(len(x), 45.0)
+    i95 = name == "I 95 NB"
+    ground[i95 & (x > 300) & (x < 420)] = 3.5                                          # under the deck
+    up = i95 & (x >= 420) & (x < 570)
+    ground[up] = 3.5 + (x[up] - 420) * 0.25                                            # the far slope, 7.5% up to 41 ft
+    low = name == "FRANKLIN ST"                                                        # a low street that rises a little
+    ground[low] = 8.0 + 2.5 * (x[low] > 500)
+    ground[low & (np.abs(x - 302.5) < 0.1)] = 22.0                                     # under another road's deck, left in the data
+    valley = name == "VALLEY RD"
+    ground[valley] = 45 - 41.5 * np.clip(1 - np.abs(x[valley] - 400) / 300, 0, 1)      # 14% both ways: steep, but a road
+    river = name == "RIVER RD"
+    ground[river & (x > 300)] = 3.5                                                    # down a bank, and low from there on
+    nb = prep.chain(p)
+    at = np.flatnonzero(i95 & (np.abs(x - 397.5) < 0.1))[0]
+    assert set(name[nb[at]]) == {"I 95 NB"} and abs(x[nb[at]] - 397.5).max() <= 5.01    # across the two lines' ends
+    deck = prep.decks(p, ground)
+    assert deck[i95 & (x > 300) & (x < 420)].all()                    # the low ground, across the two lines
+    assert deck[i95 & (x >= 420) & (x < 560)].all()                   # and the slope below 40 ft
+    assert not deck[i95 & ((x < 300) | (x > 572))].any()
+    assert not deck[valley].any() and not deck[river].any() and not deck[name == "SIDE ST"].any() and not deck[low].any()
+    code = prep.bridges(p, ground)
+    assert (code[deck] == 4).all() and (code[~deck] == 0).all()
 
 
 def test_fema_outlines_fill_in_where_vgin_has_no_footprint(monkeypatch):

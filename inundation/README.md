@@ -172,6 +172,18 @@ Windmill Point, 0.68 at Lewisetta. Tangier Island's lanes and yards lie at 0.7 t
 of pieces (11 in Mathews, 8 in Lancaster, none in Norfolk). VGIN's own bridge coding is incomplete (most bridges are `SEG_TYPE` 99), so a proper
 bridge layer (VDOT structures) would be better.
 
+4 (2026-11-28) is a deck over low ground that the road's own profile gives away (`prep.decks`): an overpass or a
+viaduct with no water under it and no bridge code. Along a road the ground cannot fall 12 ft within 15 m; where it
+does, the road has left the ground at an abutment, and the pieces beyond are under the deck as far as the piece
+where the ground is back within 5 ft of the abutment's height, if there is one within 600 m along the same street
+(`prep.chain` follows a street across VGIN's cuts). A road that comes down a bank and stays low is not under a
+deck, and neither is a low street with one high piece in it (another road's deck left in the elevation data).
+Interstate 95 by Pocahontas Island in Petersburg was the case: 47 ft at the abutment, 3.3 to 4 ft under the deck,
+a flooded interstate at 4 ft without the rule. On the saved tables of localities prepared before it, the rule would
+take out 112 pieces that can go under by 10 ft in Portsmouth (ramps and decks of Interstate 264 and the Martin
+Luther King Freeway, the Williams Avenue overpass), 29 in Gloucester (Hickory Fork Road's bridge), 8 in Hampton,
+7 in Newport News and none in Poquoson: they get it when they are next prepared.
+
 ## Files
 
 | Module | What it does |
@@ -361,7 +373,7 @@ At each gauge's forecast peak (most between 4.9 and 6.1 ft NAVD88, about 14:30Z 
 | Surry County (no pipes or values found) | 1.1 | – | 0.1 | 107 | – | – | 1.2 / 110 |
 | Prince George County, near tidal water (no pipes or values found) | 0.1 | – | 0.0 | 10 | – | – | 0.2 / 11 |
 | Hopewell (no pipes or values found) | 0.0 | – | 0.0 | 1 | – | – | 0.0 / 1 |
-| Petersburg (no pipes or values found) | 0.1 | – | 0.0 | 0 | – | – | 0.1 / 0 |
+| Petersburg (no pipes or values found) | 0.0 | – | 0.0 | 0 | – | – | 0.0 / 0 |
 | Colonial Heights (no pipes or values found) | 0.0 | – | 0.0 | 0 | – | – | 0.0 / 0 |
 | Charles City County (no pipes or values found) | 1.1 | – | 0.1 | 5 | – | – | 1.2 / 8 |
 | Chesterfield County, near tidal water (no pipes or values found) | 0.0 | – | 0.0 | 6 | – | – | 0.0 / 8 |
@@ -373,8 +385,6 @@ At each gauge's forecast peak (most between 4.9 and 6.1 ft NAVD88, about 14:30Z 
 - The rows from Surry County down (the upper James, 28 Nov) are small because little there lies low: the James and
   the Appomattox run between bluffs above Hopewell, and the forecast peak was 4.9 ft NAVD88 at Jordan Point, 5.8 at
   Richmond Locks and 6.3 at Pocahontas. Charles City County has no VGIN footprints at all (6,381 FEMA outlines).
-  Petersburg's 0.1 mile is Interstate 95 where it passes over the low ground by Pocahontas Island: an overpass VGIN
-  does not code as a bridge, over ground the elevation data has at 3.3 to 4 ft (open point below).
 - The rows from Gloucester down were prepared on 27 and 28 Nov with the gauges by water body, the high tide limit
   for water under a deck and FEMA's outlines where VGIN has no footprint; the Hampton Roads rows above them are as
   prepared before those three changes. FEMA's outlines took Mathews from 957 to 1,542 buildings, Gloucester from 719
@@ -490,10 +500,6 @@ the page says which watersheds are missing. A gauge there (or a Currituck Sound 
 
 - Building rule: half the footprint under 0.5 ft (now) or 0.5 ft at the low side (`wet_low_ft`), Derek's call.
 - Low spots with no pipe to tidal water stay dry; rain is not in it.
-- An overpass over low ground is a flooded road unless VGIN codes it as a bridge or water lies under it: the
-  elevation data has the ground under the deck. Interstate 95 by Pocahontas Island in Petersburg is one (0.12 mile
-  at 3.3 to 4 ft). A rule from the road's own profile (a drop of 10 ft from one piece to the next is a deck's end)
-  is the next step.
 - Above the head of tide (Richmond, Petersburg, Fredericksburg, Little Falls) a river in flood from rain is not in
   these maps: the gauges at the falls (RICV, ARPV, FEDV) give the tide's level below them. Pocahontas (ARPV) stood
   about a foot higher than the James at Jordan Point through the week before 26 Nov 2026; whether that is the
