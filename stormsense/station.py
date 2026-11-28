@@ -215,6 +215,7 @@ def primary(grid, t0, cols, surges, picks):
     if np.isnan(r0):
         r0 = residual_now(grid, t0, cols)
     used, res, own = {}, np.full(len(grid), np.nan), np.full(len(grid), np.nan)
+    src = np.full(len(grid), "", dtype=object)  # the guidance behind each point
     for name, lo, hi in BANDS:
         sel = (lead > lo) & (lead <= hi) if lo else (lead >= 0) & (lead <= hi)
         for key in (picks.get(name),) + FALLBACK:  # the pick, then the fallbacks where it has no value
@@ -225,16 +226,18 @@ def primary(grid, t0, cols, surges, picks):
             if g is None or np.isnan(g[0][todo]).all():
                 continue
             fill = todo & ~np.isnan(g[0])
-            res[fill], own[fill] = g[0][fill], g[1][fill]
+            res[fill], own[fill], src[fill] = g[0][fill], g[1][fill], key
             used.setdefault(name, key)
-    # ease each change of guidance: a running mean over EASE_H hours around the band edges
+    # ease each change of guidance: a running mean over EASE_H hours around the band edges and
+    # wherever a guidance ends inside a band and the next one takes over
     w = int(round(EASE_H * 10)) | 1
-    for _, _, hi in BANDS[:-1]:
+    edges = {hi for _, _, hi in BANDS[:-1]}
+    change = np.flatnonzero((src[1:] != src[:-1]) & (src[1:] != "") & (src[:-1] != "")) + 1
+    edges |= {float(lead[i]) for i in change}
+    smooth = np.convolve(np.nan_to_num(np.pad(res, w // 2, mode="edge")), np.ones(w) / w, mode="valid")
+    for hi in sorted(edges):
         near = np.abs(lead - hi) <= EASE_H
         if near.any() and not np.isnan(res[near]).any():
-            k = np.ones(w) / w
-            pad = np.pad(res, w // 2, mode="edge")
-            smooth = np.convolve(np.nan_to_num(pad), k, mode="valid")
             res[near] = smooth[near]
     res = np.where(np.isnan(res), 0.0 if np.isnan(r0) else r0 * np.exp(-np.clip(lead, 0, None) / 24.0), res)
     own = np.where(np.isnan(own) & (np.abs(lead) < 0.01), res, own)  # at t0 the surge is the residual now

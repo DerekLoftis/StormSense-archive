@@ -330,3 +330,22 @@ def test_petss_reaches_the_last_step_of_the_72_hour_grid():
     surge_ = station.on_grid((f["time"], f["residual"]), grid)
     last = surge_[grid >= t0]
     assert not np.isnan(last[-1]) and abs(last[-1] - last[-2]) < 0.01
+
+
+def test_no_step_where_a_member_or_the_picked_guidance_ends_early():
+    t0 = T0 + timedelta(hours=24)
+    grid = np.array([T0 + timedelta(minutes=6 * i) for i in range(961)])
+    lead = surge.lead_hours(grid, t0)
+    tide_ = 1.3 + np.cos(2 * np.pi * lead / 12.42)
+    observed = np.where(lead <= 0, tide_ + 0.5, np.nan)
+    short = np.where((lead > 0) & (lead <= 18), tide_ + 1.5, np.nan)  # a member that stops at 18 h, 1 ft above the other
+    cols = {"observed": observed, "petss": tide_ + 0.5, "nwm_short": short}
+    f = surge.forecast(grid, t0, cols, tide_)[0]["stormsense"] - tide_
+    fut = lead > 0
+    assert np.nanmax(np.abs(np.diff(f[fut]))) < 0.1    # was a 0.5 ft step at 18 h
+    # the primary forecast: picked guidance ends at 50 h inside the 36-72 band, P-ETSS takes over
+    cols = {"observed": observed, "astro_tide": tide_, "nws": np.where((lead >= 0) & (lead <= 50), tide_ + 1.5, np.nan),
+            "petss": tide_ + 0.5}
+    prim, used, _ = station.primary(grid, t0, cols, {}, {"36-72": "nws"})
+    r = prim["residual"][lead >= 0]
+    assert used["36-72"] == "nws" and np.nanmax(np.abs(np.diff(r))) < 0.1
