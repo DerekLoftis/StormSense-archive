@@ -1,0 +1,70 @@
+<!doctype html><meta charset="utf-8">
+<style>
+body{margin:0;background:transparent}
+.logo{width:880px;height:200px;margin:20px;position:relative}
+svg{display:block}
+</style>
+
+<!-- Variant A: scholarly serif (Bitstream Charter), W&M green text, teal wave W -->
+<div class="logo" id="A">
+<svg viewBox="0 0 880 200" width="880" height="200">
+  <defs>
+    <linearGradient id="gA" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#0E4A5C"/><stop offset=".55" stop-color="#16687E"/><stop offset="1" stop-color="#3E8CA6"/>
+    </linearGradient>
+  </defs>
+  <text x="30" y="128" font-family="Bitstream Charter, serif" font-weight="bold" font-size="104" fill="#00533A">Tide</text>
+  <!-- W as tidal wave: solid = observations, dashed = m30 -->
+  <g transform="translate(236,0)">
+    <path d="M14,56 C26,56 32,126 46,126 C60,126 64,74 78,74 C92,74 96,126 110,126 C124,126 130,56 142,56"
+          fill="none" stroke="url(#gA)" stroke-width="11" stroke-linecap="round"/>
+
+  </g>
+  <text x="392" y="128" font-family="Bitstream Charter, serif" font-weight="bold" font-size="104" fill="#00533A">atch</text>
+  <text x="604" y="66" font-family="Bitstream Charter, serif" font-weight="bold" font-size="30" fill="#B6925A">™</text>
+  <path d="M652,92 L790,92" fill="none" stroke="#87B8C8" stroke-width="5" stroke-linecap="round" stroke-dasharray="14 11"/>
+  <text x="800" y="100" font-family="Bitstream Charter, serif" font-style="italic" font-size="27" fill="#16687E" text-anchor="start">m30</text>
+</svg>
+</div>
+
+<!-- Variant B: clean sans (Carlito), teal text, navy wave W, gold accent -->
+<div class="logo" id="B">
+<svg viewBox="0 0 880 200" width="880" height="200">
+  <defs>
+    <linearGradient id="gB" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#123F54"/><stop offset="1" stop-color="#2E7D9C"/>
+    </linearGradient>
+  </defs>
+  <text x="30" y="126" font-family="Carlito, sans-serif" font-weight="bold" font-size="100" letter-spacing="1" fill="#16687E">Tide</text>
+  <g transform="translate(232,0)">
+    <path d="M12,54 C24,54 32,124 46,124 C60,124 64,72 78,72 C92,72 96,124 110,124 C124,124 132,54 144,54"
+          fill="none" stroke="url(#gB)" stroke-width="12" stroke-linecap="round"/>
+    <path d="M4,46 C18,46 28,114 44,114 C60,114 62,64 78,64 C94,64 96,114 112,114 C128,114 140,46 152,46"
+          fill="none" stroke="#87B8C8" stroke-width="5" stroke-linecap="round" opacity=".95"/>
+  </g>
+  <text x="390" y="126" font-family="Carlito, sans-serif" font-weight="bold" font-size="100" letter-spacing="1" fill="#16687E">atch</text>
+  <text x="598" y="64" font-family="Carlito, sans-serif" font-weight="bold" font-size="28" fill="#B6925A">™</text>
+  <path d="M648,90 L788,90" fill="none" stroke="#5FA5BE" stroke-width="5" stroke-linecap="round" stroke-dasharray="4 11"/>
+  <text x="798" y="98" font-family="Carlito, sans-serif" font-weight="bold" font-size="25" fill="#B6925A" text-anchor="start">m30</text>
+  <path d="M34 156 C120 146 200 166 290 156 C380 146 470 166 560 156 C590 153 610 155 622 154" fill="none" stroke="#B6925A" stroke-width="3.5" stroke-linecap="round" opacity=".9"/>
+</svg>
+</div>
+
+<!-- Variant C: flowy italic serif (Caladea), layered wave W in three blues -->
+<div class="logo" id="C">
+<svg viewBox="0 0 880 200" width="880" height="200">
+  <text x="26" y="128" font-family="Caladea, serif" font-style="italic" font-weight="bold" font-size="102" fill="#00533A">Tide</text>
+  <g transform="translate(238,0)">
+    <path d="M2,44 C18,44 28,120 44,120 C60,120 62,60 78,60 C94,60 96,120 112,120 C128,120 140,44 158,44"
+          fill="none" stroke="#B7D5DF" stroke-width="7" stroke-linecap="round" opacity=".9"/>
+    <path d="M10,52 C24,52 32,126 47,126 C62,126 64,70 79,70 C94,70 98,126 113,126 C128,126 136,52 150,52"
+          fill="none" stroke="#16687E" stroke-width="10.5" stroke-linecap="round"/>
+    <path d="M18,60 C30,60 36,130 50,130 C64,130 66,80 80,80 C94,80 100,130 114,130 C128,130 134,60 148,60"
+          fill="none" stroke="#4596B0" stroke-width="4.5" stroke-linecap="round" stroke-dasharray="13 10"/>
+  </g>
+  <text x="398" y="128" font-family="Caladea, serif" font-style="italic" font-weight="bold" font-size="102" fill="#00533A">atch</text>
+  <text x="612" y="66" font-family="Caladea, serif" font-weight="bold" font-size="30" fill="#B6925A">™</text>
+  <path d="M660,90 L794,90" fill="none" stroke="#4596B0" stroke-width="4.5" stroke-linecap="round" stroke-dasharray="13 10"/>
+  <text x="804" y="98" font-family="Caladea, serif" font-style="italic" font-size="27" fill="#16687E" text-anchor="start">m30</text>
+</svg>
+</div>
