@@ -170,6 +170,13 @@ localities has a first flood map year set, so every assumed floor is 3 ft above 
 read from the counts of each layer's codes, not from the localities' code tables. Parcel services also hold the
 owners' names: only the columns named in `value_sources.json` are ever asked for.
 
+What the pipes change: little upriver, where the low ground is marsh and river bank (a few road pieces at 8 to
+10 ft in Hopewell, Petersburg, Alexandria, Arlington and Prince William, none in Stafford, Henrico or King George).
+The exception is New Alexandria in Fairfax County (13th and 14th Streets, H and I Streets, Olde Towne Road; ground at
+3.2 to 5.5 ft): over the surface the Potomac reaches it at 6.5 ft, through the storm drains at about 4.75 ft. At a
+level of 6 ft that is 349 more road pieces (1.1 miles) and 80 more buildings, and in the 26 Nov 2026 forecast
+(Alexandria's gauge) 0.2 of the county's 0.3 flooded road miles and 21 of its 40 flooded buildings.
+
 Three things the sources needed. `vgin.layer_features` finds a layer's own object id field (King George's is
 `FID`, Alexandria's `OBJECTID_1`), reads inside a box, and checks the read against the layer's count; where a
 server counts more inside a box than it hands out (Henrico counts features just outside it), the rest are asked
@@ -433,26 +440,26 @@ At each gauge's forecast peak (most between 4.9 and 6.1 ft NAVD88, about 14:30Z 
 | Accomack County, south of 37.75 N (no pipes or values found) | 33.7 | – | 4.5 | 891 | – | – | 40.0 / 1,099 |
 | Accomack County, north of 37.75 N (no pipes or values found) | 96.9 | – | 5.9 | 7,422 | – | – | 103.7 / 7,854 |
 | Tangier Island (no pipes or values found) | 3.7 | – | 0.0 | 510 | – | – | 3.7 / 510 |
-| Surry County (no pipes or values looked for) | 1.1 | – | 0.1 | 107 | – | – | 1.2 / 110 |
-| Prince George County, near tidal water (no pipes or values looked for) | 0.1 | – | 0.0 | 10 | – | – | 0.2 / 11 |
-| Hopewell (no pipes or values looked for) | 0.0 | – | 0.0 | 1 | – | – | 0.0 / 1 |
-| Petersburg (no pipes or values looked for) | 0.0 | – | 0.0 | 0 | – | – | 0.0 / 0 |
-| Colonial Heights (no pipes or values looked for) | 0.0 | – | 0.0 | 0 | – | – | 0.0 / 0 |
-| Charles City County (no pipes or values looked for) | 1.1 | – | 0.1 | 5 | – | – | 1.2 / 8 |
-| Chesterfield County, near tidal water (no pipes or values looked for) | 0.0 | – | 0.0 | 6 | – | – | 0.0 / 8 |
-| Henrico County, near tidal water (no pipes or values looked for) | 0.0 | – | 0.0 | 8 | – | – | 0.0 / 11 |
-| Richmond (City) (no pipes or values looked for) | 0.0 | – | 0.0 | 0 | – | – | 0.0 / 0 |
-| New Kent County (no pipes or values looked for) | 1.0 | – | 0.1 | 80 | – | – | 1.1 / 95 |
-| Hanover County, near tidal water (no pipes or values looked for) | 0.0 | – | 0.0 | 0 | – | – | 0.0 / 0 |
-| Caroline County, near tidal water (no pipes or values looked for) | 0.0 | – | 0.0 | 2 | – | – | 0.0 / 3 |
-| Spotsylvania County, near tidal water (no pipes or values looked for) | 0.0 | – | 0.0 | 0 | – | – | 0.0 / 0 |
-| Fredericksburg (no pipes or values looked for) | 0.0 | – | 0.0 | 0 | – | – | 0.0 / 0 |
-| King George County (no pipes or values looked for) | 0.3 | – | 0.1 | 12 | – | – | 0.4 / 18 |
-| Stafford County, near tidal water (no pipes or values looked for) | 0.1 | – | 0.0 | 2 | – | – | 0.1 / 8 |
-| Prince William County, near tidal water (no pipes or values looked for) | 1.4 | – | 0.4 | 13 | – | – | 1.8 / 17 |
-| Fairfax County, near tidal water (no pipes or values looked for) | 0.1 | – | 0.0 | 19 | – | – | 0.1 / 22 |
-| Arlington County (no pipes or values looked for) | 0.0 | – | 0.0 | 1 | – | – | 0.0 / 2 |
-| Alexandria (no pipes or values looked for) | 0.3 | – | 0.0 | 5 | – | – | 0.4 / 9 |
+| Surry County (no pipes or values found) | 1.1 | – | 0.1 | 107 | – | – | 1.2 / 110 |
+| Prince George County, near tidal water (no pipes or values found) | 0.1 | – | 0.0 | 10 | – | – | 0.2 / 11 |
+| Hopewell (no values found) | 0.0 | 0.0 | 0.0 | 1 | – | – | 0.0 / 1 |
+| Petersburg (no values published) | 0.0 | 0.0 | 0.0 | 0 | – | – | 0.0 / 0 |
+| Colonial Heights (no pipes found) | 0.9 | – | 0.1 | 2 | 1 | $0 | 1.0 / 2 |
+| Charles City County (no pipes found) | 1.1 | – | 0.1 | 5 | 1 | $0 | 1.2 / 8 |
+| Chesterfield County, near tidal water | 0.0 | 0.0 | 0.0 | 7 | 0 | $0 | 0.0 / 9 |
+| Henrico County, near tidal water | 0.0 | 0.0 | 0.0 | 8 | 2 | $0 | 0.0 / 11 |
+| Richmond (City) (no pipes found) | 0.0 | – | 0.0 | 0 | 0 | $0 | 0.0 / 0 |
+| New Kent County (no pipes or values found) | 1.0 | – | 0.1 | 80 | – | – | 1.1 / 95 |
+| Hanover County, near tidal water (no pipes found) | 0.0 | – | 0.0 | 0 | 0 | $0 | 0.0 / 0 |
+| Caroline County, near tidal water (no pipes or values found) | 0.0 | – | 0.0 | 2 | – | – | 0.0 / 3 |
+| Spotsylvania County, near tidal water (no pipes found) | 0.0 | – | 0.0 | 0 | 0 | $0 | 0.0 / 0 |
+| Fredericksburg (no pipes found; values without a use, so no homes) | 0.0 | – | 0.0 | 0 | 0 | $0 | 0.0 / 0 |
+| King George County | 0.3 | 0.0 | 0.1 | 12 | 4 | $0.10M | 0.4 / 18 |
+| Stafford County, near tidal water (pipe lines only; no values found) | 0.1 | 0.0 | 0.0 | 2 | – | – | 0.1 / 8 |
+| Prince William County, near tidal water (no values published) | 1.4 | 0.0 | 0.4 | 13 | – | – | 1.8 / 17 |
+| Fairfax County, near tidal water | 0.3 | 0.2 | 0.1 | 40 | 12 | $0.01M | 0.4 / 50 |
+| Arlington County | 0.0 | 0.0 | 0.0 | 1 | 0 | $0 | 0.0 / 2 |
+| Alexandria (no values published) | 0.3 | 0.0 | 0.0 | 5 | – | – | 0.4 / 9 |
 
 - The rows from Prince William County down (Northern Virginia, 28 Nov): the forecast peak was 4.4 ft NAVD88 at
   Alexandria's Potomac gauge, 3.9 at Four Mile Run, 4.3 at the Washington Channel, 5.1 at Georgetown, 3.8 at

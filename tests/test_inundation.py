@@ -959,8 +959,21 @@ def test_a_layer_is_paged_by_its_own_object_id_inside_a_box(monkeypatch):
     queries = [p for u, p in asked if u.endswith("/query")]
     assert all(p["geometry"] == "-77.500000,38.250000,-77.250000,38.500000" and p["inSR"] == 4326 for p in queries)
     assert queries[0]["orderByFields"] == "FID" and queries[0]["outFields"] == "FID,PIN" and "FID > -1" in queries[0]["where"]
-    # a server that counts more than it hands out is asked for the rest by id: what lies outside the box explains the
-    # count (Henrico counts parcels just outside it), what lies inside is added, and an id it cannot give is an error
+
+
+def test_a_server_that_counts_more_than_it_hands_out_is_asked_for_the_rest(monkeypatch):
+    pytest.importorskip("shapely")
+    from inundation import vgin
+    box = (-77.5, 38.25, -77.25, 38.5)
+
+    def get(url, params, tries=4):
+        if url.endswith("/0"):
+            return {"objectIdField": "FID"}
+        last = int(params["where"].rsplit(">", 1)[1])
+        return {"features": [{"type": "Feature", "properties": {"FID": i, "PIN": str(i)}, "geometry": None}
+                             for i in (1, 2, 3) if i > last][:2]}
+    # what lies outside the box explains the count (Henrico counts parcels just outside it), what lies inside is
+    # added, and an id the server cannot give is an error
     monkeypatch.setattr(vgin, "count", lambda layer, where, bbox=None: 5)
     square = lambda x, y: {"type": "Polygon", "coordinates": [[[x, y], [x + 0.01, y], [x + 0.01, y + 0.01], [x, y]]]}  # noqa: E731
     rest = {4: square(-77.4, 38.6), 5: square(-77.4, 38.3)}             # 4 lies north of the box, 5 inside it
